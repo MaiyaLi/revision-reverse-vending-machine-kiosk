@@ -1,0 +1,6 @@
+{
+  "name": "ReVision Reverse Vending Machine Kiosk",
+  "description": "IoT-Enabled Reverse Vending Machine Kiosk Application with Automated Material Sorting, Gemini Vision Detection, and Real-time Reward Balance Management.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

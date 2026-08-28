@@ -1,0 +1,347 @@
+// Prisma Schema for ReVision Reverse Vending Machine Kiosk
+// PostgreSQL Database with comprehensive user management and transaction tracking
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ============================================
+// CORE USER MODEL
+// ============================================
+
+model User {
+  id                   String    @id @default(uuid())
+  memberId             String    @unique @db.VarChar(50)
+  qrCodeId             String    @unique @db.VarChar(50)
+  fullName             String    @db.VarChar(255)
+  phoneNumber          String?   @unique @db.VarChar(20)
+  emailAddress         String?   @unique @db.VarChar(255)
+  age                  Int?
+  barangay             String?   @db.VarChar(100)
+  profilePhotoUrl      String?
+
+  // Wallet & Eco Tracking
+  walletBalance        Float     @default(0.0) @db.Real
+  totalLifetimeEarnings Float    @default(0.0) @db.Real
+  ecoPoints            Int       @default(0)
+  co2ReducedKg         Float     @default(0.0) @db.Real
+
+  // Authentication
+  pinCodeHash          String?   @db.VarChar(255)
+  lastLoginAt          DateTime?
+  isActive             Boolean   @default(true)
+
+  // Metadata
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  // Relations
+  deposits             DepositSession[]
+  payouts              PayoutTransaction[]
+  transactions         TransactionHistory[]
+  auditLogs            AuditLog[]
+  receipts             Receipt[]
+
+  @@index([memberId])
+  @@index([phoneNumber])
+  @@index([createdAt])
+  @@index([isActive])
+  @@map("users")
+}
+
+// ============================================
+// DEPOSIT SESSION MODEL
+// ============================================
+
+model DepositSession {
+  id                   String    @id @default(uuid())
+  userId               String?
+  user                 User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  sessionRefId         String    @unique @db.VarChar(100)
+
+  // Session Tracking
+  status               DepositStatus @default(IN_PROGRESS)
+  startedAt            DateTime  @default(now())
+  completedAt          DateTime?
+
+  // Aggregated Data
+  totalItemsCount      Int       @default(0)
+  acceptedItemsCount   Int       @default(0)
+  rejectedItemsCount   Int       @default(0)
+  totalWeightGrams     Int       @default(0)
+  totalPayout          Float     @default(0.0) @db.Real
+  totalEcoPoints       Int       @default(0)
+  totalCo2ReductionKg  Float     @default(0.0) @db.Real
+
+  // Relations
+  items                DepositItem[]
+  payouts              PayoutTransaction[]
+  receipts             Receipt[]
+
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([sessionRefId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("deposit_sessions")
+}
+
+// ============================================
+// DEPOSITED ITEM MODEL
+// ============================================
+
+model DepositItem {
+  id                   String    @id @default(uuid())
+  sessionId            String
+  session              DepositSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  // Item Details
+  itemNumber           Int
+  detectedMaterial     String    @db.VarChar(50)
+  itemName             String    @db.VarChar(255)
+  weightGrams          Int
+  payoutAmount         Float     @db.Real
+  ecoPoints            Int
+  co2ReductionKg       Float     @db.Real
+
+  // Quality & Verification
+  status               ItemStatus @default(ACCEPTED)
+  confidence           Float?    @db.Real
+
+  // Sensor Data (Optional)
+  imageCaptureUrl      String?
+  inductiveSensorReading Boolean?
+  loadCellReadingGrams Int?
+  tofDistanceMm        Int?
+  classificationConfidence Float?
+
+  processedAt          DateTime  @default(now())
+
+  @@unique([sessionId, itemNumber])
+  @@index([sessionId])
+  @@index([detectedMaterial])
+  @@map("deposited_items")
+}
+
+// ============================================
+// TRANSACTION HISTORY MODEL
+// ============================================
+
+model TransactionHistory {
+  id                   String    @id @default(uuid())
+  userId               String
+  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payoutId             String?
+  payout               PayoutTransaction? @relation(fields: [payoutId], references: [id], onDelete: SetNull)
+
+  // Transaction Details
+  type                 TransactionType
+  amount               Float     @db.Real
+  balanceBefore        Float?    @db.Real
+  balanceAfter         Float?    @db.Real
+  details              String?   @db.Text
+  ecoPointsGained      Int       @default(0)
+
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([type])
+  @@index([createdAt])
+  @@map("transaction_history")
+}
+
+// ============================================
+// PAYOUT TRANSACTION MODEL
+// ============================================
+
+model PayoutTransaction {
+  id                   String    @id @default(uuid())
+  externalId           String    @unique @db.VarChar(100)
+  xenditId             String?   @db.VarChar(100)
+  userId               String
+  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessionId            String?
+  session              DepositSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+
+  // Payout Details
+  amount               Float     @db.Real
+  channel              PayoutChannel
+
+  // Account Information (for transfers)
+  accountNumber        String?   @db.VarChar(50)
+  accountName          String?   @db.VarChar(255)
+  payoutUrl            String?   @db.Text
+
+  // Status Tracking
+  status               PayoutStatus @default(PENDING)
+  failureCode          String?   @db.VarChar(100)
+  failureReason        String?   @db.Text
+
+  completedAt          DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  // Relations
+  transactions         TransactionHistory[]
+
+  @@index([userId])
+  @@index([sessionId])
+  @@index([status])
+  @@index([externalId])
+  @@map("payout_transactions")
+}
+
+// ============================================
+// RECEIPT MODEL
+// ============================================
+
+model Receipt {
+  id                   String    @id @default(uuid())
+  transactionId        String    @unique @db.VarChar(50)
+  sessionId            String
+  session              DepositSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  userId               String?
+  user                 User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  // Receipt Details
+  materialsDeposited   String?   @db.VarChar(255)
+  totalWeightKg        Float?
+  totalReward          Float?
+  payoutMethod         String?   @db.VarChar(100)
+  payoutStatus         String?   @db.VarChar(50)
+
+  // Tracking
+  printedAt            DateTime?
+  printedCount         Int       @default(0)
+  emailSentAt          DateTime?
+  smsSentAt            DateTime?
+
+  createdAt            DateTime  @default(now())
+
+  @@index([transactionId])
+  @@index([sessionId])
+  @@map("receipts")
+}
+
+// ============================================
+// AUDIT LOG MODEL
+// ============================================
+
+model AuditLog {
+  id                   BigInt    @id @default(autoincrement())
+  userId               String?
+  user                 User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  // Audit Details
+  eventType            String    @db.VarChar(100)
+  entityType           String?   @db.VarChar(100)
+  entityId             String?   @db.VarChar(100)
+  action               String?   @db.VarChar(50)
+
+  // Old & New Values (JSON)
+  oldValues            Json?
+  newValues            Json?
+
+  // Metadata
+  ipAddress            String?   @db.VarChar(50)
+  userAgent            String?   @db.Text
+
+  createdAt            DateTime  @default(now())
+
+  @@index([userId])
+  @@index([eventType])
+  @@index([createdAt])
+  @@map("audit_log")
+}
+
+// ============================================
+// DISPENSER INVENTORY MODEL
+// ============================================
+
+model DispenserInventory {
+  id                   BigInt    @id @default(autoincrement())
+  machineId            String    @db.VarChar(50)
+  coins10Pesos         Int       @default(0)
+  coins5Pesos          Int       @default(0)
+  coins1Peso           Int       @default(0)
+  lastRefilled         DateTime?
+  refillCount          Int       @default(0)
+  updatedAt            DateTime  @updatedAt
+
+  @@unique([machineId])
+  @@map("dispenser_inventory")
+}
+
+// ============================================
+// BIN INVENTORY MODEL
+// ============================================
+
+model BinInventory {
+  id                   BigInt    @id @default(autoincrement())
+  machineId            String    @db.VarChar(50)
+  materialType         String    @db.VarChar(50)
+  currentCount         Int       @default(0)
+  maxCapacity          Int?
+  lastEmptied          DateTime?
+  emptyCount           Int       @default(0)
+  updatedAt            DateTime  @updatedAt
+
+  @@unique([machineId, materialType])
+  @@map("bin_inventory")
+}
+
+// ============================================
+// ENUMS
+// ============================================
+
+enum DepositStatus {
+  IN_PROGRESS
+  COMPLETED
+  ABANDONED
+  FAILED
+}
+
+enum ItemStatus {
+  ACCEPTED
+  REJECTED
+  PENDING
+}
+
+enum TransactionType {
+  DEPOSIT
+  REDEMPTION
+  REFUND
+  BONUS
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum PayoutChannel {
+  GCASH
+  MAYA
+  QRPH
+  CASH
+  WALLET
+}
+
+enum PayoutStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+  REJECTED
+}
