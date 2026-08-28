@@ -8,9 +8,13 @@ import { db } from './database';
 export interface UserProfile {
   id: string;
   memberId: string;
+  qrCodeId: string;
   fullName: string;
   phoneNumber: string | null;
   email: string | null;
+  age?: number;
+  barangay?: string;
+  profilePhotoUrl?: string;
   walletBalance: number;
   ecoPoints: number;
   co2ReducedKg: number;
@@ -418,6 +422,114 @@ export class UserService {
     }
   }
 
+  /**
+   * Update user profile
+   */
+  async updateUserProfile(userId: string, updates: Partial<UserProfile>): Promise<UserProfile> {
+    try {
+      const fields: string[] = [];
+      const values: any[] = [];
+      let paramIndex = 1;
+
+      if (updates.fullName !== undefined) {
+        fields.push(`full_name = $${paramIndex++}`);
+        values.push(updates.fullName);
+      }
+      if (updates.phoneNumber !== undefined) {
+        fields.push(`phone_number = $${paramIndex++}`);
+        values.push(updates.phoneNumber);
+      }
+      if (updates.email !== undefined) {
+        fields.push(`email_address = $${paramIndex++}`);
+        values.push(updates.email);
+      }
+      if (updates.age !== undefined) {
+        fields.push(`age = $${paramIndex++}`);
+        values.push(updates.age);
+      }
+      if (updates.barangay !== undefined) {
+        fields.push(`barangay = $${paramIndex++}`);
+        values.push(updates.barangay);
+      }
+      if (updates.profilePhotoUrl !== undefined) {
+        fields.push(`profile_photo_url = $${paramIndex++}`);
+        values.push(updates.profilePhotoUrl);
+      }
+
+      if (fields.length === 0) {
+        throw new Error('No fields to update');
+      }
+
+      values.push(userId);
+      const query = `UPDATE users SET ${fields.join(', ')} WHERE id = $${paramIndex} RETURNING *`;
+      const updatedUser = await db.queryOne(query, values);
+
+      if (!updatedUser) {
+        throw new Error('User not found');
+      }
+
+      return this.formatUserProfile(updatedUser);
+    } catch (error) {
+      console.error('Error updating user profile:', error);
+      throw new Error(`Failed to update user profile: ${error}`);
+    }
+  }
+
+  /**
+   * List all users (admin)
+   */
+  async listAllUsers(limit: number = 100, offset: number = 0): Promise<any[]> {
+    try {
+      const query = `
+        SELECT id, member_id, qr_code_id, full_name, phone_number, email_address,
+               wallet_balance, total_lifetime_earnings, eco_points, co2_reduction_kg,
+               is_active, created_at, updated_at
+        FROM users
+        ORDER BY created_at DESC
+        LIMIT $1 OFFSET $2
+      `;
+      return await db.query(query, [limit, offset]);
+    } catch (error) {
+      console.error('Error listing users:', error);
+      throw new Error(`Failed to list users: ${error}`);
+    }
+  }
+
+  /**
+   * Get total user count (admin)
+   */
+  async getUserCount(): Promise<number> {
+    try {
+      const result = await db.queryOne(`SELECT COUNT(*) as count FROM users`);
+      return parseInt(result.count);
+    } catch (error) {
+      console.error('Error getting user count:', error);
+      throw new Error(`Failed to get user count: ${error}`);
+    }
+  }
+
+  /**
+   * Get total stats across all users (admin)
+   */
+  async getGlobalStats(): Promise<any> {
+    try {
+      const query = `
+        SELECT
+          COUNT(*) as total_users,
+          SUM(wallet_balance) as total_wallet_balance,
+          SUM(total_lifetime_earnings) as total_lifetime_earnings,
+          SUM(eco_points) as total_eco_points,
+          SUM(co2_reduction_kg) as total_co2_reduction_kg
+        FROM users
+        WHERE is_active = true
+      `;
+      return await db.queryOne(query);
+    } catch (error) {
+      console.error('Error getting global stats:', error);
+      throw new Error(`Failed to get global stats: ${error}`);
+    }
+  }
+
   // ============================================
   // PRIVATE HELPER METHODS
   // ============================================
@@ -486,9 +598,13 @@ export class UserService {
     return {
       id: user.id,
       memberId: user.member_id,
+      qrCodeId: user.qr_code_id,
       fullName: user.full_name,
       phoneNumber: user.phone_number,
       email: user.email_address,
+      age: user.age,
+      barangay: user.barangay,
+      profilePhotoUrl: user.profile_photo_url,
       walletBalance: parseFloat(user.wallet_balance),
       ecoPoints: user.eco_points,
       co2ReducedKg: parseFloat(user.co2_reduction_kg),

@@ -1,5 +1,5 @@
 import express, { Router, Request, Response, NextFunction } from 'express';
-import { userService, UserRegistrationInput, UserLoginInput } from '../services/userService';
+import { userService, UserProfile, UserRegistrationInput, UserLoginInput } from '../services/userService';
 
 // ============================================
 // TYPES & MIDDLEWARE
@@ -67,7 +67,7 @@ router.use(express.json());
  */
 router.post(
   '/register',
-  validateRequestBody(['memberId', 'name']),
+  validateRequestBody(['memberId', 'fullName']),
   asyncHandler(async (req: AuthRequest, res: Response) => {
       const { memberId, fullName, phoneNumber, email, pinCode } = req.body;
 
@@ -553,6 +553,150 @@ router.post(
       return res.status(500).json({
         success: false,
         error: 'Failed to reactivate account'
+      });
+    }
+  })
+);
+
+// ============================================
+// PROFILE UPDATE ENDPOINTS
+// ============================================
+
+/**
+ * PUT /api/user/:memberId
+ * Update user profile
+ */
+router.put(
+  '/:memberId',
+  asyncHandler(async (req: Request, res: Response) => {
+    const { memberId } = req.params;
+    const updates = req.body;
+
+    try {
+      const user = await userService.findUserByCredential(memberId);
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          error: 'User not found'
+        });
+      }
+
+      const updatedUser = await userService.updateUserProfile(user.id, updates);
+
+      return res.status(200).json({
+        success: true,
+        data: updatedUser
+      });
+    } catch (error: any) {
+      console.error('Error updating user profile:', error);
+
+      return res.status(400).json({
+        success: false,
+        error: error.message || 'Failed to update user profile'
+      });
+    }
+  })
+);
+
+// ============================================
+// ADMIN ENDPOINTS
+// ============================================
+
+/**
+ * GET /api/admin/users
+ * List all users (admin)
+ */
+router.get(
+  '/admin/users',
+  asyncHandler(async (req: Request, res: Response) => {
+    const limit = Math.min(parseInt(req.query.limit as string) || 100, 500);
+    const offset = parseInt(req.query.offset as string) || 0;
+
+    try {
+      const users = await userService.listAllUsers(limit, offset);
+      const totalCount = await userService.getUserCount();
+
+      return res.status(200).json({
+        success: true,
+        data: users,
+        pagination: {
+          limit,
+          offset,
+          totalCount
+        }
+      });
+    } catch (error: any) {
+      console.error('Error listing users:', error);
+
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to list users'
+      });
+    }
+  })
+);
+
+/**
+ * GET /api/admin/users/:memberId
+ * Get specific user details (admin)
+ */
+router.get(
+  '/admin/users/:memberId',
+  asyncHandler(async (req: Request, res: Response) => {
+    const { memberId } = req.params;
+
+    try {
+      const user = await userService.findUserByCredential(memberId);
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          error: 'User not found'
+        });
+      }
+
+      const userProfile = await userService.getUserProfile(user.id);
+      const stats = await userService.getUserStats(user.id);
+      const deposits = await userService.getDepositHistory(user.id, 10);
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          ...userProfile,
+          stats,
+          recentDeposits: deposits
+        }
+      });
+    } catch (error: any) {
+      console.error('Error fetching user details:', error);
+
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to fetch user details'
+      });
+    }
+  })
+);
+
+/**
+ * GET /api/admin/stats
+ * Get global statistics (admin)
+ */
+router.get(
+  '/admin/stats',
+  asyncHandler(async (req: Request, res: Response) => {
+    try {
+      const globalStats = await userService.getGlobalStats();
+
+      return res.status(200).json({
+        success: true,
+        data: globalStats
+      });
+    } catch (error: any) {
+      console.error('Error fetching global stats:', error);
+
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to fetch global statistics'
       });
     }
   })
