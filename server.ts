@@ -10,6 +10,7 @@ import { userService } from "./src/services/userService";
 import { depositService } from "./src/services/depositService";
 import { payoutService } from "./src/services/payoutService";
 import { receiptService } from "./src/services/receiptService";
+import userRoutes from "./src/routes/userRoutes";
 
 dotenv.config();
 
@@ -80,6 +81,8 @@ app.post("/api/auth/login", async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+app.use("/api/user", userRoutes);
 
 // ============================================
 // DEPOSIT SESSION ENDPOINTS
