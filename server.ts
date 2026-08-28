@@ -17,6 +17,17 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// CORS for mobile app / remote access
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(200);
+  }
+  next();
+});
+
 app.use(express.json({ limit: '10mb' }));
 
 // Initialize Gemini Client
@@ -56,7 +67,23 @@ app.get('/api/health', (req, res) => {
 
 app.post("/api/auth/register", async (req, res) => {
   try {
-    const user = await userService.createUser(req.body);
+    const { fullName, mobileNumber, pin, emailAddress, age, barangay, profilePhoto } = req.body;
+    
+    if (!fullName) {
+      return res.status(400).json({ error: "Full name is required" });
+    }
+
+    const memberId = `REV-${Date.now().toString(36).toUpperCase()}`;
+    const user = await userService.createUser({
+      memberId,
+      fullName,
+      phoneNumber: mobileNumber,
+      emailAddress,
+      pinCode: pin,
+      age: age ? parseInt(age) : undefined,
+      barangay,
+      profilePhotoUrl: profilePhoto
+    });
     res.status(201).json({ success: true, user });
   } catch (error: any) {
     res.status(400).json({ error: error.message });
@@ -213,24 +240,30 @@ app.post("/api/payout/webhook", async (req, res) => {
 
 app.post("/api/redemption/withdraw", async (req, res) => {
   try {
-    const { memberId, payoutMethod, amount, provider } = req.body;
+    const { memberId, userId, payoutMethod, amount, provider } = req.body;
 
     if (!amount || amount <= 0) {
       return res.status(400).json({ error: "Invalid redemption amount" });
     }
 
-    const user = await userService.getUserById(memberId);
+    // Accept either memberId or userId
+    const identifier = memberId || userId;
+    if (!identifier) {
+      return res.status(400).json({ error: "memberId or userId is required" });
+    }
+
+    const user = await userService.findUserByCredential(identifier);
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
 
-    if (user.walletBalance < amount) {
+    if (parseFloat(user.wallet_balance) < amount) {
       return res.status(400).json({ error: "Insufficient wallet balance" });
     }
 
     // Update wallet balance
     const updatedUser = await userService.updateWalletBalance(
-      memberId,
+      user.id,
       -amount,
       'REDEMPTION'
     );

@@ -57,6 +57,21 @@ const router = Router();
 router.use(captureMetadata);
 router.use(express.json());
 
+const ADMIN_API_KEY = process.env.ADMIN_API_KEY;
+
+const requireAdmin = (req: Request, res: Response, next: NextFunction) => {
+  const key = req.headers['x-admin-api-key'] || req.body?.adminApiKey;
+  if (!ADMIN_API_KEY || key !== ADMIN_API_KEY) {
+    return res.status(403).json({
+      success: false,
+      error: 'Forbidden: Admin access required'
+    });
+  }
+  next();
+};
+
+router.use('/admin', requireAdmin);
+
 // ============================================
 // USER REGISTRATION ENDPOINTS
 // ============================================

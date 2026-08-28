@@ -149,6 +149,7 @@ export default function App() {
   const [printStatus, setPrintStatus] = useState<'IDLE' | 'PRINTING' | 'DONE'>('IDLE');
   const [isProcessing, setIsProcessing] = useState(false);
   const [webcamActive, setWebcamActive] = useState(false);
+  const [sessionRefId, setSessionRefId] = useState<string | null>(null);
 
   // --- LOOPS & INACTIVITY TIMEOUTS ---
   const [secondsRemaining, setSecondsRemaining] = useState(120);
@@ -312,7 +313,7 @@ export default function App() {
   const runVerificationProcess = async () => {
     const list: DepositedItem[] = [];
     let itemIdNum = 1;
-    
+
     for (let i = 0; i < intendedPlastic; i++) {
       list.push({
         id: `ITEM-PL-${Math.floor(1000 + Math.random()*9000)}`,
@@ -356,7 +357,6 @@ export default function App() {
     }
 
     if (list.length === 0) {
-      // Just auto-insert at least 1 guest demo plastic bottle
       list.push({
         id: `ITEM-G-${Math.floor(1000 + Math.random()*9000)}`,
         number: 1,
@@ -376,11 +376,28 @@ export default function App() {
     setIsProcessing(true);
     setCurrentState('VERIFYING_ITEMS');
 
+    // Start deposit session in backend
+    let currentSessionRefId: string | null = null;
+    try {
+      const sessionRes = await fetch("/api/deposit/session/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: activeUser?.id || null })
+      });
+      if (sessionRes.ok) {
+        const sessionData = await sessionRes.json();
+        currentSessionRefId = sessionData.sessionRefId;
+        setSessionRefId(sessionData.sessionRefId);
+      }
+    } catch (e) {
+      console.warn("Could not start deposit session:", e);
+    }
+
     // Trigger sequential simulation
-    await processNextItemSequential(0, list);
+    await processNextItemSequential(0, list, currentSessionRefId);
   };
 
-  const processNextItemSequential = async (idx: number, fullList: DepositedItem[]) => {
+  const processNextItemSequential = async (idx: number, fullList: DepositedItem[], currentSessionRefId: string | null) => {
     if (idx >= fullList.length) {
       setVerificationStage('DONE');
       setIsProcessing(false);
@@ -436,7 +453,6 @@ export default function App() {
 
     // Combine with local simulation
     try {
-      // Prompt backend mock detect-waste API
       const response = await fetch("/api/detect-waste", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -460,11 +476,36 @@ export default function App() {
       console.warn("Using offline sensors verification.");
     }
 
+    // Persist item to backend deposit session
+    if (currentSessionRefId) {
+      try {
+        await fetch("/api/deposit/item/add", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sessionRefId: currentSessionRefId,
+            item: {
+              item_number: idx + 1,
+              detected_material: item.detectedMaterial,
+              item_name: item.itemName,
+              weight_grams: item.weightGrams,
+              payout_amount: item.payoutAmount,
+              eco_points: item.ecoPoints,
+              co2_reduction_kg: item.co2ReductionKg,
+              status: item.status === 'accepted' ? 'ACCEPTED' : 'REJECTED'
+            }
+          })
+        });
+      } catch (e) {
+        console.warn("Could not persist deposit item:", e);
+      }
+    }
+
     setProcessedItemsList(prev => [...prev, item]);
 
     // Next item
     setTimeout(() => {
-      processNextItemSequential(idx + 1, fullList);
+      processNextItemSequential(idx + 1, fullList, currentSessionRefId);
     }, 1500);
   };
 
@@ -488,10 +529,8 @@ export default function App() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            memberId: activeUser?.memberId || null,
-            amount: totalPayout,
-            ecoPoints: totalPoints,
-            co2Reduced: Number(totalCO2Str),
+            sessionRefId: sessionRefId,
+            userId: activeUser?.id || null,
             itemsSummary: itemsGrouped
           })
         });
@@ -506,7 +545,7 @@ export default function App() {
             date: new Date().toISOString().replace('T', ' ').substring(0, 16),
             materials: `${itemsGrouped.plastic} Plastics, ${itemsGrouped.aluminum} Cans, ${itemsGrouped.glass} Glass`,
             weight: totalWeightStr,
-            reward: totalPayout,
+            reward: resData.amountCredited || totalPayout,
             method: payoutSelected === 'wallet' ? 'Eco-Wallet' : payoutSelected === 'qrph' ? 'QRPh Instant' : 'Cash Dispensation',
             co2: totalCO2Str
           });
@@ -564,27 +603,24 @@ export default function App() {
   });
 
   const generateQRPhPayout = () => {
-    // Generate a beautiful simulated QR Code containing QRPh standard payload
     const refNum = "REF-" + Math.floor(10000000 + Math.random() * 90000000);
     setPayoutReference(refNum);
     
-    // Creating simulated canvas-based QR Ph layout
-    // standard QRPh Ph_Tag_Interoperability
-    const rvmPayload = `QRPH_PAY_TO_RVM_REVISION_PROVIDER_${selectedBank}_REF_${refNum}_AMOUNT_PHP_${activeUser ? activeUser.walletBalance : totalPayout}`;
+    const rvmPayload = `QRPH_PAY_TO_RVM_REVISION_PROVIDER_${selectedBank}_REF_${refNum}_AMOUNT_PHP_${totalPayout}`;
     setQrCodeDataUrl(`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(rvmPayload)}`);
     
     setCurrentState('QRPH_DISPLAY');
   };
 
   const confirmQRPhPayoutReceived = async () => {
-    const deductAmount = activeUser ? activeUser.walletBalance : totalPayout;
+    const deductAmount = totalPayout;
     
     try {
       const res = await fetch("/api/redemption/withdraw", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          memberId: activeUser?.memberId || null,
+          userId: activeUser?.id || null,
           payoutMethod: "QRPh",
           amount: deductAmount,
           provider: selectedBank
@@ -599,7 +635,7 @@ export default function App() {
     } catch (e) {
       console.warn("Simulated local wallet balance decrement.");
       if (activeUser) {
-        activeUser.walletBalance = 0;
+        activeUser.walletBalance -= deductAmount;
       }
     }
 
@@ -625,13 +661,13 @@ export default function App() {
           if (prev >= 100) {
             clearInterval(interval);
             setTimeout(async () => {
-              const deductAmount = activeUser ? activeUser.walletBalance : totalPayout;
+              const deductAmount = totalPayout;
               try {
                 await fetch("/api/redemption/withdraw", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({
-                    memberId: activeUser?.memberId || null,
+                    userId: activeUser?.id || null,
                     payoutMethod: "Cash/Coins",
                     amount: deductAmount
                   })
@@ -639,7 +675,7 @@ export default function App() {
               } catch (e) {}
 
               if (activeUser) {
-                activeUser.walletBalance = 0;
+                activeUser.walletBalance -= deductAmount;
               }
 
               setReceiptData(prevReceipt => ({
@@ -695,18 +731,23 @@ export default function App() {
       // Fallback local member generation
       const mockId = "REV-" + Math.floor(10000 + Math.random() * 90000);
       const mockUser: UserProfile = {
+        id: mockId,
         memberId: mockId,
         qrCodeId: `QR-${mockId}`,
         fullName: regForm.fullName || "Eco Citizen",
-        mobileNumber: regForm.mobileNumber,
-        pin: regForm.pin,
-        emailAddress: regForm.emailAddress,
-        age: regForm.age,
+        phoneNumber: regForm.mobileNumber || null,
+        email: regForm.emailAddress || null,
+        age: regForm.age ? parseInt(regForm.age) : undefined,
         barangay: regForm.barangay,
+        profilePhotoUrl: regForm.profilePhoto,
         walletBalance: 0,
         totalLifetimeEarnings: 0,
         ecoPoints: 0,
-        co2ReductionKg: 0
+        co2ReducedKg: 0,
+        lastLoginAt: null,
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date()
       };
       setActiveUser(mockUser);
       setCurrentState('DEPOSIT_PLANNING');
@@ -1825,7 +1866,7 @@ export default function App() {
                     <span className="text-xs text-emerald-500 font-black block uppercase tracking-widest">Active Member Card</span>
                     <h4 className={`font-black ${isLight ? 'text-slate-900' : 'text-white'} text-lg mt-2`}>{activeUser.fullName}</h4>
                     <p className={`font-mono text-xs ${cTextMuted} mt-1.5 font-bold`}>ID: {activeUser.memberId}</p>
-                    <p className={`font-mono text-xs ${cTextMuted} font-bold`}>{activeUser.mobileNumber}</p>
+                    <p className={`font-mono text-xs ${cTextMuted} font-bold`}>{activeUser.phoneNumber || 'N/A'}</p>
                   </div>
                   
                   {/* GENERATE DEMO BARCODE FOR MEMBER CARD */}

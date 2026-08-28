@@ -31,6 +31,9 @@ export interface UserRegistrationInput {
   phoneNumber?: string;
   emailAddress?: string;
   pinCode?: string;
+  age?: number;
+  barangay?: string;
+  profilePhotoUrl?: string;
 }
 
 export interface UserLoginInput {
@@ -100,8 +103,9 @@ export class UserService {
       const query = `
         INSERT INTO users (
           member_id, qr_code_id, full_name, phone_number, email_address, pin_code_hash,
-          wallet_balance, total_lifetime_earnings, eco_points, co2_reduction_kg
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+          wallet_balance, total_lifetime_earnings, eco_points, co2_reduction_kg,
+          age, barangay, profile_photo_url
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
         RETURNING *
       `;
 
@@ -115,7 +119,10 @@ export class UserService {
         0.0, // wallet_balance
         0.0, // total_lifetime_earnings
         0,   // eco_points
-        0.0  // co2_reduction_kg
+        0.0, // co2_reduction_kg
+        input.age || null,
+        input.barangay || null,
+        input.profilePhotoUrl || null
       ]);
 
       return this.formatUserProfile(newUser);

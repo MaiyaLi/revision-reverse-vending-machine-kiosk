@@ -29,19 +29,23 @@ export type AppState =
   | 'LEARN_MORE';
 
 export interface UserProfile {
+  id: string;
   memberId: string;
   qrCodeId: string;
   fullName: string;
-  mobileNumber: string;
-  pin: string;
-  emailAddress?: string;
-  age?: string;
+  phoneNumber: string | null;
+  email: string | null;
+  age?: number;
   barangay?: string;
-  profilePhoto?: string;
+  profilePhotoUrl?: string;
   walletBalance: number;
   totalLifetimeEarnings: number;
   ecoPoints: number;
-  co2ReductionKg: number;
+  co2ReducedKg: number;
+  lastLoginAt: Date | null;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface TransactionHistory {
