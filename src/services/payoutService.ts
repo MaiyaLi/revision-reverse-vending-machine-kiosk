@@ -34,8 +34,8 @@ export class PayoutService {
       const payoutTx = await db.queryOne(
         `INSERT INTO payout_transactions (
           id, "externalId", "sessionId", "userId", amount, channel,
-          "accountNumber", "accountName", status
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'PENDING')
+          "accountNumber", "accountName", status, "createdAt", "updatedAt"
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'PENDING', NOW(), NOW())
         RETURNING *`,
         [
           uuidv4(),
@@ -101,8 +101,8 @@ export class PayoutService {
     try {
       const payoutTx = await db.queryOne(
         `INSERT INTO payout_transactions (
-          id, "externalId", "sessionId", "userId", amount, channel, status
-        ) VALUES ($1, $2, $3, $4, $5, 'PAYOUT_LINK', 'PENDING')
+          id, "externalId", "sessionId", "userId", amount, channel, status, "createdAt", "updatedAt"
+        ) VALUES ($1, $2, $3, $4, $5, 'PAYOUT_LINK', 'PENDING', NOW(), NOW())
         RETURNING *`,
         [uuidv4(), externalId, params.sessionId, params.userId, params.amount]
       );
@@ -226,8 +226,8 @@ export class PayoutService {
 
     const payout = await db.queryOne(
       `INSERT INTO payout_transactions (
-        id, "externalId", "sessionId", "userId", amount, channel, status
-      ) VALUES ($1, $2, $3, $4, $5, 'CASH', 'COMPLETED')
+        id, "externalId", "sessionId", "userId", amount, channel, status, "createdAt", "updatedAt"
+      ) VALUES ($1, $2, $3, $4, $5, 'CASH', 'COMPLETED', NOW(), NOW())
       RETURNING *`,
       [uuidv4(), externalId, params.sessionId, params.userId, params.amount]
     );
@@ -235,8 +235,8 @@ export class PayoutService {
     if (params.userId) {
       await db.query(
         `INSERT INTO transaction_history (
-          id, "userId", "payoutId", type, amount, details
-        ) VALUES ($1, $2, $3, 'REDEMPTION', $4, $5)`,
+          id, "userId", "payoutId", type, amount, details, "createdAt", "updatedAt"
+        ) VALUES ($1, $2, $3, 'REDEMPTION', $4, $5, NOW(), NOW())`,
         [uuidv4(), params.userId, payout.id, -params.amount, `Cash dispensed - ${externalId}`]
       );
     }

@@ -91,8 +91,8 @@ export class UserService {
         INSERT INTO users (
           id, "memberId", "qrCodeId", "fullName", "phoneNumber", "emailAddress", "pinCodeHash",
           "walletBalance", "totalLifetimeEarnings", "ecoPoints", "co2ReducedKg",
-          age, barangay, "profilePhotoUrl"
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+          age, barangay, "profilePhotoUrl", "createdAt", "updatedAt"
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, NOW(), NOW())
         RETURNING *
       `;
 

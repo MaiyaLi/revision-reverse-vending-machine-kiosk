@@ -30,7 +30,7 @@ export class DepositService {
     const sessionRefId = `SES-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
     await db.query(
-      `INSERT INTO deposit_sessions (id, "userId", "sessionRefId", status) VALUES ($1, $2, $3, 'IN_PROGRESS')`,
+      `INSERT INTO deposit_sessions (id, "userId", "sessionRefId", status, "createdAt", "updatedAt") VALUES ($1, $2, $3, 'IN_PROGRESS', NOW(), NOW())`,
       [uuidv4(), userId, sessionRefId]
     );
 
@@ -154,8 +154,8 @@ export class DepositService {
 
           await client.query(
             `INSERT INTO transaction_history (
-              id, "userId", type, amount, details, "ecoPointsGained"
-            ) VALUES ($1, $2, 'DEPOSIT', $3, $4, $5)`,
+              id, "userId", type, amount, details, "ecoPointsGained", "createdAt", "updatedAt"
+            ) VALUES ($1, $2, 'DEPOSIT', $3, $4, $5, NOW(), NOW())`,
             [uuidv4(), userId, payout, `Deposit from session ${sessionRefId}`, ecoPoints]
           );
         }
