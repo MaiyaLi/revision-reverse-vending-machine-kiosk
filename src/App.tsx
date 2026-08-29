@@ -150,6 +150,7 @@ export default function App() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [webcamActive, setWebcamActive] = useState(false);
   const [sessionRefId, setSessionRefId] = useState<string | null>(null);
+  const [postLoginTarget, setPostLoginTarget] = useState<AppState | null>(null);
 
   // --- LOOPS & INACTIVITY TIMEOUTS ---
   const [secondsRemaining, setSecondsRemaining] = useState(120);
@@ -583,6 +584,7 @@ export default function App() {
       setCurrentState('REDEEM_BALANCE_SCREEN');
       speakText("walletBalance");
     } else {
+      setPostLoginTarget('REDEEM_BALANCE_SCREEN');
       setCurrentState('LOGIN_SELECT');
       speakText("authEnterCredentials");
     }
@@ -773,9 +775,11 @@ export default function App() {
         setActiveUser(data.user);
         setLoginCredential('');
         setLoginPin('');
-        // Route dynamically based on user intention or origin trigger
-        setCurrentState('DEPOSIT_PLANNING');
-        speakText("depositPlanner");
+        
+        const target = postLoginTarget || 'DEPOSIT_PLANNING';
+        setPostLoginTarget(null);
+        setCurrentState(target);
+        speakText(target === 'REDEEM_BALANCE_SCREEN' ? "walletBalance" : "depositPlanner");
       } else {
         const err = await res.json();
         setLoginError(err.error || "Invalid PIN credential.");
