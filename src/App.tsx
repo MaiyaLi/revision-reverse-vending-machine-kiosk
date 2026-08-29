@@ -604,6 +604,15 @@ export default function App() {
     co2: '0.000'
   });
 
+  const redeemUser = () => activeUser || {
+    walletBalance: 0,
+    ecoPoints: 0,
+    co2ReductionKg: 0,
+    fullName: '',
+    memberId: '',
+    phoneNumber: null
+  };
+
   const generateQRPhPayout = () => {
     const refNum = "REF-" + Math.floor(10000000 + Math.random() * 90000000);
     setPayoutReference(refNum);
@@ -722,7 +731,14 @@ export default function App() {
       });
       if (res.ok) {
         const data = await res.json();
-        setActiveUser(data.user);
+        const user = {
+          ...data.user,
+          walletBalance: Number(data.user?.walletBalance || 0),
+          ecoPoints: Number(data.user?.ecoPoints || 0),
+          co2ReducedKg: Number(data.user?.co2ReducedKg || 0),
+          totalLifetimeEarnings: Number(data.user?.totalLifetimeEarnings || 0)
+        };
+        setActiveUser(user);
         speakText("depositPlanner");
         setCurrentState('DEPOSIT_PLANNING');
       } else {
@@ -772,7 +788,14 @@ export default function App() {
 
       if (res.ok) {
         const data = await res.json();
-        setActiveUser(data.user);
+        const user = {
+          ...data.user,
+          walletBalance: Number(data.user?.walletBalance || 0),
+          ecoPoints: Number(data.user?.ecoPoints || 0),
+          co2ReducedKg: Number(data.user?.co2ReducedKg || 0),
+          totalLifetimeEarnings: Number(data.user?.totalLifetimeEarnings || 0)
+        };
+        setActiveUser(user);
         setLoginCredential('');
         setLoginPin('');
         
@@ -1016,7 +1039,7 @@ export default function App() {
                   </div>
                   <div className="text-right">
                     <span className="text-xs md:text-sm text-sky-500 font-black block">Digital Wallet Balance:</span>
-                    <p className="text-2xl md:text-3xl font-black text-emerald-500">₱{activeUser.walletBalance.toFixed(2)}</p>
+                    <p className="text-2xl md:text-3xl font-black text-emerald-500">₱{(activeUser.walletBalance || 0).toFixed(2)}</p>
                   </div>
                 </div>
               ) : (
@@ -1849,17 +1872,17 @@ export default function App() {
                 <div className="md:col-span-2 space-y-6">
                   <div>
                     <span className={`text-sm ${cTextMuted} font-black uppercase tracking-wider block`}>{t('walletBalance')}</span>
-                    <p className="text-6xl font-black text-emerald-500 font-mono mt-1">₱{activeUser.walletBalance.toFixed(2)}</p>
+                    <p className="text-6xl font-black text-emerald-500 font-mono mt-1">₱{(redeemUser().walletBalance || 0).toFixed(2)}</p>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className={`${cCardInset} p-5 rounded-2xl shadow-inner`}>
                       <span className={`text-xs ${cTextMuted} font-black uppercase block tracking-wider`}>{t('points')}</span>
-                      <p className="text-xl font-black text-sky-500 dark:text-sky-400 mt-1">+{activeUser.ecoPoints} Points</p>
+                      <p className="text-xl font-black text-sky-500 dark:text-sky-400 mt-1">+{redeemUser().ecoPoints || 0} Points</p>
                     </div>
                     <div className={`${cCardInset} p-5 rounded-2xl shadow-inner`}>
                       <span className={`text-xs ${cTextMuted} font-black uppercase block tracking-wider`}>{t('estimatedCo2')}</span>
-                      <p className="text-xl font-black text-teal-600 dark:text-teal-400 mt-1">{activeUser.co2ReductionKg.toFixed(2)} Kg</p>
+                      <p className="text-xl font-black text-teal-600 dark:text-teal-400 mt-1">{(redeemUser().co2ReductionKg || 0).toFixed(2)} Kg</p>
                     </div>
                   </div>
                 </div>
@@ -1868,15 +1891,15 @@ export default function App() {
                 <div className={`${isLight ? 'bg-slate-55 border-slate-200' : 'bg-slate-950 border-slate-800'} p-6 rounded-2xl border flex flex-col justify-between shadow-md`}>
                   <div>
                     <span className="text-xs text-emerald-500 font-black block uppercase tracking-widest">Active Member Card</span>
-                    <h4 className={`font-black ${isLight ? 'text-slate-900' : 'text-white'} text-lg mt-2`}>{activeUser.fullName}</h4>
-                    <p className={`font-mono text-xs ${cTextMuted} mt-1.5 font-bold`}>ID: {activeUser.memberId}</p>
-                    <p className={`font-mono text-xs ${cTextMuted} font-bold`}>{activeUser.phoneNumber || 'N/A'}</p>
+                    <h4 className={`font-black ${isLight ? 'text-slate-900' : 'text-white'} text-lg mt-2`}>{redeemUser().fullName}</h4>
+                    <p className={`font-mono text-xs ${cTextMuted} mt-1.5 font-bold`}>ID: {redeemUser().memberId}</p>
+                    <p className={`font-mono text-xs ${cTextMuted} font-bold`}>{redeemUser().phoneNumber || 'N/A'}</p>
                   </div>
                   
                   {/* GENERATE DEMO BARCODE FOR MEMBER CARD */}
                   <div className="bg-white p-2 rounded-xl mt-6 h-16 flex flex-col items-center justify-center opacity-85 shadow-sm">
                     <div className="w-full bg-[repeating-linear-gradient(90deg,_#000,_#000_3px,_#fff_3px,_#fff_11px)] h-8"></div>
-                    <span className="text-[10px] text-black font-mono font-black mt-1">{activeUser.memberId}</span>
+                    <span className="text-[10px] text-black font-mono font-black mt-1">{redeemUser().memberId}</span>
                   </div>
                 </div>
 
