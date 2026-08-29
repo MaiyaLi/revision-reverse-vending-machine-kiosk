@@ -604,6 +604,15 @@ export default function App() {
     co2: '0.000'
   });
 
+  const bankLogos: Record<string, string> = {
+    'GCash': 'https://logo.clearbit.com/gcash.com',
+    'Maya': 'https://logo.clearbit.com/maya.ph',
+    'BPI': 'https://logo.clearbit.com/bpi.com.ph',
+    'BDO': 'https://logo.clearbit.com/bdo.com.ph',
+    'UnionBank': 'https://logo.clearbit.com/unionbankph.com',
+    'Landbank': 'https://logo.clearbit.com/landbank.com'
+  };
+
   const redeemUser = () => activeUser || {
     walletBalance: 0,
     ecoPoints: 0,
@@ -1982,7 +1991,19 @@ export default function App() {
                     onClick={() => setSelectedBank(bank)}
                     className={`w-80 h-80 md:w-96 md:h-96 rounded-3xl border text-center transition-all flex flex-col items-center justify-center gap-6 ${selectedBank === bank ? 'bg-sky-500/10 border-sky-500 text-sky-600 dark:text-white shadow-lg font-black scale-105' : isLight ? 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100' : 'bg-slate-950 text-slate-400 border-slate-850 hover:border-slate-750'}`}
                   >
-                    <span className="text-8xl">🏦</span>
+                    <img 
+                      src={bankLogos[bank]} 
+                      alt={`${bank} logo`}
+                      className="w-24 h-24 object-contain rounded-xl"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                        const fallback = document.createElement('span');
+                        fallback.className = 'text-6xl';
+                        fallback.textContent = '🏦';
+                        target.parentElement?.insertBefore(fallback, target);
+                      }}
+                    />
                     <span className="font-black text-2xl md:text-3xl">{bank}</span>
                   </button>
                 ))}
@@ -2022,6 +2043,19 @@ export default function App() {
 
               {/* OUTWARD QR DIGITAL CANVAS */}
               <div className={`bg-white p-6 rounded-[32px] inline-block shadow-inner mx-auto border-4 ${isLight ? 'border-sky-500' : 'border-emerald-500'}`}>
+                {selectedBank && (
+                  <div className="flex justify-center mb-4">
+                    <img 
+                      src={bankLogos[selectedBank]} 
+                      alt={`${selectedBank} logo`}
+                      className="h-12 object-contain"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                      }}
+                    />
+                  </div>
+                )}
                 {qrCodeDataUrl ? (
                   <img src={qrCodeDataUrl} alt="QRPh Payout code" className="w-[260px] h-[260px] mx-auto block rounded-2xl" />
                 ) : (
