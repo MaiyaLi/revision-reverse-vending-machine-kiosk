@@ -14,8 +14,8 @@ export class ReceiptService {
 
     const receipt = await db.queryOne(
       `INSERT INTO receipts (
-        transactionId, sessionId, userId, materialsDeposited,
-        totalWeightKg, totalReward, payoutMethod, payoutStatus
+        "transactionId", "sessionId", "userId", "materialsDeposited",
+        "totalWeightKg", "totalReward", "payoutMethod", "payoutStatus"
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       RETURNING *`,
       [
@@ -35,7 +35,7 @@ export class ReceiptService {
 
   async getReceipt(transactionId: string): Promise<any> {
     return await db.queryOne(
-      `SELECT * FROM receipts WHERE transactionId = $1`,
+      `SELECT * FROM receipts WHERE "transactionId" = $1`,
       [transactionId]
     );
   }
@@ -43,8 +43,8 @@ export class ReceiptService {
   async printReceipt(transactionId: string): Promise<any> {
     const receipt = await db.queryOne(
       `UPDATE receipts
-       SET printedAt = NOW(), printedCount = printedCount + 1
-       WHERE transactionId = $1
+       SET "printedAt" = NOW(), "printedCount" = "printedCount" + 1
+       WHERE "transactionId" = $1
        RETURNING *`,
       [transactionId]
     );
@@ -55,7 +55,7 @@ export class ReceiptService {
 
   async sendViaSMS(transactionId: string, phoneNumber: string): Promise<any> {
     const receipt = await db.queryOne(
-      `SELECT * FROM receipts WHERE transactionId = $1`,
+      `SELECT * FROM receipts WHERE "transactionId" = $1`,
       [transactionId]
     );
 
@@ -66,7 +66,7 @@ export class ReceiptService {
     console.log('SMS receipt queued:', transactionId, phoneNumber);
 
     await db.query(
-      `UPDATE receipts SET smsSentAt = NOW() WHERE transactionId = $1`,
+      `UPDATE receipts SET "smsSentAt" = NOW() WHERE "transactionId" = $1`,
       [transactionId]
     );
 
@@ -75,7 +75,7 @@ export class ReceiptService {
 
   async sendViaEmail(transactionId: string, emailAddress: string): Promise<any> {
     const receipt = await db.queryOne(
-      `SELECT * FROM receipts WHERE transactionId = $1`,
+      `SELECT * FROM receipts WHERE "transactionId" = $1`,
       [transactionId]
     );
 
@@ -86,7 +86,7 @@ export class ReceiptService {
     console.log('Email receipt queued:', transactionId, emailAddress);
 
     await db.query(
-      `UPDATE receipts SET emailSentAt = NOW() WHERE transactionId = $1`,
+      `UPDATE receipts SET "emailSentAt" = NOW() WHERE "transactionId" = $1`,
       [transactionId]
     );
 
@@ -95,7 +95,7 @@ export class ReceiptService {
 
   async getUserReceipts(userId: string, limit: number = 10): Promise<any[]> {
     return await db.query(
-      `SELECT * FROM receipts WHERE userId = $1 ORDER BY createdAt DESC LIMIT $2`,
+      `SELECT * FROM receipts WHERE "userId" = $1 ORDER BY createdAt DESC LIMIT $2`,
       [userId, limit]
     );
   }

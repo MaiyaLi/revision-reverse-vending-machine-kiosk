@@ -25,8 +25,8 @@ export class PayoutService {
     try {
       const payoutTx = await db.queryOne(
         `INSERT INTO payout_transactions (
-          externalId, sessionId, userId, amount, channel,
-          accountNumber, accountName, status
+          "externalId", "sessionId", "userId", amount, channel,
+          "accountNumber", "accountName", status
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'PENDING')
         RETURNING *`,
         [
@@ -55,8 +55,8 @@ export class PayoutService {
 
       const updated = await db.queryOne(
         `UPDATE payout_transactions
-         SET xenditId = $2, status = $3
-         WHERE externalId = $1
+         SET "xenditId" = $2, status = $3
+         WHERE "externalId" = $1
          RETURNING *`,
         [
           externalId,
@@ -69,8 +69,8 @@ export class PayoutService {
     } catch (error: any) {
       await db.queryOne(
         `UPDATE payout_transactions
-         SET status = 'FAILED', failureReason = $2
-         WHERE externalId = $1
+         SET status = 'FAILED', "failureReason" = $2
+         WHERE "externalId" = $1
          RETURNING *`,
         [externalId, error.message]
       );
@@ -92,7 +92,7 @@ export class PayoutService {
     try {
       const payoutTx = await db.queryOne(
         `INSERT INTO payout_transactions (
-          externalId, sessionId, userId, amount, channel, status
+          "externalId", "sessionId", "userId", amount, channel, status
         ) VALUES ($1, $2, $3, $4, 'PAYOUT_LINK', 'PENDING')
         RETURNING *`,
         [externalId, params.sessionId, params.userId, params.amount]
@@ -112,8 +112,8 @@ export class PayoutService {
 
       const updated = await db.queryOne(
         `UPDATE payout_transactions
-         SET xenditId = $2, payoutUrl = $3
-         WHERE externalId = $1
+         SET "xenditId" = $2, "payoutUrl" = $3
+         WHERE "externalId" = $1
          RETURNING *`,
         [externalId, xenditResponse.id, xenditResponse.payout_url]
       );
@@ -122,8 +122,8 @@ export class PayoutService {
     } catch (error: any) {
       await db.queryOne(
         `UPDATE payout_transactions
-         SET status = 'FAILED', failureReason = $2
-         WHERE externalId = $1
+         SET status = 'FAILED', "failureReason" = $2
+         WHERE "externalId" = $1
          RETURNING *`,
         [externalId, error.message]
       );
@@ -133,7 +133,7 @@ export class PayoutService {
 
   async checkPayoutStatus(externalId: string): Promise<any> {
     const payout = await db.queryOne(
-      `SELECT * FROM payout_transactions WHERE externalId = $1`,
+      `SELECT * FROM payout_transactions WHERE "externalId" = $1`,
       [externalId]
     );
 
@@ -156,21 +156,21 @@ export class PayoutService {
       if (disbursement.status === 'COMPLETED') {
         await db.query(
           `UPDATE payout_transactions
-           SET status = 'COMPLETED', completedAt = NOW()
-           WHERE externalId = $1`,
+           SET status = 'COMPLETED', "completedAt" = NOW()
+           WHERE "externalId" = $1`,
           [externalId]
         );
       } else if (disbursement.status === 'FAILED') {
         await db.query(
           `UPDATE payout_transactions
-           SET status = 'FAILED', failureCode = $2, failureReason = $3
-           WHERE externalId = $1`,
+           SET status = 'FAILED', "failureCode" = $2, "failureReason" = $3
+           WHERE "externalId" = $1`,
           [externalId, disbursement.failure_code, disbursement.failure_reason]
         );
       }
 
       return await db.queryOne(
-        `SELECT * FROM payout_transactions WHERE externalId = $1`,
+        `SELECT * FROM payout_transactions WHERE "externalId" = $1`,
         [externalId]
       );
     } catch (error) {
@@ -188,7 +188,7 @@ export class PayoutService {
     }
 
     const payout = await db.queryOne(
-      `SELECT * FROM payout_transactions WHERE externalId = $1`,
+      `SELECT * FROM payout_transactions WHERE "externalId" = $1`,
       [externalId]
     );
 
@@ -200,8 +200,8 @@ export class PayoutService {
     const newStatus = status === 'COMPLETED' ? 'COMPLETED' : 'FAILED';
     await db.query(
       `UPDATE payout_transactions
-       SET status = $2, completedAt = NOW(), failureCode = $3
-       WHERE externalId = $1`,
+       SET status = $2, "completedAt" = NOW(), "failureCode" = $3
+       WHERE "externalId" = $1`,
       [externalId, newStatus, event.failure_code || null]
     );
 
@@ -217,7 +217,7 @@ export class PayoutService {
 
     const payout = await db.queryOne(
       `INSERT INTO payout_transactions (
-        externalId, sessionId, userId, amount, channel, status
+        "externalId", "sessionId", "userId", amount, channel, status
       ) VALUES ($1, $2, $3, $4, 'CASH', 'COMPLETED')
       RETURNING *`,
       [externalId, params.sessionId, params.userId, params.amount]
@@ -226,7 +226,7 @@ export class PayoutService {
     if (params.userId) {
       await db.query(
         `INSERT INTO transaction_history (
-          userId, payoutId, type, amount, details
+          "userId", "payoutId", type, amount, details
         ) VALUES ($1, $2, 'REDEMPTION', $3, $4)`,
         [params.userId, payout.id, -params.amount, `Cash dispensed - ${externalId}`]
       );

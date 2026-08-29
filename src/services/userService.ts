@@ -1,10 +1,6 @@
 import * as bcrypt from 'bcrypt';
 import { db } from './database';
 
-// ============================================
-// TYPES & INTERFACES
-// ============================================
-
 export interface UserProfile {
   id: string;
   memberId: string;
@@ -47,19 +43,12 @@ export interface WalletUpdateResult {
   amountChanged: number;
 }
 
-// ============================================
-// USER SERVICE CLASS
-// ============================================
-
 export class UserService {
-  /**
-   * Find user by memberId, phoneNumber, or email
-   */
   async findUserByCredential(credential: string): Promise<any | null> {
     try {
       const query = `
         SELECT * FROM users
-        WHERE memberId = $1 OR phoneNumber = $1 OR emailAddress = $1
+        WHERE "memberId" = $1 OR "phoneNumber" = $1 OR "emailAddress" = $1
         LIMIT 1
       `;
       const result = await db.queryOne(query, [credential]);
@@ -70,41 +59,31 @@ export class UserService {
     }
   }
 
-  /**
-   * Register a new user (alias for createUser used by server.ts)
-   */
   async createUser(input: any): Promise<UserProfile> {
     return this.registerUser(input);
   }
 
-  /**
-   * Register a new user
-   */
   async registerUser(input: UserRegistrationInput): Promise<UserProfile> {
     try {
       this.validateUserInput(input);
 
-      // Check if user already exists
       const existingUser = await this.findUserByCredential(input.memberId);
       if (existingUser) {
         throw new Error('User already exists with this member ID');
       }
 
-      // Generate qrCodeId
       const qrCodeId = `QR-${input.memberId}`;
 
-      // Hash PIN if provided
       let pinCodeHash: string | null = null;
       if (input.pinCode) {
         pinCodeHash = await this.hashPin(input.pinCode);
       }
 
-      // Create user
       const query = `
         INSERT INTO users (
-          memberId, qrCodeId, fullName, phoneNumber, emailAddress, pinCodeHash,
-          walletBalance, totalLifetimeEarnings, ecoPoints, co2ReducedKg,
-          age, barangay, profilePhotoUrl
+          "memberId", "qrCodeId", "fullName", "phoneNumber", "emailAddress", "pinCodeHash",
+          "walletBalance", "totalLifetimeEarnings", "ecoPoints", "co2ReducedKg",
+          age, barangay, "profilePhotoUrl"
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
         RETURNING *
       `;
@@ -116,10 +95,10 @@ export class UserService {
         input.phoneNumber || null,
         input.emailAddress || null,
         pinCodeHash,
-        0.0, // wallet_balance
-        0.0, // total_lifetime_earnings
-        0,   // eco_points
-        0.0, // co2_reduction_kg
+        0.0,
+        0.0,
+        0,
+        0.0,
         input.age || null,
         input.barangay || null,
         input.profilePhotoUrl || null
@@ -132,9 +111,6 @@ export class UserService {
     }
   }
 
-  /**
-   * Login user with credential and PIN
-   */
   async loginUser(credential: string, pinCode: string): Promise<UserProfile | null> {
     try {
       const user = await this.findUserByCredential(credential);
@@ -151,7 +127,7 @@ export class UserService {
         return null;
       }
 
-      await db.query(`UPDATE users SET lastLoginAt = NOW() WHERE id = $1`, [user.id]);
+      await db.query(`UPDATE users SET "lastLoginAt" = NOW() WHERE id = $1`, [user.id]);
 
       return this.formatUserProfile(user);
     } catch (error) {
@@ -160,9 +136,6 @@ export class UserService {
     }
   }
 
-  /**
-   * Get user by ID (alias used by server.ts)
-   */
   async getUserById(userId: string): Promise<UserProfile | null> {
     try {
       const user = await db.queryOne(`SELECT * FROM users WHERE id = $1`, [userId]);
@@ -174,9 +147,6 @@ export class UserService {
     }
   }
 
-  /**
-   * Verify user PIN code
-   */
   async verifyPin(userId: string, pinCode: string): Promise<boolean> {
     try {
       const query = `SELECT * FROM users WHERE id = $1`;
@@ -189,7 +159,7 @@ export class UserService {
       const isValid = await bcrypt.compare(pinCode, user.pinCodeHash);
 
       if (isValid) {
-        const updateQuery = `UPDATE users SET lastLoginAt = NOW() WHERE id = $1`;
+        const updateQuery = `UPDATE users SET "lastLoginAt" = NOW() WHERE id = $1`;
         await db.query(updateQuery, [userId]);
       }
 
@@ -200,9 +170,6 @@ export class UserService {
     }
   }
 
-  /**
-   * Get user profile
-   */
   async getUserProfile(userId: string): Promise<UserProfile> {
     try {
       const query = `SELECT * FROM users WHERE id = $1`;
@@ -219,9 +186,6 @@ export class UserService {
     }
   }
 
-  /**
-   * Update wallet balance atomically
-   */
   async updateWalletBalance(
     userId: string,
     amount: number,
@@ -229,8 +193,7 @@ export class UserService {
   ): Promise<WalletUpdateResult> {
     try {
       return await db.transaction(async (client) => {
-        // Get current balance
-        const userQuery = `SELECT walletBalance, totalLifetimeEarnings FROM users WHERE id = $1`;
+        const userQuery = `SELECT "walletBalance", "totalLifetimeEarnings" FROM users WHERE id = $1`;
         const result = await client.query(userQuery, [userId]);
 
         if (result.rows.length === 0) {
@@ -240,16 +203,14 @@ export class UserService {
         const previousBalance = parseFloat(result.rows[0].walletBalance);
         const newBalance = previousBalance + amount;
 
-        // Validate balance
         if (newBalance < 0) {
           throw new Error('Insufficient wallet balance');
         }
 
-        // Update wallet
         const updateQuery = `
           UPDATE users
-          SET walletBalance = $2,
-              totalLifetimeEarnings = $3
+          SET "walletBalance" = $2,
+              "totalLifetimeEarnings" = $3
           WHERE id = $1
         `;
 
@@ -271,9 +232,6 @@ export class UserService {
     }
   }
 
-  /**
-   * Update eco metrics
-   */
   async updateEcoMetrics(
     userId: string,
     ecoPoints: number,
@@ -282,8 +240,8 @@ export class UserService {
     try {
       const query = `
         UPDATE users
-        SET ecoPoints = ecoPoints + $2,
-            co2ReducedKg = co2ReducedKg + $3
+        SET "ecoPoints" = "ecoPoints" + $2,
+            "co2ReducedKg" = "co2ReducedKg" + $3
         WHERE id = $1
         RETURNING *
       `;
@@ -296,9 +254,6 @@ export class UserService {
     }
   }
 
-  /**
-   * Get transaction history
-   */
   async getTransactionHistory(
     userId: string,
     page: number = 1,
@@ -309,7 +264,7 @@ export class UserService {
 
       const query = `
         SELECT * FROM transaction_history
-        WHERE userId = $1
+        WHERE "userId" = $1
         ORDER BY createdAt DESC
         LIMIT $2 OFFSET $3
       `;
@@ -322,16 +277,13 @@ export class UserService {
     }
   }
 
-  /**
-   * Update PIN code
-   */
   async updatePinCode(userId: string, newPinCode: string): Promise<void> {
     try {
       this.validatePinCode(newPinCode);
 
       const pinCodeHash = await this.hashPin(newPinCode);
 
-      const query = `UPDATE users SET pinCodeHash = $2 WHERE id = $1`;
+      const query = `UPDATE users SET "pinCodeHash" = $2 WHERE id = $1`;
       await db.query(query, [userId, pinCodeHash]);
     } catch (error) {
       console.error('Error updating PIN code:', error);
@@ -339,12 +291,9 @@ export class UserService {
     }
   }
 
-  /**
-   * Deactivate user account
-   */
   async deactivateUser(userId: string): Promise<void> {
     try {
-      const query = `UPDATE users SET isActive = false WHERE id = $1`;
+      const query = `UPDATE users SET "isActive" = false WHERE id = $1`;
       await db.query(query, [userId]);
     } catch (error) {
       console.error('Error deactivating user:', error);
@@ -352,12 +301,9 @@ export class UserService {
     }
   }
 
-  /**
-   * Reactivate user account
-   */
   async reactivateUser(userId: string): Promise<void> {
     try {
-      const query = `UPDATE users SET isActive = true WHERE id = $1`;
+      const query = `UPDATE users SET "isActive" = true WHERE id = $1`;
       await db.query(query, [userId]);
     } catch (error) {
       console.error('Error reactivating user:', error);
@@ -365,9 +311,6 @@ export class UserService {
     }
   }
 
-  /**
-   * Get user with stats (used by userRoutes.ts)
-   */
   async getUserWithStats(userId: string): Promise<any> {
     try {
       const user = await db.queryOne(`SELECT * FROM users WHERE id = $1`, [userId]);
@@ -381,9 +324,6 @@ export class UserService {
     }
   }
 
-  /**
-   * Get user stats (used by userRoutes.ts)
-   */
   async getUserStats(userId: string): Promise<any> {
     try {
       const query = `
@@ -392,12 +332,12 @@ export class UserService {
           COUNT(di.id) as total_items,
           SUM(CASE WHEN di.status = 'ACCEPTED' THEN 1 ELSE 0 END) as accepted_items,
           SUM(CASE WHEN di.status = 'REJECTED' THEN 1 ELSE 0 END) as rejected_items,
-          SUM(CASE WHEN di.status = 'ACCEPTED' THEN di.weightGrams ELSE 0 END) as total_weight_grams,
-          SUM(CASE WHEN di.status = 'ACCEPTED' THEN di.payoutAmount ELSE 0 END) as total_payout,
-          SUM(CASE WHEN di.status = 'ACCEPTED' THEN di.ecoPoints ELSE 0 END) as total_eco_points
+          SUM(CASE WHEN di.status = 'ACCEPTED' THEN di."weightGrams" ELSE 0 END) as total_weight_grams,
+          SUM(CASE WHEN di.status = 'ACCEPTED' THEN di."payoutAmount" ELSE 0 END) as total_payout,
+          SUM(CASE WHEN di.status = 'ACCEPTED' THEN di."ecoPoints" ELSE 0 END) as total_eco_points
         FROM users u
-        LEFT JOIN deposit_sessions ds ON ds.userId = u.id
-        LEFT JOIN deposited_items di ON di.sessionId = ds.id
+        LEFT JOIN deposit_sessions ds ON ds."userId" = u.id
+        LEFT JOIN deposited_items di ON di."sessionId" = ds.id
         WHERE u.id = $1
         GROUP BY u.id
       `;
@@ -409,14 +349,11 @@ export class UserService {
     }
   }
 
-  /**
-   * Get deposit history (used by userRoutes.ts)
-   */
   async getDepositHistory(userId: string, limit: number = 20): Promise<any[]> {
     try {
       const query = `
         SELECT * FROM deposit_sessions
-        WHERE userId = $1
+        WHERE "userId" = $1
         ORDER BY createdAt DESC
         LIMIT $2
       `;
@@ -427,9 +364,6 @@ export class UserService {
     }
   }
 
-  /**
-   * Update user profile
-   */
   async updateUserProfile(userId: string, updates: Partial<UserProfile>): Promise<UserProfile> {
     try {
       const fields: string[] = [];
@@ -437,15 +371,15 @@ export class UserService {
       let paramIndex = 1;
 
       if (updates.fullName !== undefined) {
-        fields.push(`fullName = $${paramIndex++}`);
+        fields.push(`"fullName" = $${paramIndex++}`);
         values.push(updates.fullName);
       }
       if (updates.phoneNumber !== undefined) {
-        fields.push(`phoneNumber = $${paramIndex++}`);
+        fields.push(`"phoneNumber" = $${paramIndex++}`);
         values.push(updates.phoneNumber);
       }
       if (updates.email !== undefined) {
-        fields.push(`emailAddress = $${paramIndex++}`);
+        fields.push(`"emailAddress" = $${paramIndex++}`);
         values.push(updates.email);
       }
       if (updates.age !== undefined) {
@@ -457,7 +391,7 @@ export class UserService {
         values.push(updates.barangay);
       }
       if (updates.profilePhotoUrl !== undefined) {
-        fields.push(`profilePhotoUrl = $${paramIndex++}`);
+        fields.push(`"profilePhotoUrl" = $${paramIndex++}`);
         values.push(updates.profilePhotoUrl);
       }
 
@@ -480,15 +414,12 @@ export class UserService {
     }
   }
 
-  /**
-   * List all users (admin)
-   */
   async listAllUsers(limit: number = 100, offset: number = 0): Promise<any[]> {
     try {
       const query = `
-        SELECT id, memberId, qrCodeId, fullName, phoneNumber, emailAddress,
-               walletBalance, totalLifetimeEarnings, ecoPoints, co2ReducedKg,
-               isActive, createdAt, updatedAt
+        SELECT id, "memberId", "qrCodeId", "fullName", "phoneNumber", "emailAddress",
+               "walletBalance", "totalLifetimeEarnings", "ecoPoints", "co2ReducedKg",
+               "isActive", createdAt, updatedAt
         FROM users
         ORDER BY createdAt DESC
         LIMIT $1 OFFSET $2
@@ -500,9 +431,6 @@ export class UserService {
     }
   }
 
-  /**
-   * Get total user count (admin)
-   */
   async getUserCount(): Promise<number> {
     try {
       const result = await db.queryOne(`SELECT COUNT(*) as count FROM users`);
@@ -513,20 +441,17 @@ export class UserService {
     }
   }
 
-  /**
-   * Get total stats across all users (admin)
-   */
   async getGlobalStats(): Promise<any> {
     try {
       const query = `
         SELECT
           COUNT(*) as total_users,
-          SUM(walletBalance) as total_wallet_balance,
-          SUM(totalLifetimeEarnings) as total_lifetime_earnings,
-          SUM(ecoPoints) as total_eco_points,
-          SUM(co2ReducedKg) as total_co2_reduction_kg
+          SUM("walletBalance") as total_wallet_balance,
+          SUM("totalLifetimeEarnings") as total_lifetime_earnings,
+          SUM("ecoPoints") as total_eco_points,
+          SUM("co2ReducedKg") as total_co2_reduction_kg
         FROM users
-        WHERE isActive = true
+        WHERE "isActive" = true
       `;
       return await db.queryOne(query);
     } catch (error) {
@@ -534,10 +459,6 @@ export class UserService {
       throw new Error(`Failed to get global stats: ${error}`);
     }
   }
-
-  // ============================================
-  // PRIVATE HELPER METHODS
-  // ============================================
 
   private async hashPin(pinCode: string): Promise<string> {
     const saltRounds = 10;

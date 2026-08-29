@@ -22,8 +22,7 @@ export class DepositService {
     const sessionRefId = `SES-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
     await db.query(
-      `INSERT INTO deposit_sessions (userId, sessionRefId, status)
-       VALUES ($1, $2, 'IN_PROGRESS')`,
+      `INSERT INTO deposit_sessions ("userId", "sessionRefId", status) VALUES ($1, $2, 'IN_PROGRESS')`,
       [userId, sessionRefId]
     );
 
@@ -32,7 +31,7 @@ export class DepositService {
 
   async getSession(sessionRefId: string): Promise<any> {
     return await db.queryOne(
-      `SELECT * FROM deposit_sessions WHERE sessionRefId = $1`,
+      `SELECT * FROM deposit_sessions WHERE "sessionRefId" = $1`,
       [sessionRefId]
     );
   }
@@ -48,13 +47,13 @@ export class DepositService {
 
     await executeQuery(
       `INSERT INTO deposited_items (
-        sessionId, itemNumber, detectedMaterial, itemName, weightGrams,
-        payoutAmount, ecoPoints, co2ReductionKg, status,
-        imageCaptureUrl, inductiveSensorReading, loadCellReadingGrams,
-        tofDistanceMm, classificationConfidence
+        "sessionId", "itemNumber", "detectedMaterial", "itemName", "weightGrams",
+        "payoutAmount", "ecoPoints", "co2ReductionKg", status,
+        "imageCaptureUrl", "inductiveSensorReading", "loadCellReadingGrams",
+        "tofDistanceMm", "classificationConfidence"
       )
       SELECT id, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14
-      FROM deposit_sessions WHERE sessionRefId = $1`,
+      FROM deposit_sessions WHERE "sessionRefId" = $1`,
       [
         sessionRefId,
         item.itemNumber,
@@ -80,7 +79,7 @@ export class DepositService {
   ): Promise<any> {
     return await db.transaction(async (client) => {
       const sessionResult = await client.query(
-        `SELECT * FROM deposit_sessions WHERE sessionRefId = $1`,
+        `SELECT * FROM deposit_sessions WHERE "sessionRefId" = $1`,
         [sessionRefId]
       );
 
@@ -95,11 +94,11 @@ export class DepositService {
           COUNT(*) as total_items,
           SUM(CASE WHEN status = 'ACCEPTED' THEN 1 ELSE 0 END) as accepted_items,
           SUM(CASE WHEN status = 'REJECTED' THEN 1 ELSE 0 END) as rejected_items,
-          SUM(CASE WHEN status = 'ACCEPTED' THEN weightGrams ELSE 0 END) as total_weight,
-          SUM(CASE WHEN status = 'ACCEPTED' THEN payoutAmount ELSE 0 END) as total_payout,
-          SUM(CASE WHEN status = 'ACCEPTED' THEN ecoPoints ELSE 0 END) as total_eco_points,
-          SUM(CASE WHEN status = 'ACCEPTED' THEN co2ReductionKg ELSE 0 END) as total_co2
-        FROM deposited_items WHERE sessionId = $1`,
+          SUM(CASE WHEN status = 'ACCEPTED' THEN "weightGrams" ELSE 0 END) as total_weight,
+          SUM(CASE WHEN status = 'ACCEPTED' THEN "payoutAmount" ELSE 0 END) as total_payout,
+          SUM(CASE WHEN status = 'ACCEPTED' THEN "ecoPoints" ELSE 0 END) as total_eco_points,
+          SUM(CASE WHEN status = 'ACCEPTED' THEN "co2ReductionKg" ELSE 0 END) as total_co2
+        FROM deposited_items WHERE "sessionId" = $1`,
         [sessionId]
       );
 
@@ -108,14 +107,14 @@ export class DepositService {
       const updatedResult = await client.query(
         `UPDATE deposit_sessions
          SET status = 'COMPLETED',
-             completedAt = NOW(),
-             totalItemsCount = $2,
-             acceptedItemsCount = $3,
-             rejectedItemsCount = $4,
-             totalWeightGrams = $5,
-             totalPayout = $6,
-             totalEcoPoints = $7,
-             totalCo2ReductionKg = $8
+             "completedAt" = NOW(),
+             "totalItemsCount" = $2,
+             "acceptedItemsCount" = $3,
+             "rejectedItemsCount" = $4,
+             "totalWeightGrams" = $5,
+             "totalPayout" = $6,
+             "totalEcoPoints" = $7,
+             "totalCo2ReductionKg" = $8
          WHERE id = $1
          RETURNING *`,
         [
@@ -137,16 +136,16 @@ export class DepositService {
         if (payout > 0) {
           await client.query(
             `UPDATE users
-             SET walletBalance = walletBalance + $2,
-                 totalLifetimeEarnings = totalLifetimeEarnings + $2,
-                 ecoPoints = ecoPoints + $3
+             SET "walletBalance" = "walletBalance" + $2,
+                 "totalLifetimeEarnings" = "totalLifetimeEarnings" + $2,
+                 "ecoPoints" = "ecoPoints" + $3
              WHERE id = $1`,
             [userId, payout, ecoPoints]
           );
 
           await client.query(
             `INSERT INTO transaction_history (
-              userId, type, amount, details, ecoPointsGained
+              "userId", type, amount, details, "ecoPointsGained"
             ) VALUES ($1, 'DEPOSIT', $2, $3, $4)`,
             [userId, payout, `Deposit from session ${sessionRefId}`, ecoPoints]
           );
@@ -160,9 +159,9 @@ export class DepositService {
   async getSessionItems(sessionRefId: string): Promise<DepositItem[]> {
     return await db.query(
       `SELECT di.* FROM deposited_items di
-       JOIN deposit_sessions ds ON di.sessionId = ds.id
-       WHERE ds.sessionRefId = $1
-       ORDER BY di.itemNumber ASC`,
+       JOIN deposit_sessions ds ON di."sessionId" = ds.id
+       WHERE ds."sessionRefId" = $1
+       ORDER BY di."itemNumber" ASC`,
       [sessionRefId]
     );
   }
@@ -170,8 +169,8 @@ export class DepositService {
   async abandonSession(sessionRefId: string): Promise<void> {
     await db.query(
       `UPDATE deposit_sessions
-       SET status = 'ABANDONED', completedAt = NOW()
-       WHERE sessionRefId = $1`,
+       SET status = 'ABANDONED', "completedAt" = NOW()
+       WHERE "sessionRefId" = $1`,
       [sessionRefId]
     );
   }
