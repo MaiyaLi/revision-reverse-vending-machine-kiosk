@@ -484,14 +484,14 @@ export default function App() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             sessionRefId: currentSessionRefId,
-            item: {
-              item_number: idx + 1,
-              detected_material: item.detectedMaterial,
-              item_name: item.itemName,
-              weight_grams: item.weightGrams,
-              payout_amount: item.payoutAmount,
-              eco_points: item.ecoPoints,
-              co2_reduction_kg: item.co2ReductionKg,
+              item: {
+              itemNumber: idx + 1,
+              detectedMaterial: item.detectedMaterial,
+              itemName: item.itemName,
+              weightGrams: item.weightGrams,
+              payoutAmount: item.payoutAmount,
+              ecoPoints: item.ecoPoints,
+              co2ReductionKg: item.co2ReductionKg,
               status: item.status === 'accepted' ? 'ACCEPTED' : 'REJECTED'
             }
           })

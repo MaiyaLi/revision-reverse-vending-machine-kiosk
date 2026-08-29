@@ -18,17 +18,15 @@ export class PayoutService {
 
     const externalId = `RVM-PAY-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-    // Validate inputs
     this.validatePhoneNumber(params.accountNumber, params.channel);
     this.validateAccountName(params.accountName);
     this.validateAmount(params.amount, params.channel);
 
     try {
-      // Create transaction record FIRST (before calling Xendit)
       const payoutTx = await db.queryOne(
         `INSERT INTO payout_transactions (
-          external_id, session_id, user_id, amount, channel,
-          account_number, account_name, status
+          externalId, sessionId, userId, amount, channel,
+          accountNumber, accountName, status
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'PENDING')
         RETURNING *`,
         [
@@ -42,13 +40,12 @@ export class PayoutService {
         ]
       );
 
-      // Call Xendit API
       const xenditResponse = await this.callXenditAPI(
         '/disbursements',
         'POST',
         {
           external_id: externalId,
-          amount: Math.round(params.amount * 100) / 100, // Ensure 2 decimals
+          amount: Math.round(params.amount * 100) / 100,
           bank_code: params.channel,
           account_holder_name: params.accountName,
           account_number: params.accountNumber,
@@ -56,11 +53,10 @@ export class PayoutService {
         }
       );
 
-      // Update with Xendit response
       const updated = await db.queryOne(
         `UPDATE payout_transactions
-         SET xendit_id = $2, status = $3
-         WHERE external_id = $1
+         SET xenditId = $2, status = $3
+         WHERE externalId = $1
          RETURNING *`,
         [
           externalId,
@@ -71,11 +67,10 @@ export class PayoutService {
 
       return updated;
     } catch (error: any) {
-      // Mark as failed
       await db.queryOne(
         `UPDATE payout_transactions
-         SET status = 'FAILED', failure_reason = $2
-         WHERE external_id = $1
+         SET status = 'FAILED', failureReason = $2
+         WHERE externalId = $1
          RETURNING *`,
         [externalId, error.message]
       );
@@ -97,7 +92,7 @@ export class PayoutService {
     try {
       const payoutTx = await db.queryOne(
         `INSERT INTO payout_transactions (
-          external_id, session_id, user_id, amount, channel, status
+          externalId, sessionId, userId, amount, channel, status
         ) VALUES ($1, $2, $3, $4, 'PAYOUT_LINK', 'PENDING')
         RETURNING *`,
         [externalId, params.sessionId, params.userId, params.amount]
@@ -117,8 +112,8 @@ export class PayoutService {
 
       const updated = await db.queryOne(
         `UPDATE payout_transactions
-         SET xendit_id = $2, payout_url = $3
-         WHERE external_id = $1
+         SET xenditId = $2, payoutUrl = $3
+         WHERE externalId = $1
          RETURNING *`,
         [externalId, xenditResponse.id, xenditResponse.payout_url]
       );
@@ -127,8 +122,8 @@ export class PayoutService {
     } catch (error: any) {
       await db.queryOne(
         `UPDATE payout_transactions
-         SET status = 'FAILED', failure_reason = $2
-         WHERE external_id = $1
+         SET status = 'FAILED', failureReason = $2
+         WHERE externalId = $1
          RETURNING *`,
         [externalId, error.message]
       );
@@ -138,7 +133,7 @@ export class PayoutService {
 
   async checkPayoutStatus(externalId: string): Promise<any> {
     const payout = await db.queryOne(
-      `SELECT * FROM payout_transactions WHERE external_id = $1`,
+      `SELECT * FROM payout_transactions WHERE externalId = $1`,
       [externalId]
     );
 
@@ -146,12 +141,10 @@ export class PayoutService {
       throw new Error('Payout not found');
     }
 
-    // If already completed/failed, return cached status
     if (payout.status !== 'PENDING') {
       return payout;
     }
 
-    // Check with Xendit
     try {
       const xenditStatus = await this.callXenditAPI(
         `/disbursements?external_id=${externalId}`,
@@ -163,26 +156,26 @@ export class PayoutService {
       if (disbursement.status === 'COMPLETED') {
         await db.query(
           `UPDATE payout_transactions
-           SET status = 'COMPLETED', completed_at = NOW()
-           WHERE external_id = $1`,
+           SET status = 'COMPLETED', completedAt = NOW()
+           WHERE externalId = $1`,
           [externalId]
         );
       } else if (disbursement.status === 'FAILED') {
         await db.query(
           `UPDATE payout_transactions
-           SET status = 'FAILED', failure_code = $2, failure_reason = $3
-           WHERE external_id = $1`,
+           SET status = 'FAILED', failureCode = $2, failureReason = $3
+           WHERE externalId = $1`,
           [externalId, disbursement.failure_code, disbursement.failure_reason]
         );
       }
 
       return await db.queryOne(
-        `SELECT * FROM payout_transactions WHERE external_id = $1`,
+        `SELECT * FROM payout_transactions WHERE externalId = $1`,
         [externalId]
       );
     } catch (error) {
       console.error('Failed to check Xendit status:', error);
-      return payout; // Return cached status on error
+      return payout;
     }
   }
 
@@ -195,7 +188,7 @@ export class PayoutService {
     }
 
     const payout = await db.queryOne(
-      `SELECT * FROM payout_transactions WHERE external_id = $1`,
+      `SELECT * FROM payout_transactions WHERE externalId = $1`,
       [externalId]
     );
 
@@ -204,12 +197,11 @@ export class PayoutService {
       return;
     }
 
-    // Update status
     const newStatus = status === 'COMPLETED' ? 'COMPLETED' : 'FAILED';
     await db.query(
       `UPDATE payout_transactions
-       SET status = $2, completed_at = NOW(), failure_code = $3
-       WHERE external_id = $1`,
+       SET status = $2, completedAt = NOW(), failureCode = $3
+       WHERE externalId = $1`,
       [externalId, newStatus, event.failure_code || null]
     );
 
@@ -225,17 +217,16 @@ export class PayoutService {
 
     const payout = await db.queryOne(
       `INSERT INTO payout_transactions (
-        external_id, session_id, user_id, amount, channel, status
+        externalId, sessionId, userId, amount, channel, status
       ) VALUES ($1, $2, $3, $4, 'CASH', 'COMPLETED')
       RETURNING *`,
       [externalId, params.sessionId, params.userId, params.amount]
     );
 
-    // Log transaction for cash dispensing
     if (params.userId) {
       await db.query(
         `INSERT INTO transaction_history (
-          user_id, payout_id, type, amount, details
+          userId, payoutId, type, amount, details
         ) VALUES ($1, $2, 'REDEMPTION', $3, $4)`,
         [params.userId, payout.id, -params.amount, `Cash dispensed - ${externalId}`]
       );

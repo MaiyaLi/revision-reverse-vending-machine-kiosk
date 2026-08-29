@@ -59,7 +59,7 @@ export class UserService {
     try {
       const query = `
         SELECT * FROM users
-        WHERE member_id = $1 OR phone_number = $1 OR email_address = $1
+        WHERE memberId = $1 OR phoneNumber = $1 OR emailAddress = $1
         LIMIT 1
       `;
       const result = await db.queryOne(query, [credential]);
@@ -102,9 +102,9 @@ export class UserService {
       // Create user
       const query = `
         INSERT INTO users (
-          member_id, qr_code_id, full_name, phone_number, email_address, pin_code_hash,
-          wallet_balance, total_lifetime_earnings, eco_points, co2_reduction_kg,
-          age, barangay, profile_photo_url
+          memberId, qrCodeId, fullName, phoneNumber, emailAddress, pinCodeHash,
+          walletBalance, totalLifetimeEarnings, ecoPoints, co2ReducedKg,
+          age, barangay, profilePhotoUrl
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
         RETURNING *
       `;
@@ -142,17 +142,16 @@ export class UserService {
         return null;
       }
 
-      if (!user.pin_code_hash) {
+      if (!user.pinCodeHash) {
         throw new Error('User does not have a PIN set');
       }
 
-      const isValid = await bcrypt.compare(pinCode, user.pin_code_hash);
+      const isValid = await bcrypt.compare(pinCode, user.pinCodeHash);
       if (!isValid) {
         return null;
       }
 
-      // Update last login
-      await db.query(`UPDATE users SET last_login_at = NOW() WHERE id = $1`, [user.id]);
+      await db.query(`UPDATE users SET lastLoginAt = NOW() WHERE id = $1`, [user.id]);
 
       return this.formatUserProfile(user);
     } catch (error) {
@@ -183,15 +182,14 @@ export class UserService {
       const query = `SELECT * FROM users WHERE id = $1`;
       const user = await db.queryOne(query, [userId]);
 
-      if (!user || !user.pin_code_hash) {
+      if (!user || !user.pinCodeHash) {
         throw new Error('User not found or PIN not set');
       }
 
-      const isValid = await bcrypt.compare(pinCode, user.pin_code_hash);
+      const isValid = await bcrypt.compare(pinCode, user.pinCodeHash);
 
       if (isValid) {
-        // Update last login
-        const updateQuery = `UPDATE users SET last_login_at = NOW() WHERE id = $1`;
+        const updateQuery = `UPDATE users SET lastLoginAt = NOW() WHERE id = $1`;
         await db.query(updateQuery, [userId]);
       }
 
@@ -232,14 +230,14 @@ export class UserService {
     try {
       return await db.transaction(async (client) => {
         // Get current balance
-        const userQuery = `SELECT wallet_balance, total_lifetime_earnings FROM users WHERE id = $1`;
+        const userQuery = `SELECT walletBalance, totalLifetimeEarnings FROM users WHERE id = $1`;
         const result = await client.query(userQuery, [userId]);
 
         if (result.rows.length === 0) {
           throw new Error('User not found');
         }
 
-        const previousBalance = parseFloat(result.rows[0].wallet_balance);
+        const previousBalance = parseFloat(result.rows[0].walletBalance);
         const newBalance = previousBalance + amount;
 
         // Validate balance
@@ -250,14 +248,14 @@ export class UserService {
         // Update wallet
         const updateQuery = `
           UPDATE users
-          SET wallet_balance = $2,
-              total_lifetime_earnings = $3
+          SET walletBalance = $2,
+              totalLifetimeEarnings = $3
           WHERE id = $1
         `;
 
         const newEarnings = type === 'DEPOSIT'
-          ? parseFloat(result.rows[0].total_lifetime_earnings) + amount
-          : parseFloat(result.rows[0].total_lifetime_earnings);
+          ? parseFloat(result.rows[0].totalLifetimeEarnings) + amount
+          : parseFloat(result.rows[0].totalLifetimeEarnings);
 
         await client.query(updateQuery, [userId, newBalance, newEarnings]);
 
@@ -284,8 +282,8 @@ export class UserService {
     try {
       const query = `
         UPDATE users
-        SET eco_points = eco_points + $2,
-            co2_reduction_kg = co2_reduction_kg + $3
+        SET ecoPoints = ecoPoints + $2,
+            co2ReducedKg = co2ReducedKg + $3
         WHERE id = $1
         RETURNING *
       `;
@@ -311,8 +309,8 @@ export class UserService {
 
       const query = `
         SELECT * FROM transaction_history
-        WHERE user_id = $1
-        ORDER BY created_at DESC
+        WHERE userId = $1
+        ORDER BY createdAt DESC
         LIMIT $2 OFFSET $3
       `;
 
@@ -333,7 +331,7 @@ export class UserService {
 
       const pinCodeHash = await this.hashPin(newPinCode);
 
-      const query = `UPDATE users SET pin_code_hash = $2 WHERE id = $1`;
+      const query = `UPDATE users SET pinCodeHash = $2 WHERE id = $1`;
       await db.query(query, [userId, pinCodeHash]);
     } catch (error) {
       console.error('Error updating PIN code:', error);
@@ -346,7 +344,7 @@ export class UserService {
    */
   async deactivateUser(userId: string): Promise<void> {
     try {
-      const query = `UPDATE users SET is_active = false WHERE id = $1`;
+      const query = `UPDATE users SET isActive = false WHERE id = $1`;
       await db.query(query, [userId]);
     } catch (error) {
       console.error('Error deactivating user:', error);
@@ -359,7 +357,7 @@ export class UserService {
    */
   async reactivateUser(userId: string): Promise<void> {
     try {
-      const query = `UPDATE users SET is_active = true WHERE id = $1`;
+      const query = `UPDATE users SET isActive = true WHERE id = $1`;
       await db.query(query, [userId]);
     } catch (error) {
       console.error('Error reactivating user:', error);
@@ -394,12 +392,12 @@ export class UserService {
           COUNT(di.id) as total_items,
           SUM(CASE WHEN di.status = 'ACCEPTED' THEN 1 ELSE 0 END) as accepted_items,
           SUM(CASE WHEN di.status = 'REJECTED' THEN 1 ELSE 0 END) as rejected_items,
-          SUM(CASE WHEN di.status = 'ACCEPTED' THEN di.weight_grams ELSE 0 END) as total_weight_grams,
-          SUM(CASE WHEN di.status = 'ACCEPTED' THEN di.payout_amount ELSE 0 END) as total_payout,
-          SUM(CASE WHEN di.status = 'ACCEPTED' THEN di.eco_points ELSE 0 END) as total_eco_points
+          SUM(CASE WHEN di.status = 'ACCEPTED' THEN di.weightGrams ELSE 0 END) as total_weight_grams,
+          SUM(CASE WHEN di.status = 'ACCEPTED' THEN di.payoutAmount ELSE 0 END) as total_payout,
+          SUM(CASE WHEN di.status = 'ACCEPTED' THEN di.ecoPoints ELSE 0 END) as total_eco_points
         FROM users u
-        LEFT JOIN deposit_sessions ds ON ds.user_id = u.id
-        LEFT JOIN deposited_items di ON di.session_id = ds.id
+        LEFT JOIN deposit_sessions ds ON ds.userId = u.id
+        LEFT JOIN deposited_items di ON di.sessionId = ds.id
         WHERE u.id = $1
         GROUP BY u.id
       `;
@@ -418,8 +416,8 @@ export class UserService {
     try {
       const query = `
         SELECT * FROM deposit_sessions
-        WHERE user_id = $1
-        ORDER BY created_at DESC
+        WHERE userId = $1
+        ORDER BY createdAt DESC
         LIMIT $2
       `;
       return await db.query(query, [userId, limit]);
@@ -439,15 +437,15 @@ export class UserService {
       let paramIndex = 1;
 
       if (updates.fullName !== undefined) {
-        fields.push(`full_name = $${paramIndex++}`);
+        fields.push(`fullName = $${paramIndex++}`);
         values.push(updates.fullName);
       }
       if (updates.phoneNumber !== undefined) {
-        fields.push(`phone_number = $${paramIndex++}`);
+        fields.push(`phoneNumber = $${paramIndex++}`);
         values.push(updates.phoneNumber);
       }
       if (updates.email !== undefined) {
-        fields.push(`email_address = $${paramIndex++}`);
+        fields.push(`emailAddress = $${paramIndex++}`);
         values.push(updates.email);
       }
       if (updates.age !== undefined) {
@@ -459,7 +457,7 @@ export class UserService {
         values.push(updates.barangay);
       }
       if (updates.profilePhotoUrl !== undefined) {
-        fields.push(`profile_photo_url = $${paramIndex++}`);
+        fields.push(`profilePhotoUrl = $${paramIndex++}`);
         values.push(updates.profilePhotoUrl);
       }
 
@@ -488,11 +486,11 @@ export class UserService {
   async listAllUsers(limit: number = 100, offset: number = 0): Promise<any[]> {
     try {
       const query = `
-        SELECT id, member_id, qr_code_id, full_name, phone_number, email_address,
-               wallet_balance, total_lifetime_earnings, eco_points, co2_reduction_kg,
-               is_active, created_at, updated_at
+        SELECT id, memberId, qrCodeId, fullName, phoneNumber, emailAddress,
+               walletBalance, totalLifetimeEarnings, ecoPoints, co2ReducedKg,
+               isActive, createdAt, updatedAt
         FROM users
-        ORDER BY created_at DESC
+        ORDER BY createdAt DESC
         LIMIT $1 OFFSET $2
       `;
       return await db.query(query, [limit, offset]);
@@ -523,12 +521,12 @@ export class UserService {
       const query = `
         SELECT
           COUNT(*) as total_users,
-          SUM(wallet_balance) as total_wallet_balance,
-          SUM(total_lifetime_earnings) as total_lifetime_earnings,
-          SUM(eco_points) as total_eco_points,
-          SUM(co2_reduction_kg) as total_co2_reduction_kg
+          SUM(walletBalance) as total_wallet_balance,
+          SUM(totalLifetimeEarnings) as total_lifetime_earnings,
+          SUM(ecoPoints) as total_eco_points,
+          SUM(co2ReducedKg) as total_co2_reduction_kg
         FROM users
-        WHERE is_active = true
+        WHERE isActive = true
       `;
       return await db.queryOne(query);
     } catch (error) {
@@ -604,22 +602,22 @@ export class UserService {
   private formatUserProfile(user: any): UserProfile {
     return {
       id: user.id,
-      memberId: user.member_id,
-      qrCodeId: user.qr_code_id,
-      fullName: user.full_name,
-      phoneNumber: user.phone_number,
-      email: user.email_address,
+      memberId: user.memberId,
+      qrCodeId: user.qrCodeId,
+      fullName: user.fullName,
+      phoneNumber: user.phoneNumber,
+      email: user.emailAddress,
       age: user.age,
       barangay: user.barangay,
-      profilePhotoUrl: user.profile_photo_url,
-      walletBalance: parseFloat(user.wallet_balance),
-      ecoPoints: user.eco_points,
-      co2ReducedKg: parseFloat(user.co2_reduction_kg),
-      totalEarnings: parseFloat(user.total_lifetime_earnings),
-      lastLoginAt: user.last_login_at,
-      isActive: user.is_active,
-      createdAt: user.created_at,
-      updatedAt: user.updated_at
+      profilePhotoUrl: user.profilePhotoUrl,
+      walletBalance: parseFloat(user.walletBalance),
+      ecoPoints: user.ecoPoints,
+      co2ReducedKg: parseFloat(user.co2ReducedKg),
+      totalEarnings: parseFloat(user.totalLifetimeEarnings),
+      lastLoginAt: user.lastLoginAt,
+      isActive: user.isActive,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt
     };
   }
 }
