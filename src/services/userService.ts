@@ -1,6 +1,14 @@
 import * as bcrypt from 'bcrypt';
 import { db } from './database';
 
+function uuidv4(): string {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
 export interface UserProfile {
   id: string;
   memberId: string;
@@ -81,14 +89,15 @@ export class UserService {
 
       const query = `
         INSERT INTO users (
-          "memberId", "qrCodeId", "fullName", "phoneNumber", "emailAddress", "pinCodeHash",
+          id, "memberId", "qrCodeId", "fullName", "phoneNumber", "emailAddress", "pinCodeHash",
           "walletBalance", "totalLifetimeEarnings", "ecoPoints", "co2ReducedKg",
           age, barangay, "profilePhotoUrl"
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
         RETURNING *
       `;
 
       const newUser = await db.queryOne(query, [
+        uuidv4(),
         input.memberId,
         qrCodeId,
         input.fullName,

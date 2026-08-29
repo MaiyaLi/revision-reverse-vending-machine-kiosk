@@ -1,5 +1,13 @@
 import { db } from './database';
 
+function uuidv4(): string {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
 export class ReceiptService {
   async createReceipt(params: {
     sessionId: string;
@@ -14,11 +22,12 @@ export class ReceiptService {
 
     const receipt = await db.queryOne(
       `INSERT INTO receipts (
-        "transactionId", "sessionId", "userId", "materialsDeposited",
+        id, "transactionId", "sessionId", "userId", "materialsDeposited",
         "totalWeightKg", "totalReward", "payoutMethod", "payoutStatus"
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       RETURNING *`,
       [
+        uuidv4(),
         transactionId,
         params.sessionId,
         params.userId,

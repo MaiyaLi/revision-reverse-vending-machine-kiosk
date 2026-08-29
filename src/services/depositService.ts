@@ -1,6 +1,14 @@
 import { db } from './database';
 import { PoolClient } from 'pg';
 
+function uuidv4(): string {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
 export interface DepositItem {
   itemNumber: number;
   detectedMaterial: string;
@@ -22,8 +30,8 @@ export class DepositService {
     const sessionRefId = `SES-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
     await db.query(
-      `INSERT INTO deposit_sessions ("userId", "sessionRefId", status) VALUES ($1, $2, 'IN_PROGRESS')`,
-      [userId, sessionRefId]
+      `INSERT INTO deposit_sessions (id, "userId", "sessionRefId", status) VALUES ($1, $2, $3, 'IN_PROGRESS')`,
+      [uuidv4(), userId, sessionRefId]
     );
 
     return sessionRefId;
@@ -47,14 +55,15 @@ export class DepositService {
 
     await executeQuery(
       `INSERT INTO deposited_items (
-        "sessionId", "itemNumber", "detectedMaterial", "itemName", "weightGrams",
+        id, "sessionId", "itemNumber", "detectedMaterial", "itemName", "weightGrams",
         "payoutAmount", "ecoPoints", "co2ReductionKg", status,
         "imageCaptureUrl", "inductiveSensorReading", "loadCellReadingGrams",
         "tofDistanceMm", "classificationConfidence"
       )
-      SELECT id, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14
-      FROM deposit_sessions WHERE "sessionRefId" = $1`,
+      SELECT $1, id, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15
+      FROM deposit_sessions WHERE "sessionRefId" = $2`,
       [
+        uuidv4(),
         sessionRefId,
         item.itemNumber,
         item.detectedMaterial,
@@ -145,9 +154,9 @@ export class DepositService {
 
           await client.query(
             `INSERT INTO transaction_history (
-              "userId", type, amount, details, "ecoPointsGained"
-            ) VALUES ($1, 'DEPOSIT', $2, $3, $4)`,
-            [userId, payout, `Deposit from session ${sessionRefId}`, ecoPoints]
+              id, "userId", type, amount, details, "ecoPointsGained"
+            ) VALUES ($1, $2, 'DEPOSIT', $3, $4, $5)`,
+            [uuidv4(), userId, payout, `Deposit from session ${sessionRefId}`, ecoPoints]
           );
         }
       }

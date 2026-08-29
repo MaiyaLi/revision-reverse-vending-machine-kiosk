@@ -1,5 +1,13 @@
 import { db } from './database';
 
+function uuidv4(): string {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
 const XENDIT_BASE_URL = 'https://api.xendit.co';
 const XENDIT_SECRET_KEY = process.env.XENDIT_SECRET_KEY;
 
@@ -25,11 +33,12 @@ export class PayoutService {
     try {
       const payoutTx = await db.queryOne(
         `INSERT INTO payout_transactions (
-          "externalId", "sessionId", "userId", amount, channel,
+          id, "externalId", "sessionId", "userId", amount, channel,
           "accountNumber", "accountName", status
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'PENDING')
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'PENDING')
         RETURNING *`,
         [
+          uuidv4(),
           externalId,
           params.sessionId,
           params.userId,
@@ -92,10 +101,10 @@ export class PayoutService {
     try {
       const payoutTx = await db.queryOne(
         `INSERT INTO payout_transactions (
-          "externalId", "sessionId", "userId", amount, channel, status
-        ) VALUES ($1, $2, $3, $4, 'PAYOUT_LINK', 'PENDING')
+          id, "externalId", "sessionId", "userId", amount, channel, status
+        ) VALUES ($1, $2, $3, $4, $5, 'PAYOUT_LINK', 'PENDING')
         RETURNING *`,
-        [externalId, params.sessionId, params.userId, params.amount]
+        [uuidv4(), externalId, params.sessionId, params.userId, params.amount]
       );
 
       const xenditResponse = await this.callXenditAPI(
@@ -217,18 +226,18 @@ export class PayoutService {
 
     const payout = await db.queryOne(
       `INSERT INTO payout_transactions (
-        "externalId", "sessionId", "userId", amount, channel, status
-      ) VALUES ($1, $2, $3, $4, 'CASH', 'COMPLETED')
+        id, "externalId", "sessionId", "userId", amount, channel, status
+      ) VALUES ($1, $2, $3, $4, $5, 'CASH', 'COMPLETED')
       RETURNING *`,
-      [externalId, params.sessionId, params.userId, params.amount]
+      [uuidv4(), externalId, params.sessionId, params.userId, params.amount]
     );
 
     if (params.userId) {
       await db.query(
         `INSERT INTO transaction_history (
-          "userId", "payoutId", type, amount, details
-        ) VALUES ($1, $2, 'REDEMPTION', $3, $4)`,
-        [params.userId, payout.id, -params.amount, `Cash dispensed - ${externalId}`]
+          id, "userId", "payoutId", type, amount, details
+        ) VALUES ($1, $2, $3, 'REDEMPTION', $4, $5)`,
+        [uuidv4(), params.userId, payout.id, -params.amount, `Cash dispensed - ${externalId}`]
       );
     }
 
