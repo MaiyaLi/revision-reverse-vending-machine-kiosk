@@ -605,12 +605,12 @@ export default function App() {
   });
 
   const bankLogos: Record<string, string> = {
-    'GCash': 'https://logo.clearbit.com/gcash.com',
-    'Maya': 'https://logo.clearbit.com/maya.ph',
-    'BPI': 'https://logo.clearbit.com/bpi.com.ph',
-    'BDO': 'https://logo.clearbit.com/bdo.com.ph',
-    'UnionBank': 'https://logo.clearbit.com/unionbankph.com',
-    'Landbank': 'https://logo.clearbit.com/landbank.com'
+    'GCash': 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/42/GCash_logo.svg/1200px-GCash_logo.svg.png',
+    'Maya': 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4a/Maya_%28mobile_payments%29_logo.svg/1200px-Maya_%28mobile_payments%29_logo.svg.png',
+    'BPI': 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/7e/BPI_logo.svg/1200px-BPI_logo.svg.png',
+    'BDO': 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9a/BDO_Unibank_logo.svg/1200px-BDO_Unibank_logo.svg.png',
+    'UnionBank': 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5a/UnionBank_logo.svg/1200px-UnionBank_logo.svg.png',
+    'Landbank': 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/6e/Landbank_of_the_Philippines_logo.svg/1200px-Landbank_of_the_Philippines_logo.svg.png'
   };
 
   const redeemUser = () => activeUser || {
@@ -1999,8 +1999,8 @@ export default function App() {
                         const target = e.target as HTMLImageElement;
                         target.style.display = 'none';
                         const fallback = document.createElement('span');
-                        fallback.className = 'text-6xl';
-                        fallback.textContent = '🏦';
+                        fallback.className = 'text-6xl font-black';
+                        fallback.textContent = bank.charAt(0);
                         target.parentElement?.insertBefore(fallback, target);
                       }}
                     />
