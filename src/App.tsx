@@ -290,14 +290,17 @@ export default function App() {
   // Stop/Start Webcam stream
   const startWebcam = async () => {
     try {
+      console.log('Requesting camera...');
       setWebcamActive(true);
       const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 400, height: 300 } });
+      console.log('Camera stream obtained');
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
       }
     } catch (err) {
-      console.warn("System camera hardware block or insufficient iframe permissions. ReVision virtual AI camera backdrop activated.");
+      console.error('Camera error:', err);
       setWebcamActive(false);
+      throw err;
     }
   };
 
@@ -1565,8 +1568,15 @@ export default function App() {
                 <button 
                   id="activate-rvm-button"
                   onClick={async () => {
-                    await startWebcam();
-                    runVerificationProcess();
+                    try {
+                      console.log('Start button clicked');
+                      await startWebcam();
+                      console.log('Webcam started, running verification');
+                      runVerificationProcess();
+                    } catch (err) {
+                      console.error('Start deposit scan error:', err);
+                      alert('Failed to start camera: ' + (err?.message || err));
+                    }
                   }}
                   className="w-80 h-80 md:w-96 md:h-96 bg-gradient-to-r from-emerald-600 to-teal-500 font-black text-white rounded-3xl shadow-xl flex flex-col items-center justify-center gap-6 hover:brightness-110 active:scale-95 transition-all text-2xl animate-pulse"
                 >
