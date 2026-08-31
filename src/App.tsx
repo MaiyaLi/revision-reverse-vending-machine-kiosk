@@ -1652,26 +1652,23 @@ export default function App() {
                       ref={canvasRef} 
                       className="w-full h-[280px] object-cover rounded-2xl border border-slate-800 bg-slate-900"
                     />
-                  ) : (
-                    <div className="flex-1 flex flex-col items-center justify-center text-center p-6 min-h-[280px]">
-                      {/* SIMULATED OPTICS SCHEMATIC GRAPHIC BASED ON ITEM MATERIAL */}
-                      <div className="w-28 h-28 rounded-2xl bg-slate-800 flex items-center justify-center border border-slate-700 relative mb-4">
-                        {verificationStage === 'CAMERA' && <Camera className="w-12 h-12 text-teal-400 animate-pulse" />}
-                        {verificationStage === 'INDUCTIVE' && <Cpu className="w-12 h-12 text-sky-400 animate-spin" />}
-                        {verificationStage === 'WEIGHT' && <TrendingUp className="w-12 h-12 text-emerald-400" />}
-                        {verificationStage === 'SORTING' && <Sliders className="w-12 h-12 text-amber-500 animate-bounce" />}
-                        <div className="absolute inset-0 bg-gradient-to-t from-teal-500/20 to-transparent"></div>
-                      </div>
-                      <span className="text-sm text-teal-400 font-black uppercase tracking-widest">{verificationStage}...</span>
-                      <p className="text-xs text-slate-500 max-w-[200px] truncate mt-1">Optics model: RevOptics-D56</p>
-                    </div>
-                  )}
+                   ) : (
+                     <div className="flex-1 flex flex-col items-center justify-center text-center p-6 min-h-[280px]">
+                       {/* SIMULATED OPTICS SCHEMATIC GRAPHIC BASED ON ITEM MATERIAL */}
+                       <div className="w-28 h-28 rounded-2xl bg-slate-800 flex items-center justify-center border border-slate-700 relative mb-4">
+                         {verificationStage === 'CAMERA' && <Camera className="w-12 h-12 text-teal-400 animate-pulse" />}
+                         {verificationStage === 'INDUCTIVE' && <Cpu className="w-12 h-12 text-sky-400 animate-spin" />}
+                         {verificationStage === 'WEIGHT' && <TrendingUp className="w-12 h-12 text-emerald-400" />}
+                         {verificationStage === 'SORTING' && <Sliders className="w-12 h-12 text-amber-500 animate-bounce" />}
+                         <div className="absolute inset-0 bg-gradient-to-t from-teal-500/20 to-transparent"></div>
+                       </div>
+                       <span className="text-sm text-teal-400 font-black uppercase tracking-widest">{verificationStage}...</span>
+                       <p className="text-xs text-slate-500 max-w-[200px] truncate mt-1">Optics model: RevOptics-D56</p>
+                     </div>
+                   )}
 
-                  {/* WEBCAM REALTIME CANVAS SNIP */}
-                  <canvas ref={canvasRef} className={backendCameraActive ? '' : 'hidden'} />
-
-                  {/* BOTTOM REVAL CHEVRON FLAPS POSITION */}
-                  <div className="bg-slate-900 border border-slate-800 px-4 py-2.5 rounded-2xl flex items-center justify-between mt-3">
+                   {/* BOTTOM REVAL CHEVRON FLAPS POSITION */}
+                   <div className="bg-slate-900 border border-slate-800 px-4 py-2.5 rounded-2xl flex items-center justify-between mt-3">
                     <span className="text-xs text-slate-400 font-bold">Solenoid Flap:</span>
                     <span className="text-xs font-black text-emerald-400 font-mono">
                       {verificationStage === 'SORTING' ? 'OPEN & DIVERTER ACTUATING' : 'SHUT / LOCKED'}
