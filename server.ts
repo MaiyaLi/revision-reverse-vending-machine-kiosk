@@ -343,10 +343,22 @@ app.get("/api/camera/snapshot", async (req, res) => {
   try {
     const tmpFile = `/tmp/rvm-cam-${Date.now()}.jpg`;
     const { execSync } = await import("child_process");
-    execSync(`rpicam-still -o ${tmpFile} --width 640 --height 480 --nopreview --timeout 1`, {
-      stdio: "ignore",
-      timeout: 5000
-    });
+
+    try {
+      execSync(`rpicam-still -o ${tmpFile} --width 640 --height 480 --nopreview --timeout 1000`, {
+        stdio: "ignore",
+        timeout: 5000
+      });
+    } catch (firstError) {
+      try {
+        execSync("killall -9 detector.py 2>/dev/null; kill $(pgrep -f frigate) 2>/dev/null; sleep 1", { stdio: "ignore", timeout: 5000 });
+      } catch {}
+      execSync(`rpicam-still -o ${tmpFile} --width 640 --height 480 --nopreview --timeout 1000`, {
+        stdio: "ignore",
+        timeout: 5000
+      });
+    }
+
     const imageBuffer = await import("fs").then(fs => fs.readFileSync(tmpFile));
     const base64 = imageBuffer.toString("base64");
     await import("fs").then(fs => fs.unlinkSync(tmpFile));
@@ -360,7 +372,7 @@ app.get("/api/camera/image", async (req, res) => {
   try {
     const tmpFile = `/tmp/rvm-cam-${Date.now()}.jpg`;
     const { execSync } = await import("child_process");
-    execSync(`rpicam-still -o ${tmpFile} --width 640 --height 480 --nopreview --timeout 1`, {
+    execSync(`rpicam-still -o ${tmpFile} --width 640 --height 480 --nopreview --timeout 1000`, {
       stdio: "ignore",
       timeout: 5000
     });
