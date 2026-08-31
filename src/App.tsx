@@ -149,6 +149,7 @@ export default function App() {
   const [printStatus, setPrintStatus] = useState<'IDLE' | 'PRINTING' | 'DONE'>('IDLE');
   const [isProcessing, setIsProcessing] = useState(false);
   const [webcamActive, setWebcamActive] = useState(false);
+  const [backendCameraActive, setBackendCameraActive] = useState(false);
   const [sessionRefId, setSessionRefId] = useState<string | null>(null);
   const [postLoginTarget, setPostLoginTarget] = useState<AppState | null>(null);
 
@@ -288,17 +289,52 @@ export default function App() {
   const [activeSnapshot, setActiveSnapshot] = useState<string | null>(null);
 
   // Stop/Start Webcam stream
+  const cameraIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   const startWebcam = async () => {
     try {
       setWebcamActive(true);
+      setBackendCameraActive(false);
       const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 400, height: 300 } });
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
       }
     } catch (err) {
-      console.warn('Camera unavailable, using virtual fallback.', err);
+      console.warn('Browser camera unavailable, switching to backend camera feed.', err);
       setWebcamActive(false);
+      setBackendCameraActive(true);
+      if (videoRef.current) {
+        videoRef.current.srcObject = null;
+      }
+      startBackendCameraFeed();
     }
+  };
+
+  const startBackendCameraFeed = () => {
+    setBackendCameraActive(true);
+    if (cameraIntervalRef.current) return;
+    cameraIntervalRef.current = setInterval(async () => {
+      try {
+        const res = await fetch('/api/camera/snapshot');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.imageBase64 && canvasRef.current) {
+            const img = new Image();
+            img.onload = () => {
+              const ctx = canvasRef.current?.getContext('2d');
+              if (ctx && canvasRef.current) {
+                canvasRef.current.width = img.width;
+                canvasRef.current.height = img.height;
+                ctx.drawImage(img, 0, 0);
+              }
+            };
+            img.src = data.imageBase64;
+          }
+        }
+      } catch (err) {
+        console.warn('Backend camera snapshot failed:', err);
+      }
+    }, 1000);
   };
 
   const stopWebcam = () => {
@@ -307,7 +343,12 @@ export default function App() {
       stream.getTracks().forEach(track => track.stop());
       videoRef.current.srcObject = null;
     }
+    if (cameraIntervalRef.current) {
+      clearInterval(cameraIntervalRef.current);
+      cameraIntervalRef.current = null;
+    }
     setWebcamActive(false);
+    setBackendCameraActive(false);
   };
 
   // Run real-time RVM diagnostic simulator for planning list
@@ -1604,6 +1645,11 @@ export default function App() {
                       ref={videoRef} 
                       autoPlay 
                       playsInline 
+                      className="w-full h-[280px] object-cover rounded-2xl border border-slate-800 bg-slate-900"
+                    />
+                  ) : backendCameraActive ? (
+                    <canvas 
+                      ref={canvasRef} 
                       className="w-full h-[280px] object-cover rounded-2xl border border-slate-800 bg-slate-900"
                     />
                   ) : (

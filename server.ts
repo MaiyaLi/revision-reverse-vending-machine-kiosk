@@ -336,6 +336,43 @@ app.post("/api/receipt/email/:transactionId", async (req, res) => {
 });
 
 // ============================================
+// CAMERA ENDPOINTS
+// ============================================
+
+app.get("/api/camera/snapshot", async (req, res) => {
+  try {
+    const tmpFile = `/tmp/rvm-cam-${Date.now()}.jpg`;
+    const { execSync } = await import("child_process");
+    execSync(`rpicam-still -o ${tmpFile} --width 640 --height 480 --nopreview --timeout 1`, {
+      stdio: "ignore",
+      timeout: 5000
+    });
+    const imageBuffer = await import("fs").then(fs => fs.readFileSync(tmpFile));
+    const base64 = imageBuffer.toString("base64");
+    await import("fs").then(fs => fs.unlinkSync(tmpFile));
+    res.json({ success: true, imageBase64: `data:image/jpeg;base64,${base64}` });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.get("/api/camera/image", async (req, res) => {
+  try {
+    const tmpFile = `/tmp/rvm-cam-${Date.now()}.jpg`;
+    const { execSync } = await import("child_process");
+    execSync(`rpicam-still -o ${tmpFile} --width 640 --height 480 --nopreview --timeout 1`, {
+      stdio: "ignore",
+      timeout: 5000
+    });
+    res.sendFile(tmpFile, {}, (err) => {
+      try { require("fs").unlinkSync(tmpFile); } catch {}
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================
 // COMPUTER VISION / WASTE DETECTION
 // ============================================
 
