@@ -1668,7 +1668,7 @@ export default function App() {
                   )}
 
                   {/* WEBCAM REALTIME CANVAS SNIP */}
-                  <canvas ref={canvasRef} className="hidden" />
+                  <canvas ref={canvasRef} className={backendCameraActive ? '' : 'hidden'} />
 
                   {/* BOTTOM REVAL CHEVRON FLAPS POSITION */}
                   <div className="bg-slate-900 border border-slate-800 px-4 py-2.5 rounded-2xl flex items-center justify-between mt-3">
