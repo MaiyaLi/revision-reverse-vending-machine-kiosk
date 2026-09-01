@@ -293,11 +293,54 @@ export default function App() {
 
   const startWebcam = async () => {
     try {
-      setWebcamActive(true);
       setBackendCameraActive(false);
+      setWebcamActive(true);
       const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 400, height: 300 } });
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+      }
+      // Verify that the webcam is producing actual video frames (not black/blank)
+      // If no frames arrive within 2 seconds, fall back to backend camera
+      let receivedFrame = false;
+      let frameCheckDone = false;
+      const videoEl = videoRef.current;
+      if (videoEl) {
+        const checkFrame = () => {
+          if (videoEl.readyState >= 2) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 1;
+            canvas.height = 1;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+              try {
+                ctx.drawImage(videoEl, 0, 0, 1, 1);
+                const pixel = ctx.getImageData(0, 0, 1, 1).data;
+                if (pixel[0] !== 0 || pixel[1] !== 0 || pixel[2] !== 0) {
+                  receivedFrame = true;
+                }
+              } catch (e) {
+                // drawImage may fail if cross-origin or other issues; treat as no frame
+              }
+            }
+          }
+          if (!frameCheckDone) {
+            frameCheckDone = true;
+            if (!receivedFrame) {
+              // Webcam did not produce usable frames, switch to backend camera
+              if (videoEl.srcObject) {
+                const tracks = (videoEl.srcObject as MediaStream).getTracks();
+                tracks.forEach(t => t.stop());
+                videoEl.srcObject = null;
+              }
+              setWebcamActive(false);
+              setBackendCameraActive(true);
+              startBackendCameraFeed();
+            }
+          }
+        };
+        videoEl.onplaying = checkFrame;
+        // Safety timeout: if onplaying never fires, check after 2s
+        setTimeout(checkFrame, 2000);
       }
     } catch (err) {
       console.warn('Browser camera unavailable, switching to backend camera feed.', err);
@@ -350,6 +393,13 @@ export default function App() {
     setWebcamActive(false);
     setBackendCameraActive(false);
   };
+
+  // Ensure backend camera feed restarts when re-entering VERIFYING_ITEMS with backend camera active
+  useEffect(() => {
+    if (currentState === 'VERIFYING_ITEMS' && backendCameraActive && !cameraIntervalRef.current) {
+      startBackendCameraFeed();
+    }
+  }, [currentState, backendCameraActive]);
 
   // Run real-time RVM diagnostic simulator for planning list
   const runVerificationProcess = async () => {
@@ -466,13 +516,15 @@ export default function App() {
     await new Promise(r => setTimeout(r, 1200));
 
     // Simulate canvas capture draw
-    if (canvasRef.current && videoRef.current && webcamActive) {
+    if (canvasRef.current && (webcamActive || backendCameraActive)) {
       try {
         canvasRef.current.width = 160;
         canvasRef.current.height = 120;
         const ctx = canvasRef.current.getContext('2d');
         if (ctx) {
-          ctx.drawImage(videoRef.current, 0, 0, 160, 120);
+          if (webcamActive && videoRef.current) {
+            ctx.drawImage(videoRef.current, 0, 0, 160, 120);
+          }
           item.imageBlobUrl = canvasRef.current.toDataURL('image/jpeg');
         }
       } catch (err) {
