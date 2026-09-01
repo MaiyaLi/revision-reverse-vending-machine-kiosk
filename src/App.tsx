@@ -292,15 +292,15 @@ export default function App() {
   const cameraIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const startWebcam = async () => {
+    setBackendCameraActive(false);
+    setWebcamActive(false);
     try {
-      setBackendCameraActive(false);
-      setWebcamActive(false);
       const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 400, height: 300 } });
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
       }
       // Verify that the webcam is producing actual video frames (not black/blank)
-      // If no frames arrive within 2.5 seconds, fall back to backend camera
+      // If no frames arrive within 2 seconds, fall back to backend camera
       let receivedFrame = false;
       let frameCheckDone = false;
       const videoEl = videoRef.current;
@@ -339,8 +339,8 @@ export default function App() {
           }
         };
         videoEl.onplaying = checkFrame;
-        // Safety timeout: if onplaying never fires, check after 2.5s
-        setTimeout(checkFrame, 2500);
+        // Safety timeout: if onplaying never fires, check after 2s
+        setTimeout(checkFrame, 2000);
       }
     } catch (err) {
       console.warn('Browser camera unavailable, switching to backend camera feed.', err);
@@ -1658,7 +1658,7 @@ export default function App() {
                 <button 
                   id="activate-rvm-button"
                    onClick={async () => {
-                     await startWebcam().catch(err => console.warn('Camera unavailable, continuing offline.', err));
+                     startWebcam().catch(err => console.warn('Camera unavailable, continuing offline.', err));
                      runVerificationProcess();
                    }}
                   className="w-80 h-80 md:w-96 md:h-96 bg-gradient-to-r from-emerald-600 to-teal-500 font-black text-white rounded-3xl shadow-xl flex flex-col items-center justify-center gap-6 hover:brightness-110 active:scale-95 transition-all text-2xl animate-pulse"
