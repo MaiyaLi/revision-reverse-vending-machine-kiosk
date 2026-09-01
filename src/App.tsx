@@ -294,18 +294,19 @@ export default function App() {
   const startWebcam = async () => {
     try {
       setBackendCameraActive(false);
-      setWebcamActive(true);
+      setWebcamActive(false);
       const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 400, height: 300 } });
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
       }
       // Verify that the webcam is producing actual video frames (not black/blank)
-      // If no frames arrive within 2 seconds, fall back to backend camera
+      // If no frames arrive within 2.5 seconds, fall back to backend camera
       let receivedFrame = false;
       let frameCheckDone = false;
       const videoEl = videoRef.current;
       if (videoEl) {
         const checkFrame = () => {
+          if (frameCheckDone) return;
           if (videoEl.readyState >= 2) {
             const canvas = document.createElement('canvas');
             canvas.width = 1;
@@ -323,24 +324,23 @@ export default function App() {
               }
             }
           }
-          if (!frameCheckDone) {
-            frameCheckDone = true;
-            if (!receivedFrame) {
-              // Webcam did not produce usable frames, switch to backend camera
-              if (videoEl.srcObject) {
-                const tracks = (videoEl.srcObject as MediaStream).getTracks();
-                tracks.forEach(t => t.stop());
-                videoEl.srcObject = null;
-              }
-              setWebcamActive(false);
-              setBackendCameraActive(true);
-              startBackendCameraFeed();
+          frameCheckDone = true;
+          if (receivedFrame) {
+            setWebcamActive(true);
+          } else {
+            // Webcam did not produce usable frames, switch to backend camera
+            if (videoEl.srcObject) {
+              const tracks = (videoEl.srcObject as MediaStream).getTracks();
+              tracks.forEach(t => t.stop());
+              videoEl.srcObject = null;
             }
+            setBackendCameraActive(true);
+            startBackendCameraFeed();
           }
         };
         videoEl.onplaying = checkFrame;
-        // Safety timeout: if onplaying never fires, check after 2s
-        setTimeout(checkFrame, 2000);
+        // Safety timeout: if onplaying never fires, check after 2.5s
+        setTimeout(checkFrame, 2500);
       }
     } catch (err) {
       console.warn('Browser camera unavailable, switching to backend camera feed.', err);
@@ -1657,10 +1657,10 @@ export default function App() {
               <div className="flex flex-row flex-wrap justify-center gap-8 max-w-5xl mx-auto w-full">
                 <button 
                   id="activate-rvm-button"
-                  onClick={async () => {
-                    startWebcam().catch(err => console.warn('Camera unavailable, continuing offline.', err));
-                    runVerificationProcess();
-                  }}
+                   onClick={async () => {
+                     await startWebcam().catch(err => console.warn('Camera unavailable, continuing offline.', err));
+                     runVerificationProcess();
+                   }}
                   className="w-80 h-80 md:w-96 md:h-96 bg-gradient-to-r from-emerald-600 to-teal-500 font-black text-white rounded-3xl shadow-xl flex flex-col items-center justify-center gap-6 hover:brightness-110 active:scale-95 transition-all text-2xl animate-pulse"
                 >
                   <Cpu className="w-14 h-14 animate-spin-slow" />
