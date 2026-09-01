@@ -1611,20 +1611,23 @@ export default function App() {
                     LASER SCANNING CHAMBER
                   </span>
 
-                   {backendCameraActive ? (
-                     <img 
-                       src="/api/camera/stream"
-                       alt="Live Camera Feed"
-                       className="w-full h-[280px] object-cover rounded-2xl border border-slate-800 bg-slate-900"
-                       onLoad={() => console.log('Camera stream loaded')}
-                       onError={(e) => {
-                         const target = e.target as HTMLImageElement;
-                         if (target.src !== activeSnapshot) {
-                           target.src = activeSnapshot || '';
-                         }
-                       }}
-                     />
-                     ) : (
+                    {backendCameraActive ? (
+                      activeSnapshot ? (
+                        <img 
+                          src={activeSnapshot}
+                          alt="Live Camera Feed"
+                          className="w-full h-[280px] object-cover rounded-2xl border border-slate-800 bg-slate-900"
+                        />
+                      ) : (
+                        <video 
+                          autoPlay 
+                          muted
+                          playsInline
+                          src="/api/camera/stream"
+                          className="w-full h-[280px] object-cover rounded-2xl border border-slate-800 bg-slate-900"
+                        />
+                      )
+                    ) : (
                      <div className="flex-1 flex flex-col items-center justify-center text-center p-6 min-h-[280px]">
                         {/* SIMULATED OPTICS SCHEMATIC GRAPHIC BASED ON ITEM MATERIAL */}
                         <div className="w-28 h-28 rounded-2xl bg-slate-800 flex items-center justify-center border border-slate-700 relative mb-4">
