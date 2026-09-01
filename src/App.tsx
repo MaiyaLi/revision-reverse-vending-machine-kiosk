@@ -295,6 +295,8 @@ export default function App() {
   useEffect(() => {
     setBackendCameraActive(true);
     if (cameraIntervalRef.current) return;
+    
+    // Fallback: poll snapshot endpoint every 1000ms (for browsers that don't support MJPEG in img tags)
     cameraIntervalRef.current = setInterval(async () => {
       try {
         const res = await fetch('/api/camera/snapshot');
@@ -1609,13 +1611,20 @@ export default function App() {
                     LASER SCANNING CHAMBER
                   </span>
 
-                   {activeSnapshot ? (
+                   {backendCameraActive ? (
                      <img 
-                       src={activeSnapshot}
+                       src="/api/camera/stream"
                        alt="Live Camera Feed"
                        className="w-full h-[280px] object-cover rounded-2xl border border-slate-800 bg-slate-900"
+                       onLoad={() => console.log('Camera stream loaded')}
+                       onError={(e) => {
+                         const target = e.target as HTMLImageElement;
+                         if (target.src !== activeSnapshot) {
+                           target.src = activeSnapshot || '';
+                         }
+                       }}
                      />
-                   ) : (
+                     ) : (
                      <div className="flex-1 flex flex-col items-center justify-center text-center p-6 min-h-[280px]">
                         {/* SIMULATED OPTICS SCHEMATIC GRAPHIC BASED ON ITEM MATERIAL */}
                         <div className="w-28 h-28 rounded-2xl bg-slate-800 flex items-center justify-center border border-slate-700 relative mb-4">
@@ -1628,7 +1637,7 @@ export default function App() {
                         <span className="text-sm text-teal-400 font-black uppercase tracking-widest">{verificationStage}...</span>
                         <p className="text-xs text-slate-500 max-w-[200px] truncate mt-1">Optics model: RevOptics-D56</p>
                       </div>
-                    )}
+                   )}
 
                    {/* BOTTOM REVAL CHEVRON FLAPS POSITION */}
                    <div className="bg-slate-900 border border-slate-800 px-4 py-2.5 rounded-2xl flex items-center justify-between mt-3">

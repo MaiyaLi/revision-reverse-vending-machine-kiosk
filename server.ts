@@ -339,6 +339,88 @@ app.post("/api/receipt/email/:transactionId", async (req, res) => {
 // CAMERA ENDPOINTS
 // ============================================
 
+// Start rpicam-vid as a persistent MJPEG stream
+let mjpegStream: ReturnType<typeof setInterval> | null = null;
+let mjpegStreamPath: string | null = null;
+
+function startMjpegStream() {
+  if (mjpegStream) return;
+  const { spawn } = require("child_process");
+  const streamPath = "/tmp/rvm-mjpeg-stream.mjpeg";
+  const proc = spawn("rpicam-vid", [
+    "-t", "0",
+    "--codec", "mjpeg",
+    "--width", "640",
+    "--height", "480",
+    "--framerate", "15",
+    "-o", streamPath
+  ], {
+    stdio: ["ignore", "ignore", "ignore"]
+  });
+  proc.on("error", () => {});
+  mjpegStream = setInterval(() => {}, 1000);
+  mjpegStreamPath = streamPath;
+}
+
+// Serve a continuous MJPEG stream from rpicam-vid
+app.get("/api/camera/stream", (req, res) => {
+  res.setHeader("Content-Type", "multipart/x-mixed-replace;boundary=frame");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "close");
+
+  const { spawn } = require("child_process");
+  let proc: any;
+
+  try {
+    proc = spawn("rpicam-vid", [
+      "-t", "0",
+      "--codec", "mjpeg",
+      "--width", "640",
+      "--height", "480",
+      "--framerate", "15",
+      "-o", "-"  // Output to stdout
+    ], {
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Camera unavailable" });
+    return;
+  }
+
+  const boundary = "frame";
+  let buffer = Buffer.alloc(0);
+
+  const cleanup = () => {
+    if (proc) proc.kill();
+    res.end();
+  };
+
+  req.on("close", cleanup);
+  req.on("aborted", cleanup);
+
+  proc.stdout.on("data", (data: Buffer) => {
+    buffer = Buffer.concat([buffer, data]);
+    // MJPEG frames are independent, just flush everything
+    try {
+      res.write(`--${boundary}\r\nContent-Type: image/jpeg\r\n\r\n`);
+      res.write(data);
+      res.write("\r\n");
+    } catch (e) {
+      // Client disconnected
+    }
+  });
+
+  proc.stderr.on("data", (data: Buffer) => {
+    // Silently discard stderr
+  });
+
+  proc.on("close", cleanup);
+
+  // Set a timeout to prevent hanging
+  setTimeout(cleanup, 30000);
+});
+
+// Serve single JPEG snapshot (fallback for browsers that don't support MJPEG)
 app.get("/api/camera/snapshot", async (req, res) => {
   try {
     const tmpFile = `/tmp/rvm-cam-${Date.now()}.jpg`;
