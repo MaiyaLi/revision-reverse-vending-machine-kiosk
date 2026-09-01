@@ -719,7 +719,7 @@ export default function App() {
 
               setCurrentState('FINAL_RECEIPT_CLIENT');
               speakText("receiptTitle");
-            }, 1000);
+    }, 500);
             return 100;
           }
           return prev + 20;
