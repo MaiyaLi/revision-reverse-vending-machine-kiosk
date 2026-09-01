@@ -26,7 +26,8 @@ export type AppState =
   | 'PAYOUT_SUCCESS'
   | 'PAYOUT_FAILED'
   | 'FINAL_RECEIPT_CLIENT'
-  | 'LEARN_MORE';
+  | 'LEARN_MORE'
+  | 'DETECTION_TEST';
 
 export interface UserProfile {
   id: string;

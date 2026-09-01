@@ -10,6 +10,7 @@ import { userService } from "./src/services/userService";
 import { depositService } from "./src/services/depositService";
 import { payoutService } from "./src/services/payoutService";
 import { receiptService } from "./src/services/receiptService";
+import { detectionService } from "./src/services/detectionService";
 import userRoutes from "./src/routes/userRoutes";
 
 dotenv.config();
@@ -547,6 +548,66 @@ Respond ONLY in JSON: {"detectedMaterial": "...", "confidence": 0.0-1.0}`
 });
 
 // ============================================
+// CONTINUOUS DETECTION / TEST VIEW ENDPOINTS
+// ============================================
+
+// Get latest detection result from background detection
+app.get("/api/detection/latest", (req, res) => {
+  const history = detectionService.getHistory();
+  if (history.length === 0) {
+    res.status(404).json({ error: "No detections yet" });
+  } else {
+    res.json(history[0]);
+  }
+});
+
+// Get detection history (last 20)
+app.get("/api/detection/history", (req, res) => {
+  res.json(detectionService.getHistory().slice(0, 20));
+});
+
+// Get last captured image (for test view)
+app.get("/api/detection/image", (req, res) => {
+  const img = detectionService.getLastImage();
+  if (!img) {
+    res.status(404).json({ error: "No image available" });
+  } else {
+    res.json({ imageBase64: img });
+  }
+});
+
+// Trigger a manual detection (for testing)
+app.post("/api/detection/run", async (req, res) => {
+  try {
+    const result = await detectionService.detectItem();
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Start background detection service
+app.post("/api/detection/background/start", (req, res) => {
+  try {
+    const interval = parseInt(req.body?.intervalMs) || 2000;
+    detectionService.startBackgroundDetection(interval);
+    res.json({ success: true, message: `Background detection started (interval: ${interval}ms)` });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Stop background detection service
+app.post("/api/detection/background/stop", (req, res) => {
+  try {
+    detectionService.stopBackgroundDetection();
+    res.json({ success: true, message: "Background detection stopped" });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================
 // TELEMETRY ENDPOINTS
 // ============================================
 
@@ -611,6 +672,10 @@ async function startServer() {
       console.log(`✅ ReVision Reverse Vending Machine Kiosk Server running on port ${PORT}`);
       console.log(`📊 Transaction system: ENABLED (PostgreSQL)`);
       console.log(`💳 Xendit integration: ${process.env.XENDIT_SECRET_KEY ? 'CONFIGURED' : 'NOT CONFIGURED'}`);
+      
+      // Start background detection service automatically
+      detectionService.startBackgroundDetection(3000);
+      console.log(`🔍 Background camera detection started (interval: 3000ms)`);
     });
   } catch (error) {
     console.error("❌ Failed to start server:", error);

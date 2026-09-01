@@ -152,6 +152,8 @@ export default function App() {
   const [backendCameraActive, setBackendCameraActive] = useState(false);
   const [sessionRefId, setSessionRefId] = useState<string | null>(null);
   const [postLoginTarget, setPostLoginTarget] = useState<AppState | null>(null);
+  const [detectionResult, setDetectionResult] = useState<any>(null);
+  const [detectionHistory, setDetectionHistory] = useState<any[]>([]);
 
   // --- LOOPS & INACTIVITY TIMEOUTS ---
   const [secondsRemaining, setSecondsRemaining] = useState(120);
@@ -329,11 +331,53 @@ export default function App() {
       clearInterval(cameraIntervalRef.current);
       cameraIntervalRef.current = null;
     }
-    setWebcamActive(false);
-    setBackendCameraActive(false);
-  };
+     setWebcamActive(false);
+     setBackendCameraActive(false);
+   };
 
-  // Run real-time RVM diagnostic simulator for planning list
+   // Background detection polling (for DETECTION_TEST view)
+   useEffect(() => {
+     if (currentState === 'DETECTION_TEST') {
+       const fetchDetection = async () => {
+         try {
+           const res = await fetch('/api/detection/latest');
+           if (res.ok) {
+             const data = await res.json();
+             setDetectionResult(data);
+           }
+         } catch (err) {
+           console.warn('Detection fetch failed:', err);
+         }
+         try {
+           const res = await fetch('/api/detection/history');
+           if (res.ok) {
+             const data = await res.json();
+             setDetectionHistory(data);
+           }
+         } catch (err) {
+           console.warn('Detection history fetch failed:', err);
+         }
+       };
+       fetchDetection();
+       const interval = setInterval(fetchDetection, 2000);
+       return () => clearInterval(interval);
+     }
+   }, [currentState]);
+
+   const refreshDetection = async () => {
+     try {
+       const res = await fetch('/api/detection/run', { method: 'POST' });
+       if (res.ok) {
+         const data = await res.json();
+         setDetectionResult(data);
+         setDetectionHistory(prev => [data, ...prev.slice(0, 19)]);
+       }
+     } catch (err) {
+       console.warn('Manual detection failed:', err);
+     }
+   };
+
+   // Run real-time RVM diagnostic simulator for planning list
   const runVerificationProcess = async () => {
     const list: DepositedItem[] = [];
     let itemIdNum = 1;
@@ -2310,19 +2354,128 @@ export default function App() {
                 </p>
               </div>
 
-              <div className="flex justify-center pt-4">
-                <button 
-                  type="button"
-                  onClick={() => setCurrentState('MAIN_MENU')}
-                  className={`px-8 py-4 ${isLight ? 'bg-slate-200 text-slate-705 hover:bg-slate-250 border-slate-350' : 'bg-slate-800 text-slate-300 hover:bg-slate-755 border-slate-705'} border rounded-2xl text-base font-black transition-all active:scale-[0.98] shadow-md`}
-                >
-                  Return to Main Menu
-                </button>
+               <div className="flex justify-center pt-4 gap-4">
+                 <button 
+                   type="button"
+                   onClick={() => setCurrentState('MAIN_MENU')}
+                   className={`px-8 py-4 ${isLight ? 'bg-slate-200 text-slate-705 hover:bg-slate-250 border-slate-350' : 'bg-slate-800 text-slate-300 hover:bg-slate-755 border-slate-705'} border rounded-2xl text-base font-black transition-all active:scale-[0.98] shadow-md`}
+                 >
+                   Return to Main Menu
+                 </button>
+                 <button 
+                   type="button"
+                   onClick={() => setCurrentState('DETECTION_TEST')}
+                   className={`px-8 py-4 ${isLight ? 'bg-blue-100 text-blue-800 hover:bg-blue-200 border-blue-300' : 'bg-blue-900/40 text-blue-300 hover:bg-blue-850 border-blue-500'} border rounded-2xl text-base font-black transition-all active:scale-[0.98] shadow-md`}
+                 >
+                   Camera Detection Test
+                 </button>
+               </div>
               </div>
-            </div>
-          )}
+            )}
 
-        </div>
+           {/* ========================================================= */}
+           {/* DETECTION TEST VIEW */}
+           {currentState === 'DETECTION_TEST' && (
+             <div className="w-full max-w-5xl mx-auto space-y-6 my-auto py-4">
+               <div className="text-center space-y-2">
+                 <h3 className={`text-4xl font-black ${cTextTitle} uppercase tracking-widest`}>Live Detection Test</h3>
+                 <p className={`text-sm md:text-base ${cTextSubtitle}`}>Camera is continuously capturing and classifying items</p>
+               </div>
+
+               {/* LIVE CAMERA + DETECTION DISPLAY */}
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                 {/* Camera Feed */}
+                 <div className={`bg-black border-4 ${isLight ? 'border-slate-300' : 'border-slate-700'} rounded-[24px] p-4 relative flex flex-col items-center`}>
+                   <span className="absolute top-4 left-4 bg-blue-600/90 text-white text-xs px-3 py-1 rounded-lg font-mono font-black z-10">
+                     LIVE CSI CAMERA
+                   </span>
+                   {activeSnapshot ? (
+                     <img 
+                       src={activeSnapshot}
+                       alt="Live Camera Feed"
+                       className="w-full h-[320px] object-cover rounded-xl border border-slate-800"
+                     />
+                   ) : (
+                     <div className="w-full h-[320px] bg-slate-900 rounded-xl flex items-center justify-center text-slate-500">
+                       Waiting for camera...
+                     </div>
+                   )}
+                 </div>
+
+                 {/* Detection Results */}
+                 <div className={`bg-black border-4 ${isLight ? 'border-slate-300' : 'border-slate-700'} rounded-[24px] p-4 relative flex flex-col items-center`}>
+                   <span className="absolute top-4 left-4 bg-emerald-600/90 text-white text-xs px-3 py-1 rounded-lg font-mono font-black z-10">
+                     DETECTION RESULTS
+                   </span>
+                   <div className="mt-12 w-full text-center space-y-4">
+                     <div className={`p-6 rounded-2xl ${backendCameraActive ? 'bg-emerald-950/40 border border-emerald-500 text-emerald-400' : 'bg-slate-800 border border-slate-700 text-slate-400'}`}>
+                       <div className="text-3xl font-black mb-2">
+                         {detectionResult?.detectedMaterial === 'plastic' ? '🥤 PLASTIC' : 
+                          detectionResult?.detectedMaterial === 'aluminum' ? '🥫 ALUMINUM' : 
+                          detectionResult?.detectedMaterial === 'glass' ? '🍾 GLASS' : 
+                          detectionResult?.detectedMaterial === 'other' ? '🚫 REJECTED' :
+                          '⏳ Waiting...'}
+                       </div>
+                       <div className="text-xl font-bold">
+                         {detectionResult?.itemName || 'No detection yet'}
+                       </div>
+                       <div className="text-sm mt-2 opacity-80">
+                         Confidence: {(detectionResult?.confidence || 0) * 100}%
+                       </div>
+                       <div className="text-xs mt-2 opacity-60">
+                         Weight: {detectionResult?.estimatedWeightGrams || 0}g
+                       </div>
+                     </div>
+                   </div>
+                 </div>
+               </div>
+
+               {/* DETECTION HISTORY */}
+               <div className="space-y-3">
+                 <span className={`text-sm ${cTextMuted} font-black block uppercase tracking-widest`}>Recent Detections:</span>
+                 <div className={`rounded-3xl p-4 max-h-[200px] overflow-y-auto space-y-2 text-sm font-mono ${cCardInset} shadow-inner`}>
+                   {detectionHistory.length === 0 ? (
+                     <div className="text-slate-500 text-center py-4">No detections recorded yet.</div>
+                   ) : (
+                     detectionHistory.map((item, idx) => (
+                       <div key={idx} className={`flex items-center justify-between p-2 rounded-lg ${isLight ? 'bg-slate-50/80 border border-slate-200' : 'bg-slate-900/60 border border-slate-850'} font-bold`}>
+                         <div className="flex flex-col">
+                           <span className={`capitalize font-black ${
+                             item.detectedMaterial === 'plastic' ? 'text-teal-500' :
+                             item.detectedMaterial === 'aluminum' ? 'text-sky-400' :
+                             item.detectedMaterial === 'glass' ? 'text-amber-400' : 'text-red-400'
+                           }`}>
+                           {item.detectedMaterial} - {item.itemName}
+                         </span>
+                         <span className="text-xs opacity-60">
+                           {new Date(item.timestamp).toLocaleTimeString()} | {(item.confidence * 100).toFixed(1)}% | {item.estimatedWeightGrams}g
+                         </span>
+                       </div>
+                     </div>
+                   ))
+                   )}
+                 </div>
+               </div>
+
+               {/* ACTION BUTTONS */}
+               <div className="flex flex-wrap justify-center gap-4 pt-4">
+                 <button 
+                   onClick={refreshDetection}
+                   className={`px-8 py-4 ${isLight ? 'bg-sky-100 hover:bg-sky-200 text-sky-800' : 'bg-sky-900/40 hover:bg-sky-850 border border-sky-500 text-white'} rounded-2xl font-black transition-all active:scale-95`}
+                 >
+                   Run Manual Detection
+                 </button>
+                 <button 
+                   onClick={() => setCurrentState('MAIN_MENU')}
+                   className={`px-8 py-4 ${isLight ? 'bg-slate-200 text-slate-705 hover:bg-slate-250 border-slate-350' : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border-slate-705'} border rounded-2xl font-black transition-all active:scale-95`}
+                 >
+                   Back to Main Menu
+                 </button>
+               </div>
+             </div>
+           )}
+
+         </div>
 
       {/* RENDER ON-SCREEN VIRTUAL KEYBOARD OVERLAY */}
       {activeKeyboard && (
