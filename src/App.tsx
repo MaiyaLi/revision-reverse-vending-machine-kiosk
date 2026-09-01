@@ -287,73 +287,12 @@ export default function App() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [activeSnapshot, setActiveSnapshot] = useState<string | null>(null);
-
-  // Stop/Start Webcam stream
+  
+  // Start backend camera feed immediately on mount for testing
   const cameraIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const startWebcam = async () => {
-    setBackendCameraActive(false);
-    setWebcamActive(false);
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 400, height: 300 } });
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
-      // Verify that the webcam is producing actual video frames (not black/blank)
-      // If no frames arrive within 2 seconds, fall back to backend camera
-      let receivedFrame = false;
-      let frameCheckDone = false;
-      const videoEl = videoRef.current;
-      if (videoEl) {
-        const checkFrame = () => {
-          if (frameCheckDone) return;
-          if (videoEl.readyState >= 2) {
-            const canvas = document.createElement('canvas');
-            canvas.width = 1;
-            canvas.height = 1;
-            const ctx = canvas.getContext('2d');
-            if (ctx) {
-              try {
-                ctx.drawImage(videoEl, 0, 0, 1, 1);
-                const pixel = ctx.getImageData(0, 0, 1, 1).data;
-                if (pixel[0] !== 0 || pixel[1] !== 0 || pixel[2] !== 0) {
-                  receivedFrame = true;
-                }
-              } catch (e) {
-                // drawImage may fail if cross-origin or other issues; treat as no frame
-              }
-            }
-          }
-          frameCheckDone = true;
-          if (receivedFrame) {
-            setWebcamActive(true);
-          } else {
-            // Webcam did not produce usable frames, switch to backend camera
-            if (videoEl.srcObject) {
-              const tracks = (videoEl.srcObject as MediaStream).getTracks();
-              tracks.forEach(t => t.stop());
-              videoEl.srcObject = null;
-            }
-            setBackendCameraActive(true);
-            startBackendCameraFeed();
-          }
-        };
-        videoEl.onplaying = checkFrame;
-        // Safety timeout: if onplaying never fires, check after 2s
-        setTimeout(checkFrame, 2000);
-      }
-    } catch (err) {
-      console.warn('Browser camera unavailable, switching to backend camera feed.', err);
-      setWebcamActive(false);
-      setBackendCameraActive(true);
-      if (videoRef.current) {
-        videoRef.current.srcObject = null;
-      }
-      startBackendCameraFeed();
-    }
-  };
-
-  const startBackendCameraFeed = () => {
+  // Start backend camera feed using Pi CSI camera
+  useEffect(() => {
     setBackendCameraActive(true);
     if (cameraIntervalRef.current) return;
     cameraIntervalRef.current = setInterval(async () => {
@@ -361,24 +300,22 @@ export default function App() {
         const res = await fetch('/api/camera/snapshot');
         if (res.ok) {
           const data = await res.json();
-          if (data.success && data.imageBase64 && canvasRef.current) {
-            const img = new Image();
-            img.onload = () => {
-              const ctx = canvasRef.current?.getContext('2d');
-              if (ctx && canvasRef.current) {
-                canvasRef.current.width = img.width;
-                canvasRef.current.height = img.height;
-                ctx.drawImage(img, 0, 0);
-              }
-            };
-            img.src = data.imageBase64;
+          if (data.success && data.imageBase64) {
+            setActiveSnapshot(data.imageBase64);
           }
         }
       } catch (err) {
         console.warn('Backend camera snapshot failed:', err);
       }
     }, 1000);
-  };
+    
+    return () => {
+      if (cameraIntervalRef.current) {
+        clearInterval(cameraIntervalRef.current);
+        cameraIntervalRef.current = null;
+      }
+    };
+  }, []);
 
   const stopWebcam = () => {
     if (videoRef.current && videoRef.current.srcObject) {
@@ -393,13 +330,6 @@ export default function App() {
     setWebcamActive(false);
     setBackendCameraActive(false);
   };
-
-  // Ensure backend camera feed restarts when re-entering VERIFYING_ITEMS with backend camera active
-  useEffect(() => {
-    if (currentState === 'VERIFYING_ITEMS' && backendCameraActive && !cameraIntervalRef.current) {
-      startBackendCameraFeed();
-    }
-  }, [currentState, backendCameraActive]);
 
   // Run real-time RVM diagnostic simulator for planning list
   const runVerificationProcess = async () => {
@@ -515,21 +445,9 @@ export default function App() {
     // Step 1: Camera sensor
     await new Promise(r => setTimeout(r, 1200));
 
-    // Simulate canvas capture draw
-    if (canvasRef.current && (webcamActive || backendCameraActive)) {
-      try {
-        canvasRef.current.width = 160;
-        canvasRef.current.height = 120;
-        const ctx = canvasRef.current.getContext('2d');
-        if (ctx) {
-          if (webcamActive && videoRef.current) {
-            ctx.drawImage(videoRef.current, 0, 0, 160, 120);
-          }
-          item.imageBlobUrl = canvasRef.current.toDataURL('image/jpeg');
-        }
-      } catch (err) {
-        console.warn("Could not copy frame", err);
-      }
+    // Capture image from active camera feed
+    if (activeSnapshot) {
+      item.imageBlobUrl = activeSnapshot;
     }
 
     // Call REST back-end server endpoint to execute computer vision algorithms on image
@@ -1657,10 +1575,9 @@ export default function App() {
               <div className="flex flex-row flex-wrap justify-center gap-8 max-w-5xl mx-auto w-full">
                 <button 
                   id="activate-rvm-button"
-                   onClick={async () => {
-                     startWebcam().catch(err => console.warn('Camera unavailable, continuing offline.', err));
-                     runVerificationProcess();
-                   }}
+                    onClick={() => {
+                      runVerificationProcess();
+                    }}
                   className="w-80 h-80 md:w-96 md:h-96 bg-gradient-to-r from-emerald-600 to-teal-500 font-black text-white rounded-3xl shadow-xl flex flex-col items-center justify-center gap-6 hover:brightness-110 active:scale-95 transition-all text-2xl animate-pulse"
                 >
                   <Cpu className="w-14 h-14 animate-spin-slow" />
@@ -1692,32 +1609,26 @@ export default function App() {
                     LASER SCANNING CHAMBER
                   </span>
 
-                  {webcamActive ? (
-                    <video 
-                      ref={videoRef} 
-                      autoPlay 
-                      playsInline 
-                      className="w-full h-[280px] object-cover rounded-2xl border border-slate-800 bg-slate-900"
-                    />
-                  ) : backendCameraActive ? (
-                    <canvas 
-                      ref={canvasRef} 
-                      className="w-full h-[280px] object-cover rounded-2xl border border-slate-800 bg-slate-900"
-                    />
+                   {activeSnapshot ? (
+                     <img 
+                       src={activeSnapshot}
+                       alt="Live Camera Feed"
+                       className="w-full h-[280px] object-cover rounded-2xl border border-slate-800 bg-slate-900"
+                     />
                    ) : (
                      <div className="flex-1 flex flex-col items-center justify-center text-center p-6 min-h-[280px]">
-                       {/* SIMULATED OPTICS SCHEMATIC GRAPHIC BASED ON ITEM MATERIAL */}
-                       <div className="w-28 h-28 rounded-2xl bg-slate-800 flex items-center justify-center border border-slate-700 relative mb-4">
-                         {verificationStage === 'CAMERA' && <Camera className="w-12 h-12 text-teal-400 animate-pulse" />}
-                         {verificationStage === 'INDUCTIVE' && <Cpu className="w-12 h-12 text-sky-400 animate-spin" />}
-                         {verificationStage === 'WEIGHT' && <TrendingUp className="w-12 h-12 text-emerald-400" />}
-                         {verificationStage === 'SORTING' && <Sliders className="w-12 h-12 text-amber-500 animate-bounce" />}
-                         <div className="absolute inset-0 bg-gradient-to-t from-teal-500/20 to-transparent"></div>
-                       </div>
-                       <span className="text-sm text-teal-400 font-black uppercase tracking-widest">{verificationStage}...</span>
-                       <p className="text-xs text-slate-500 max-w-[200px] truncate mt-1">Optics model: RevOptics-D56</p>
-                     </div>
-                   )}
+                        {/* SIMULATED OPTICS SCHEMATIC GRAPHIC BASED ON ITEM MATERIAL */}
+                        <div className="w-28 h-28 rounded-2xl bg-slate-800 flex items-center justify-center border border-slate-700 relative mb-4">
+                          {verificationStage === 'CAMERA' && <Camera className="w-12 h-12 text-teal-400 animate-pulse" />}
+                          {verificationStage === 'INDUCTIVE' && <Cpu className="w-12 h-12 text-sky-400 animate-spin" />}
+                          {verificationStage === 'WEIGHT' && <TrendingUp className="w-12 h-12 text-emerald-400" />}
+                          {verificationStage === 'SORTING' && <Sliders className="w-12 h-12 text-amber-500 animate-bounce" />}
+                          <div className="absolute inset-0 bg-gradient-to-t from-teal-500/20 to-transparent"></div>
+                        </div>
+                        <span className="text-sm text-teal-400 font-black uppercase tracking-widest">{verificationStage}...</span>
+                        <p className="text-xs text-slate-500 max-w-[200px] truncate mt-1">Optics model: RevOptics-D56</p>
+                      </div>
+                    )}
 
                    {/* BOTTOM REVAL CHEVRON FLAPS POSITION */}
                    <div className="bg-slate-900 border border-slate-800 px-4 py-2.5 rounded-2xl flex items-center justify-between mt-3">
