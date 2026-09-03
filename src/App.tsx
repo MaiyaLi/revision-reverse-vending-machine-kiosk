@@ -2389,27 +2389,27 @@ export default function App() {
                     <span className="absolute top-4 left-4 bg-blue-600/90 text-white text-xs px-3 py-1 rounded-lg font-mono font-black z-10">
                       LIVE CSI CAMERA
                     </span>
-                    {activeSnapshot ? (
-                      <div className="relative w-full h-[320px]">
+                    <div className="relative w-full h-[320px]">
+                      {activeSnapshot ? (
                         <img 
                           src={activeSnapshot}
                           alt="Live Camera Feed"
                           className="w-full h-[320px] object-cover rounded-xl border border-slate-800"
                         />
-                        {/* Bounding Box Overlay */}
-                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                          <div className="w-3/5 h-3/5 border-4 border-yellow-400 rounded-xl shadow-[0_0_30px_rgba(250,204,21,0.6)] bg-yellow-400/10">
-                            <div className="absolute -top-6 left-0 bg-yellow-400 text-black text-[10px] font-black px-2 py-0.5 rounded">
-                              DETECTION AREA
-                            </div>
+                      ) : (
+                        <div className="w-full h-[320px] bg-slate-900 rounded-xl flex items-center justify-center text-slate-500">
+                          Waiting for camera...
+                        </div>
+                      )}
+                      {/* Bounding Box Overlay */}
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <div className="w-3/5 h-3/5 border-4 border-yellow-400 rounded-xl shadow-[0_0_30px_rgba(250,204,21,0.6)] bg-yellow-400/10">
+                          <div className="absolute -top-6 left-0 bg-yellow-400 text-black text-[10px] font-black px-2 py-0.5 rounded">
+                            DETECTION AREA
                           </div>
                         </div>
                       </div>
-                    ) : (
-                      <div className="w-full h-[320px] bg-slate-900 rounded-xl flex items-center justify-center text-slate-500">
-                        Waiting for camera...
-                      </div>
-                    )}
+                    </div>
                   </div>
 
                  {/* Detection Results */}
