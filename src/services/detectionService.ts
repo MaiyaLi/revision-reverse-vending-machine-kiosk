@@ -84,7 +84,7 @@ export class DetectionService {
         try {
           const base64Data = image.replace(/^data:image\/\w+;base64,/, "");
           const response = await this.ai.models.generateContent({
-            model: "gemini-2.5-flash",
+            model: "gemini-2.5-pro",
             contents: [
               { inlineData: { data: base64Data, mimeType: "image/jpeg" } },
                {
