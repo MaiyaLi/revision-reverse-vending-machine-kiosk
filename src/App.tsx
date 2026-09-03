@@ -2384,23 +2384,33 @@ export default function App() {
 
                {/* LIVE CAMERA + DETECTION DISPLAY */}
                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                 {/* Camera Feed */}
-                 <div className={`bg-black border-4 ${isLight ? 'border-slate-300' : 'border-slate-700'} rounded-[24px] p-4 relative flex flex-col items-center`}>
-                   <span className="absolute top-4 left-4 bg-blue-600/90 text-white text-xs px-3 py-1 rounded-lg font-mono font-black z-10">
-                     LIVE CSI CAMERA
-                   </span>
-                   {activeSnapshot ? (
-                     <img 
-                       src={activeSnapshot}
-                       alt="Live Camera Feed"
-                       className="w-full h-[320px] object-cover rounded-xl border border-slate-800"
-                     />
-                   ) : (
-                     <div className="w-full h-[320px] bg-slate-900 rounded-xl flex items-center justify-center text-slate-500">
-                       Waiting for camera...
-                     </div>
-                   )}
-                 </div>
+                  {/* Camera Feed */}
+                  <div className={`bg-black border-4 ${isLight ? 'border-slate-300' : 'border-slate-700'} rounded-[24px] p-4 relative flex flex-col items-center`}>
+                    <span className="absolute top-4 left-4 bg-blue-600/90 text-white text-xs px-3 py-1 rounded-lg font-mono font-black z-10">
+                      LIVE CSI CAMERA
+                    </span>
+                    {activeSnapshot ? (
+                      <div className="relative w-full h-[320px]">
+                        <img 
+                          src={activeSnapshot}
+                          alt="Live Camera Feed"
+                          className="w-full h-[320px] object-cover rounded-xl border border-slate-800"
+                        />
+                        {/* Bounding Box Overlay */}
+                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                          <div className="w-3/5 h-3/5 border-4 border-yellow-400 rounded-xl shadow-[0_0_30px_rgba(250,204,21,0.6)] bg-yellow-400/10">
+                            <div className="absolute -top-6 left-0 bg-yellow-400 text-black text-[10px] font-black px-2 py-0.5 rounded">
+                              DETECTION AREA
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="w-full h-[320px] bg-slate-900 rounded-xl flex items-center justify-center text-slate-500">
+                        Waiting for camera...
+                      </div>
+                    )}
+                  </div>
 
                  {/* Detection Results */}
                  <div className={`bg-black border-4 ${isLight ? 'border-slate-300' : 'border-slate-700'} rounded-[24px] p-4 relative flex flex-col items-center`}>
