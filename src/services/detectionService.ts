@@ -239,7 +239,9 @@ If absolutely nothing is visible: {"items": []}`
           });
 
           const responseText = response.text || "";
+          console.log("🤖 Gemini raw response:", responseText.substring(0, 200));
           const parsed = JSON.parse(responseText.trim());
+          console.log("📋 Parsed items count:", parsed.items?.length || 0);
           
           if (parsed.items && Array.isArray(parsed.items)) {
             for (const item of parsed.items) {
