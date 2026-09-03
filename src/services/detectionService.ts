@@ -41,7 +41,7 @@ export class DetectionService {
   async captureImage(): Promise<string | null> {
     try {
       const tmpFile = `/tmp/rvm-detect-${Date.now()}.jpg`;
-      const { execSync } = require("child_process");
+      const { execSync } = await import("child_process");
       execSync(`rpicam-still -o ${tmpFile} --width 640 --height 480 --nopreview --timeout 100`, {
         stdio: "ignore",
         timeout: 5000
@@ -74,11 +74,11 @@ export class DetectionService {
         };
       }
 
-      let materialType = "plastic";
-      let itemName = "PET Beverage Bottle";
-      let confidence = 0.95;
-      let estimatedWeight = 22;
-      let reasoning = "Sensor-based classification";
+      let materialType = "other";
+      let itemName = "Unknown item";
+      let confidence = 0.3;
+      let estimatedWeight = 0;
+      let reasoning = "No AI available - please set GEMINI_API_KEY in .env";
 
       if (this.ai) {
         try {
@@ -87,15 +87,19 @@ export class DetectionService {
             model: "gemini-3.6-flash",
             contents: [
               { inlineData: { data: base64Data, mimeType: "image/jpeg" } },
-              {
-                text: `Analyze this recyclable container. Identify if it's:
-1. "plastic" (soda bottle, container)
-2. "aluminum" (beverage can)
-3. "glass" (beer bottle, container)
-4. "other" (unsupported)
+               {
+                 text: `You are a recycling classifier. Look at this image and identify the material type based on visual characteristics.
 
-Respond ONLY in JSON: {"detectedMaterial": "...", "itemName": "...", "confidence": 0.0-1.0, "estimatedWeightGrams": 0, "reasoning": "..."}`
-              }
+Classify as ONE of:
+1. "plastic" - clear/translucent bottles, soda bottles, containers with plastic appearance
+2. "aluminum" - metallic cans, silver beverage cans, aluminum foil containers  
+3. "glass" - transparent glass bottles, beer bottles, glass jars
+4. "other" - anything else, non-recyclable items, or unclear
+
+Look for: material texture, transparency, color, shape, labels, reflections.
+
+Respond ONLY in JSON: {"detectedMaterial": "plastic|aluminum|glass|other", "itemName": "descriptive name", "confidence": 0.0-1.0, "estimatedWeightGrams": number, "reasoning": "what you see"}`
+               }
             ],
             config: {
               responseMimeType: "application/json"
@@ -111,7 +115,8 @@ Respond ONLY in JSON: {"detectedMaterial": "...", "itemName": "...", "confidence
           reasoning = parsed.reasoning || reasoning;
         } catch (err: any) {
           console.warn("Gemini detection failed:", err.message);
-          reasoning = "AI detection failed, using sensor-based fallback";
+          reasoning = "AI detection failed - check GEMINI_API_KEY in .env";
+          confidence = 0.2;
         }
       }
 
