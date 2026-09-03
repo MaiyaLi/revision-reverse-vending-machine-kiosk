@@ -190,16 +190,26 @@ If no items are detected, return: {"items": []}`
       const image = imageBase64 || await this.captureImage();
       
       if (!image) {
+        console.log("📸 Camera capture failed - no image");
         return {
           items: [],
           timestamp: new Date().toISOString(),
           imageBase64: null
         };
       }
+      console.log("📸 Image captured successfully");
 
       const items: DetectionResult[] = [];
 
-      if (this.ai) {
+      if (!this.ai) {
+        console.log("❌ Gemini AI not initialized - check GEMINI_API_KEY");
+        return {
+          items: [],
+          timestamp: new Date().toISOString(),
+          imageBase64: image
+        };
+      }
+      console.log("🤖 Gemini AI initialized, sending request...");
         try {
           const base64Data = image.replace(/^data:image\/\w+;base64,/, "");
           const response = await this.ai.models.generateContent({
@@ -259,7 +269,7 @@ If absolutely nothing is visible: {"items": []}`
             }
           }
         } catch (err: any) {
-          console.warn("Gemini multi-detection failed:", err.message);
+          console.warn("❌ Gemini multi-detection failed:", err.message);
         }
       }
 
