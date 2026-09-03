@@ -185,6 +185,97 @@ If no items are detected, return: {"items": []}`
     }
   }
 
+  async detectMultipleItems(imageBase64?: string): Promise<MultiDetectionResult> {
+    try {
+      const image = imageBase64 || await this.captureImage();
+      
+      if (!image) {
+        return {
+          items: [],
+          timestamp: new Date().toISOString(),
+          imageBase64: null
+        };
+      }
+
+      const items: DetectionResult[] = [];
+
+      if (this.ai) {
+        try {
+          const base64Data = image.replace(/^data:image\/\w+;base64,/, "");
+          const response = await this.ai.models.generateContent({
+            model: "gemini-3.6-flash",
+            contents: [
+              { inlineData: { data: base64Data, mimeType: "image/jpeg" } },
+               {
+                 text: `You are a recycling classifier for a reverse vending machine. Analyze this image and detect ALL recyclable items present, even if there are multiple items.
+
+Classify EACH item as ONE of:
+1. "plastic" - clear/translucent bottles, soda bottles, containers with plastic appearance
+2. "aluminum" - metallic cans, silver beverage cans, aluminum foil containers  
+3. "glass" - transparent glass bottles, beer bottles, glass jars
+4. "other" - anything else, non-recyclable items, or unclear
+
+For EACH detected item, provide a bounding box as percentages (0-100):
+- x: left position %
+- y: top position %  
+- width: width %
+- height: height %
+
+Return JSON array of ALL detected items:
+{"items": [{"detectedMaterial": "...", "itemName": "...", "confidence": 0.0-1.0, "estimatedWeightGrams": number, "reasoning": "...", "boundingBox": {"x": number, "y": number, "width": number, "height": number}}]}
+
+If no items: {"items": []}`
+               }
+            ],
+            config: {
+              responseMimeType: "application/json"
+            }
+          });
+
+          const responseText = response.text || "";
+          const parsed = JSON.parse(responseText.trim());
+          
+          if (parsed.items && Array.isArray(parsed.items)) {
+            for (const item of parsed.items) {
+              const result: DetectionResult = {
+                detectedMaterial: item.detectedMaterial || "other",
+                itemName: item.itemName || "Unknown item",
+                confidence: item.confidence || 0.5,
+                estimatedWeightGrams: item.estimatedWeightGrams || 0,
+                timestamp: new Date().toISOString(),
+                imageBase64: image,
+                reasoning: item.reasoning || "",
+                boundingBox: item.boundingBox && typeof item.boundingBox.x === 'number' ? item.boundingBox : undefined
+              };
+              items.push(result);
+            }
+          }
+        } catch (err: any) {
+          console.warn("Gemini multi-detection failed:", err.message);
+        }
+      }
+
+      for (const item of items) {
+        this.detectionHistory.unshift(item);
+      }
+      if (this.detectionHistory.length > 50) {
+        this.detectionHistory = this.detectionHistory.slice(0, 50);
+      }
+
+      return {
+        items,
+        timestamp: new Date().toISOString(),
+        imageBase64: image
+      };
+    } catch (error: any) {
+      return {
+        items: [],
+        timestamp: new Date().toISOString(),
+        imageBase64: null
+      };
+    }
+  }
+
   async startBackgroundDetection(intervalMs: number = 2000) {
     if (this.isDetecting) return;
     this.isDetecting = true;
