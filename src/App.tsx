@@ -153,6 +153,7 @@ export default function App() {
   const [sessionRefId, setSessionRefId] = useState<string | null>(null);
   const [postLoginTarget, setPostLoginTarget] = useState<AppState | null>(null);
   const [detectionResult, setDetectionResult] = useState<any>(null);
+  const [detectionItems, setDetectionItems] = useState<any[]>([]);
   const [detectionHistory, setDetectionHistory] = useState<any[]>([]);
 
   // --- LOOPS & INACTIVITY TIMEOUTS ---
@@ -335,47 +336,58 @@ export default function App() {
      setBackendCameraActive(false);
    };
 
-   // Background detection polling (for DETECTION_TEST view)
-   useEffect(() => {
-     if (currentState === 'DETECTION_TEST') {
-       const fetchDetection = async () => {
-         try {
-           const res = await fetch('/api/detection/latest');
-           if (res.ok) {
-             const data = await res.json();
-             setDetectionResult(data);
-           }
-         } catch (err) {
-           console.warn('Detection fetch failed:', err);
-         }
-         try {
-           const res = await fetch('/api/detection/history');
-           if (res.ok) {
-             const data = await res.json();
-             setDetectionHistory(data);
-           }
-         } catch (err) {
-           console.warn('Detection history fetch failed:', err);
-         }
-       };
-       fetchDetection();
-       const interval = setInterval(fetchDetection, 2000);
-       return () => clearInterval(interval);
-     }
-   }, [currentState]);
+    // Background detection polling (for DETECTION_TEST view)
+    useEffect(() => {
+      if (currentState === 'DETECTION_TEST') {
+        const fetchDetection = async () => {
+          try {
+            const res = await fetch('/api/detection/latest');
+            if (res.ok) {
+              const data = await res.json();
+              setDetectionResult(data);
+              if (data.items && Array.isArray(data.items)) {
+                setDetectionItems(data.items);
+              } else if (data.detectedMaterial) {
+                setDetectionItems([data]);
+              }
+            }
+          } catch (err) {
+            console.warn('Detection fetch failed:', err);
+          }
+          try {
+            const res = await fetch('/api/detection/history');
+            if (res.ok) {
+              const data = await res.json();
+              setDetectionHistory(data);
+            }
+          } catch (err) {
+            console.warn('Detection history fetch failed:', err);
+          }
+        };
 
-   const refreshDetection = async () => {
-     try {
-       const res = await fetch('/api/detection/run', { method: 'POST' });
-       if (res.ok) {
-         const data = await res.json();
-         setDetectionResult(data);
-         setDetectionHistory(prev => [data, ...prev.slice(0, 19)]);
-       }
-     } catch (err) {
-       console.warn('Manual detection failed:', err);
-     }
-   };
+        fetchDetection();
+        const interval = setInterval(fetchDetection, 1500);
+        return () => clearInterval(interval);
+      }
+    }, [currentState]);
+
+    const refreshDetection = async () => {
+      try {
+        const res = await fetch('/api/detection/run', { method: 'POST' });
+        if (res.ok) {
+          const data = await res.json();
+          setDetectionResult(data);
+          if (data.items && Array.isArray(data.items)) {
+            setDetectionItems(data.items);
+          } else if (data.detectedMaterial) {
+            setDetectionItems([data]);
+          }
+          setDetectionHistory(prev => [data, ...prev.slice(0, 19)]);
+        }
+      } catch (err) {
+        console.warn('Manual detection failed:', err);
+      }
+    };
 
    // Run real-time RVM diagnostic simulator for planning list
   const runVerificationProcess = async () => {
@@ -2401,51 +2413,59 @@ export default function App() {
                            Waiting for camera...
                          </div>
                        )}
-                       {/* AI Bounding Box */}
-                       {detectionResult?.boundingBox ? (
-                         <div 
-                           className="absolute border-4 border-red-500 rounded-lg shadow-[0_0_20px_rgba(239,68,68,0.8)] bg-red-500/10 pointer-events-none"
-                           style={{
-                             left: `${detectionResult.boundingBox.x}%`,
-                             top: `${detectionResult.boundingBox.y}%`,
-                             width: `${detectionResult.boundingBox.width}%`,
-                             height: `${detectionResult.boundingBox.height}%`,
-                           }}
-                         >
-                           <div className="absolute -top-6 left-0 bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded">
-                             {detectionResult.itemName}
+                       {/* AI Bounding Boxes for all detected items */}
+                       {detectionItems.map((item, idx) => (
+                         item.boundingBox ? (
+                           <div 
+                             key={idx}
+                             className="absolute border-4 border-red-500 rounded-lg shadow-[0_0_20px_rgba(239,68,68,0.8)] bg-red-500/10 pointer-events-none"
+                             style={{
+                               left: `${item.boundingBox.x}%`,
+                               top: `${item.boundingBox.y}%`,
+                               width: `${item.boundingBox.width}%`,
+                               height: `${item.boundingBox.height}%`,
+                             }}
+                           >
+                             <div className="absolute -top-6 left-0 bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded">
+                               {item.itemName} ({(item.confidence * 100).toFixed(0)}%)
+                             </div>
                            </div>
-                         </div>
-                       ) : null}
+                         ) : null
+                       ))}
                      </div>
                   </div>
 
-                 {/* Detection Results */}
-                 <div className={`bg-black border-4 ${isLight ? 'border-slate-300' : 'border-slate-700'} rounded-[24px] p-4 relative flex flex-col items-center`}>
-                   <span className="absolute top-4 left-4 bg-emerald-600/90 text-white text-xs px-3 py-1 rounded-lg font-mono font-black z-10">
-                     DETECTION RESULTS
-                   </span>
-                   <div className="mt-12 w-full text-center space-y-4">
-                     <div className={`p-6 rounded-2xl ${backendCameraActive ? 'bg-emerald-950/40 border border-emerald-500 text-emerald-400' : 'bg-slate-800 border border-slate-700 text-slate-400'}`}>
-                       <div className="text-3xl font-black mb-2">
-                         {detectionResult?.detectedMaterial === 'plastic' ? '🥤 PLASTIC' : 
-                          detectionResult?.detectedMaterial === 'aluminum' ? '🥫 ALUMINUM' : 
-                          detectionResult?.detectedMaterial === 'glass' ? '🍾 GLASS' : 
-                          detectionResult?.detectedMaterial === 'other' ? '🚫 REJECTED' :
-                          '⏳ Waiting...'}
-                       </div>
-                       <div className="text-xl font-bold">
-                         {detectionResult?.itemName || 'No detection yet'}
-                       </div>
-                       <div className="text-sm mt-2 opacity-80">
-                         Confidence: {(detectionResult?.confidence || 0) * 100}%
-                       </div>
-                       <div className="text-xs mt-2 opacity-60">
-                         Weight: {detectionResult?.estimatedWeightGrams || 0}g
-                       </div>
-                     </div>
-                   </div>
-                 </div>
+                  {/* Detection Results */}
+                  <div className={`bg-black border-4 ${isLight ? 'border-slate-300' : 'border-slate-700'} rounded-[24px] p-4 relative flex flex-col items-center`}>
+                    <span className="absolute top-4 left-4 bg-emerald-600/90 text-white text-xs px-3 py-1 rounded-lg font-mono font-black z-10">
+                      DETECTION RESULTS
+                    </span>
+                    <div className="mt-12 w-full text-center space-y-3">
+                      {detectionItems.length === 0 ? (
+                        <div className={`p-6 rounded-2xl ${backendCameraActive ? 'bg-emerald-950/40 border border-emerald-500 text-emerald-400' : 'bg-slate-800 border border-slate-700 text-slate-400'}`}>
+                          <div className="text-3xl font-black mb-2">⏳ Waiting...</div>
+                          <div className="text-sm opacity-80">No items detected yet</div>
+                        </div>
+                      ) : (
+                        detectionItems.map((item, idx) => (
+                          <div key={idx} className={`p-4 rounded-2xl ${item.detectedMaterial === 'plastic' ? 'bg-teal-950/40 border border-teal-500 text-teal-400' : 
+                           item.detectedMaterial === 'aluminum' ? 'bg-sky-950/40 border border-sky-500 text-sky-400' : 
+                           item.detectedMaterial === 'glass' ? 'bg-amber-950/40 border border-amber-500 text-amber-400' : 
+                           'bg-red-950/40 border border-red-500 text-red-400'}`}>
+                            <div className="text-2xl font-black mb-1">
+                              {item.detectedMaterial === 'plastic' ? '🥤 PLASTIC' : 
+                               item.detectedMaterial === 'aluminum' ? '🥫 ALUMINUM' : 
+                               item.detectedMaterial === 'glass' ? '🍾 GLASS' : 
+                               '🚫 REJECTED'}
+                            </div>
+                            <div className="text-lg font-bold">{item.itemName}</div>
+                            <div className="text-sm mt-1 opacity-80">Confidence: {(item.confidence * 100).toFixed(1)}%</div>
+                            <div className="text-xs mt-1 opacity-60">Weight: {item.estimatedWeightGrams}g</div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
                </div>
 
                {/* DETECTION HISTORY */}

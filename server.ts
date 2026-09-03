@@ -577,10 +577,33 @@ app.get("/api/detection/image", (req, res) => {
 });
 
 // Trigger a manual detection (for testing)
+// Run detection - returns all detected items
 app.post("/api/detection/run", async (req, res) => {
   try {
-    const result = await detectionService.detectItem();
+    const result = await detectionService.detectMultipleItems();
     res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get latest multi-detection result
+app.get("/api/detection/latest", (req, res) => {
+  try {
+    const latest = detectionService.getHistory()[0];
+    if (!latest) {
+      return res.status(404).json({ error: "No detections yet" });
+    }
+    res.json(latest);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get all detection history
+app.get("/api/detection/history", (req, res) => {
+  try {
+    res.json(detectionService.getHistory());
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }

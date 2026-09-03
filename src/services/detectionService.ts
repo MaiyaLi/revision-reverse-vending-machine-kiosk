@@ -3,6 +3,13 @@ import fs from "fs";
 import path from "path";
 import { GoogleGenAI } from "@google/genai";
 
+export interface BoundingBox {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 export interface DetectionResult {
   detectedMaterial: string;
   itemName: string;
@@ -11,12 +18,13 @@ export interface DetectionResult {
   timestamp: string;
   imageBase64: string | null;
   reasoning: string;
-  boundingBox?: {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-  };
+  boundingBox?: BoundingBox;
+}
+
+export interface MultiDetectionResult {
+  items: DetectionResult[];
+  timestamp: string;
+  imageBase64: string | null;
 }
 
 export class DetectionService {
@@ -86,7 +94,7 @@ export class DetectionService {
       let confidence = 0.3;
       let estimatedWeight = 0;
       let reasoning = "No AI available - please set GEMINI_API_KEY in .env";
-      let boundingBox: { x: number; y: number; width: number; height: number } | undefined;
+      let boundingBox: BoundingBox | undefined;
 
       if (this.ai) {
         try {
@@ -96,24 +104,24 @@ export class DetectionService {
             contents: [
               { inlineData: { data: base64Data, mimeType: "image/jpeg" } },
                {
-                 text: `You are a recycling classifier. Look at this image and identify the material type based on visual characteristics.
+                 text: `You are a recycling classifier for a reverse vending machine. Analyze this image and detect ALL recyclable items present.
 
-Classify as ONE of:
+Classify EACH item as ONE of:
 1. "plastic" - clear/translucent bottles, soda bottles, containers with plastic appearance
 2. "aluminum" - metallic cans, silver beverage cans, aluminum foil containers  
 3. "glass" - transparent glass bottles, beer bottles, glass jars
 4. "other" - anything else, non-recyclable items, or unclear
 
-IMPORTANT: Also estimate where the detected item is located in the image as a bounding box.
-Use percentages (0-100) for all coordinates relative to the image dimensions.
+For EACH detected item, estimate its bounding box location as percentages (0-100) relative to image dimensions:
 - x: left position percentage
 - y: top position percentage  
 - width: width percentage
 - height: height percentage
 
-Example: {"detectedMaterial": "plastic", "itemName": "PET Beverage Bottle", "confidence": 0.95, "estimatedWeightGrams": 22, "reasoning": "Clear plastic bottle with label", "boundingBox": {"x": 25, "y": 15, "width": 50, "height": 70}}
+Return a JSON array of ALL detected items:
+{"items": [{"detectedMaterial": "...", "itemName": "...", "confidence": 0.0-1.0, "estimatedWeightGrams": number, "reasoning": "...", "boundingBox": {"x": number, "y": number, "width": number, "height": number}}]}
 
-Respond ONLY in JSON: {"detectedMaterial": "plastic|aluminum|glass|other", "itemName": "descriptive name", "confidence": 0.0-1.0, "estimatedWeightGrams": number, "reasoning": "what you see", "boundingBox": {"x": number, "y": number, "width": number, "height": number}}`
+If no items are detected, return: {"items": []}`
                }
             ],
             config: {
@@ -123,13 +131,20 @@ Respond ONLY in JSON: {"detectedMaterial": "plastic|aluminum|glass|other", "item
 
           const responseText = response.text || "";
           const parsed = JSON.parse(responseText.trim());
-          materialType = parsed.detectedMaterial || materialType;
-          itemName = parsed.itemName || itemName;
-          confidence = parsed.confidence || confidence;
-          estimatedWeight = parsed.estimatedWeightGrams || estimatedWeight;
-          reasoning = parsed.reasoning || reasoning;
-          if (parsed.boundingBox && typeof parsed.boundingBox.x === 'number') {
-            boundingBox = parsed.boundingBox;
+          
+          if (parsed.items && Array.isArray(parsed.items) && parsed.items.length > 0) {
+            const best = parsed.items[0];
+            materialType = best.detectedMaterial || materialType;
+            itemName = best.itemName || itemName;
+            confidence = best.confidence || confidence;
+            estimatedWeight = best.estimatedWeightGrams || estimatedWeight;
+            reasoning = best.reasoning || reasoning;
+            if (best.boundingBox && typeof best.boundingBox.x === 'number') {
+              boundingBox = best.boundingBox;
+            }
+          } else {
+            reasoning = "No recyclable items detected in image";
+            confidence = 0.2;
           }
         } catch (err: any) {
           console.warn("Gemini detection failed:", err.message);
@@ -177,7 +192,10 @@ Respond ONLY in JSON: {"detectedMaterial": "plastic|aluminum|glass|other", "item
     const detect = async () => {
       if (!this.isDetecting) return;
       try {
-        await this.detectItem();
+        const multiResult = await this.detectMultipleItems();
+        if (multiResult.items.length > 0) {
+          console.log(`🔍 Detected ${multiResult.items.length} item(s):`, multiResult.items.map(i => `${i.detectedMaterial} (${(i.confidence * 100).toFixed(1)}%)`).join(', '));
+        }
       } catch (err) {
         console.warn("Background detection error:", err);
       }
