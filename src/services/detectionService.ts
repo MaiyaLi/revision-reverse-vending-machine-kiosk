@@ -11,6 +11,12 @@ export interface DetectionResult {
   timestamp: string;
   imageBase64: string | null;
   reasoning: string;
+  boundingBox?: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
 }
 
 export class DetectionService {
@@ -70,7 +76,8 @@ export class DetectionService {
           estimatedWeightGrams: 0,
           timestamp: new Date().toISOString(),
           imageBase64: null,
-          reasoning: "Image capture failed"
+          reasoning: "Image capture failed",
+          boundingBox: undefined
         };
       }
 
@@ -79,6 +86,7 @@ export class DetectionService {
       let confidence = 0.3;
       let estimatedWeight = 0;
       let reasoning = "No AI available - please set GEMINI_API_KEY in .env";
+      let boundingBox: { x: number; y: number; width: number; height: number } | undefined;
 
       if (this.ai) {
         try {
@@ -96,9 +104,16 @@ Classify as ONE of:
 3. "glass" - transparent glass bottles, beer bottles, glass jars
 4. "other" - anything else, non-recyclable items, or unclear
 
-Look for: material texture, transparency, color, shape, labels, reflections.
+IMPORTANT: Also estimate where the detected item is located in the image as a bounding box.
+Use percentages (0-100) for all coordinates relative to the image dimensions.
+- x: left position percentage
+- y: top position percentage  
+- width: width percentage
+- height: height percentage
 
-Respond ONLY in JSON: {"detectedMaterial": "plastic|aluminum|glass|other", "itemName": "descriptive name", "confidence": 0.0-1.0, "estimatedWeightGrams": number, "reasoning": "what you see"}`
+Example: {"detectedMaterial": "plastic", "itemName": "PET Beverage Bottle", "confidence": 0.95, "estimatedWeightGrams": 22, "reasoning": "Clear plastic bottle with label", "boundingBox": {"x": 25, "y": 15, "width": 50, "height": 70}}
+
+Respond ONLY in JSON: {"detectedMaterial": "plastic|aluminum|glass|other", "itemName": "descriptive name", "confidence": 0.0-1.0, "estimatedWeightGrams": number, "reasoning": "what you see", "boundingBox": {"x": number, "y": number, "width": number, "height": number}}`
                }
             ],
             config: {
@@ -113,6 +128,9 @@ Respond ONLY in JSON: {"detectedMaterial": "plastic|aluminum|glass|other", "item
           confidence = parsed.confidence || confidence;
           estimatedWeight = parsed.estimatedWeightGrams || estimatedWeight;
           reasoning = parsed.reasoning || reasoning;
+          if (parsed.boundingBox && typeof parsed.boundingBox.x === 'number') {
+            boundingBox = parsed.boundingBox;
+          }
         } catch (err: any) {
           console.warn("Gemini detection failed:", err.message);
           reasoning = "AI detection failed - check GEMINI_API_KEY in .env";
@@ -127,7 +145,8 @@ Respond ONLY in JSON: {"detectedMaterial": "plastic|aluminum|glass|other", "item
         estimatedWeightGrams: estimatedWeight,
         timestamp: new Date().toISOString(),
         imageBase64: image,
-        reasoning
+        reasoning,
+        boundingBox
       };
 
       // Add to history (keep last 50)
@@ -145,7 +164,8 @@ Respond ONLY in JSON: {"detectedMaterial": "plastic|aluminum|glass|other", "item
         estimatedWeightGrams: 0,
         timestamp: new Date().toISOString(),
         imageBase64: null,
-        reasoning: error.message || "Unknown error"
+        reasoning: error.message || "Unknown error",
+        boundingBox: undefined
       };
     }
   }

@@ -2389,27 +2389,43 @@ export default function App() {
                     <span className="absolute top-4 left-4 bg-blue-600/90 text-white text-xs px-3 py-1 rounded-lg font-mono font-black z-10">
                       LIVE CSI CAMERA
                     </span>
-                    <div className="relative w-full h-[320px]">
-                      {activeSnapshot ? (
-                        <img 
-                          src={activeSnapshot}
-                          alt="Live Camera Feed"
-                          className="w-full h-[320px] object-cover rounded-xl border border-slate-800"
-                        />
-                      ) : (
-                        <div className="w-full h-[320px] bg-slate-900 rounded-xl flex items-center justify-center text-slate-500">
-                          Waiting for camera...
-                        </div>
-                      )}
-                      {/* Bounding Box Overlay */}
-                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                        <div className="w-3/5 h-3/5 border-4 border-yellow-400 rounded-xl shadow-[0_0_30px_rgba(250,204,21,0.6)] bg-yellow-400/10">
-                          <div className="absolute -top-6 left-0 bg-yellow-400 text-black text-[10px] font-black px-2 py-0.5 rounded">
-                            DETECTION AREA
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+                     <div className="relative w-full h-[320px]">
+                       {activeSnapshot ? (
+                         <img 
+                           src={activeSnapshot}
+                           alt="Live Camera Feed"
+                           className="w-full h-[320px] object-cover rounded-xl border border-slate-800"
+                         />
+                       ) : (
+                         <div className="w-full h-[320px] bg-slate-900 rounded-xl flex items-center justify-center text-slate-500">
+                           Waiting for camera...
+                         </div>
+                       )}
+                       {/* AI Bounding Box */}
+                       {detectionResult?.boundingBox ? (
+                         <div 
+                           className="absolute border-4 border-red-500 rounded-lg shadow-[0_0_20px_rgba(239,68,68,0.8)] bg-red-500/10 pointer-events-none"
+                           style={{
+                             left: `${detectionResult.boundingBox.x}%`,
+                             top: `${detectionResult.boundingBox.y}%`,
+                             width: `${detectionResult.boundingBox.width}%`,
+                             height: `${detectionResult.boundingBox.height}%`,
+                           }}
+                         >
+                           <div className="absolute -top-6 left-0 bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded">
+                             {detectionResult.itemName}
+                           </div>
+                         </div>
+                       ) : (
+                         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                           <div className="w-3/5 h-3/5 border-4 border-yellow-400 rounded-xl shadow-[0_0_30px_rgba(250,204,21,0.6)] bg-yellow-400/10">
+                             <div className="absolute -top-6 left-0 bg-yellow-400 text-black text-[10px] font-black px-2 py-0.5 rounded">
+                               DETECTION AREA
+                             </div>
+                           </div>
+                         </div>
+                       )}
+                     </div>
                   </div>
 
                  {/* Detection Results */}
