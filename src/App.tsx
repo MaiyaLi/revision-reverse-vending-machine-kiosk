@@ -2416,15 +2416,7 @@ export default function App() {
                              {detectionResult.itemName}
                            </div>
                          </div>
-                       ) : (
-                         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                           <div className="w-3/5 h-3/5 border-4 border-yellow-400 rounded-xl shadow-[0_0_30px_rgba(250,204,21,0.6)] bg-yellow-400/10">
-                             <div className="absolute -top-6 left-0 bg-yellow-400 text-black text-[10px] font-black px-2 py-0.5 rounded">
-                               DETECTION AREA
-                             </div>
-                           </div>
-                         </div>
-                       )}
+                       ) : null}
                      </div>
                   </div>
 
