@@ -50,7 +50,7 @@ function waitForPort(path: string, baudRate?: number): Promise<SerialPort> {
       } else {
         console.log(`🖨️  Printer connected on ${path}${baudRate ? ` @ ${baudRate} baud` : ""}`);
         parser = testPort.pipe(new ReadlineParser({ delimiter: "\n" }));
-        setTimeout(() => resolve(testPort), 300);
+        setTimeout(() => resolve(testPort), 500);
       }
     });
   });
@@ -206,9 +206,18 @@ export async function testPrinterCommands(): Promise<boolean> {
     }) },
   ];
 
+  // Remove readline parser to avoid interfering with binary data
+  if (parser) {
+    parser.destroy();
+    parser = null;
+  }
+
   for (const test of tests) {
     try {
       await new Promise((resolve, reject) => {
+        if (!printer || !printer.isOpen) {
+          return reject(new Error("Printer not open"));
+        }
         printer.write(test.data, (err) => {
           if (err) return reject(err);
           printer.flush?.();
