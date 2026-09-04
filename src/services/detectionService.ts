@@ -271,7 +271,6 @@ If absolutely nothing is visible: {"items": []}`
         } catch (err: any) {
           console.warn("❌ Gemini multi-detection failed:", err.message);
         }
-      }
 
       for (const item of items) {
         this.detectionHistory.unshift(item);
