@@ -1,16 +1,9 @@
-import { SerialPort } from "serialport";
-import { ReadlineParser } from "@serialport/parser-readline";
+import { exec } from "child_process";
+import { promisify } from "util";
 
+const execAsync = promisify(exec);
+const PORT_PATH = "/dev/serial0";
 const BAUD_RATE = 9600;
-
-let port: SerialPort | null = null;
-let parser: ReadlineParser | null = null;
-
-async function findUsbPrinter(): Promise<string | null> {
-  const ports = await SerialPort.list();
-  const usbPrinter = ports.find(p => p.path?.includes("usb") || p.path?.includes("lp") || p.manufacturer?.includes("gxmc") || p.vendorId === "28e9");
-  return usbPrinter?.path || null;
-}
 
 export interface ReceiptData {
   items: Array<{
@@ -29,72 +22,27 @@ export interface ReceiptData {
   transactionId: string;
 }
 
-function waitForPort(path: string, baudRate?: number): Promise<SerialPort> {
-  return new Promise((resolve, reject) => {
-    const options: any = { autoOpen: false };
-    if (baudRate) {
-      options.baudRate = baudRate;
-      options.dataBits = 8;
-      options.stopBits = 1;
-      options.parity = "none";
-    }
-
-    const testPort = new SerialPort({
-      path,
-      ...options,
-    });
-
-    testPort.open((err) => {
-      if (err) {
-        reject(new Error(`Failed to open ${path}${baudRate ? ` @ ${baudRate} baud` : ""}: ${err.message} (code: ${err.code})`));
-      } else {
-        console.log(`🖨️  Printer connected on ${path}${baudRate ? ` @ ${baudRate} baud` : ""}`);
-        parser = testPort.pipe(new ReadlineParser({ delimiter: "\n" }));
-        setTimeout(() => resolve(testPort), 500);
-      }
-    });
-  });
+async function ensureBaudRate(): Promise<void> {
+  try {
+    await execAsync(`stty -F ${PORT_PATH} ${BAUD_RATE} cs8 -cstopb -parenck -ixon -ixoff -crtscts raw -echo 2>/dev/null || true`);
+  } catch {
+    // ignore stty errors
+  }
 }
 
-async function initPrinter(): Promise<SerialPort | null> {
-  if (port && port.isOpen) {
-    return port;
-  }
-
-  // Try auto-detected USB printer first
+async function writeToPrinter(data: Buffer): Promise<boolean> {
   try {
-    const usbPath = await findUsbPrinter();
-    if (usbPath) {
-      port = await waitForPort(usbPath);
-      return port;
-    }
+    await ensureBaudRate();
+    const tmpFile = `/tmp/receipt-${Date.now()}.bin`;
+    const { writeFile } = await import("fs");
+    await writeFile(tmpFile, data);
+    await execAsync(`cat ${tmpFile} > ${PORT_PATH}`);
+    await execAsync(`rm -f ${tmpFile}`);
+    return true;
   } catch (err: any) {
-    console.warn(`❌ USB auto-detect: ${err.message}`);
+    console.warn("❌ Printer write failed:", err.message);
+    return false;
   }
-
-  // Fall back to known USB paths
-  const usbPaths = ["/dev/usb/lp0", "/dev/usb/lp1", "/dev/lp0"];
-  for (const path of usbPaths) {
-    try {
-      port = await waitForPort(path);
-      return port;
-    } catch (err: any) {
-      console.warn(`❌ USB ${path}: ${err.message}`);
-    }
-  }
-
-  // Fall back to serial
-  const serialPaths = ["/dev/serial0", "/dev/ttyAMA0"];
-  for (const path of serialPaths) {
-    try {
-      port = await waitForPort(path, BAUD_RATE);
-      return port;
-    } catch (err: any) {
-      console.warn(`❌ Serial ${path}: ${err.message}`);
-    }
-  }
-
-  return null;
 }
 
 function buildEscPos(receipt: ReceiptData): Buffer {
@@ -113,12 +61,6 @@ function buildEscPos(receipt: ReceiptData): Buffer {
 
   if (receipt.user?.name) {
     chunks.push(Buffer.from(`User: ${receipt.user.name}\n`, "ascii"));
-  }
-  if (receipt.user?.email) {
-    chunks.push(Buffer.from(`Email: ${receipt.user.email}\n`, "ascii"));
-  }
-  if (receipt.user?.phone) {
-    chunks.push(Buffer.from(`Phone: ${receipt.user.phone}\n`, "ascii"));
   }
 
   chunks.push(Buffer.from(`Date: ${new Date(receipt.timestamp).toLocaleString()}\n`, "ascii"));
@@ -153,96 +95,41 @@ function buildEscPos(receipt: ReceiptData): Buffer {
 }
 
 export async function printReceipt(receipt: ReceiptData): Promise<boolean> {
-  const printer = await initPrinter();
-  if (!printer || !printer.isOpen) {
-    console.warn("🖨️  Printer not available");
-    return false;
+  const data = buildEscPos(receipt);
+  const ok = await writeToPrinter(data);
+  if (ok) {
+    console.log(`🖨️  Receipt printed: ${receipt.transactionId}`);
   }
-
-  try {
-    const data = buildEscPos(receipt);
-    await new Promise((resolve, reject) => {
-      if (!printer || !printer.isOpen) {
-        return reject(new Error("Printer not open"));
-      }
-      printer.write(data, (err) => {
-        if (err) return reject(err);
-        printer.flush?.();
-        resolve(true);
-      });
-    });
-    await new Promise(r => setTimeout(r, 500));
-    return true;
-  } catch (err: any) {
-    console.warn("❌ Print failed:", err.message);
-    return false;
-  }
+  return ok;
 }
 
 export async function testPrinterCommands(): Promise<boolean> {
-  const printer = await initPrinter();
-  if (!printer || !printer.isOpen) {
-    console.warn("🖨️  Printer not available for command test");
-    return false;
-  }
+  console.log("🧪 Testing QR204 printer via shell echo...");
 
-  console.log("🧪 Testing QR204 raw printer commands...");
-
-  const tests = [
-    { name: "Plain text only", data: Buffer.from("HELLO WORLD\n") },
+  const tests: Array<{ name: string; data: Buffer }> = [
+    { name: "Plain text", data: Buffer.from("HELLO WORLD\n") },
     { name: "ESC init + text", data: Buffer.concat([Buffer.from([0x1b, 0x40]), Buffer.from("Test\n")]) },
-    { name: "ESC init + feed + text + cut", data: Buffer.concat([
-      Buffer.from([0x1b, 0x40]),
-      Buffer.from([0x1b, 0x64, 0x03]),
-      Buffer.from("Line 1\nLine 2\nLine 3\n"),
-      Buffer.from([0x1b, 0x64, 0x05]),
-      Buffer.from([0x1d, 0x56, 0x00]),
-    ])},
-    { name: "Full receipt with extra feed", data: buildEscPos({
-      items: [{name: "Test", material: "plastic", weightGrams: 100, points: 10}],
+    { name: "Full receipt", data: buildEscPos({
+      items: [{name: "PET Bottle", material: "plastic", weightGrams: 22, points: 10}],
       totalPoints: 10,
       timestamp: new Date().toISOString(),
       transactionId: "TEST",
     }) },
   ];
 
-  // Remove readline parser to avoid interfering with binary data
-  if (parser) {
-    parser.destroy();
-    parser = null;
-  }
-
   for (const test of tests) {
-    try {
-      await new Promise((resolve, reject) => {
-        if (!printer || !printer.isOpen) {
-          return reject(new Error("Printer not open"));
-        }
-        printer.write(test.data, (err) => {
-          if (err) return reject(err);
-          printer.flush?.();
-          resolve(true);
-        });
-      });
+    const ok = await writeToPrinter(test.data);
+    if (ok) {
       console.log(`  ✅ Sent: ${test.name}`);
-      await new Promise(r => setTimeout(r, 2000));
-    } catch (err: any) {
-      console.warn(`  ❌ ${test.name} failed:`, err.message);
+    } else {
+      console.warn(`  ❌ ${test.name} failed`);
     }
+    await new Promise(r => setTimeout(r, 2000));
   }
 
   return true;
 }
 
 export function closePrinter(): void {
-  if (parser) {
-    parser.destroy();
-    parser = null;
-  }
-  if (port && port.isOpen) {
-    port.close((err) => {
-      if (err) console.warn("❌ Failed to close printer:", err.message);
-    });
-    port = null;
-  }
+  // no-op for shell-based writer
 }

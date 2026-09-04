@@ -1,5 +1,5 @@
 import { db } from './database';
-import { printReceipt, testPrinterCommands } from './printerService';
+import { printReceipt, testPrinterCommands, closePrinter } from './printerService';
 
 export interface ReceiptData {
   items: Array<{
@@ -103,7 +103,6 @@ export class ReceiptService {
   async testPrinterCommands(): Promise<boolean> {
     return await testPrinterCommands();
   }
-}
 
   async sendViaSMS(transactionId: string, phoneNumber: string): Promise<any> {
     const receipt = await db.queryOne(
