@@ -6,34 +6,17 @@ const PORT_PATH = "/dev/ttyAMA0";
 const BAUD_RATE = 9600;
 
 export interface ReceiptData {
-  items: Array<{
-    name: string;
-    material: string;
-    weightGrams: number;
-    points: number;
-  }>;
+  items: Array<{ name: string; material: string; weightGrams: number; points: number }>;
   totalPoints: number;
-  user?: {
-    name: string;
-    email?: string;
-    phone?: string;
-  };
+  user?: { name: string; email?: string; phone?: string };
   timestamp: string;
   transactionId: string;
 }
 
-async function ensureBaudRate(): Promise<void> {
+async function writeRaw(data: Buffer): Promise<boolean> {
   try {
     await execAsync(`stty -F ${PORT_PATH} ${BAUD_RATE} cs8 -cstopb -parenck -ixon -ixoff -crtscts raw -echo 2>/dev/null || true`);
-  } catch {
-    // ignore stty errors
-  }
-}
-
-async function writeToPrinter(data: Buffer): Promise<boolean> {
-  try {
-    await ensureBaudRate();
-    const tmpFile = `/tmp/receipt-${Date.now()}.bin`;
+    const tmpFile = `/tmp/printer-${Date.now()}.bin`;
     const { writeFile } = await import("fs");
     await writeFile(tmpFile, data);
     await execAsync(`cat ${tmpFile} > ${PORT_PATH}`);
@@ -52,7 +35,7 @@ function buildEscPos(receipt: ReceiptData): Buffer {
 
   const chunks: Buffer[] = [];
 
-  chunks.push(ESC, Buffer.from([0x40])); // Initialize printer
+  chunks.push(ESC, Buffer.from([0x40])); // Initialize
   chunks.push(ESC, Buffer.from([0x61, 0x01])); // Center align
 
   chunks.push(Buffer.from("================================\n", "ascii"));
@@ -96,7 +79,7 @@ function buildEscPos(receipt: ReceiptData): Buffer {
 
 export async function printReceipt(receipt: ReceiptData): Promise<boolean> {
   const data = buildEscPos(receipt);
-  const ok = await writeToPrinter(data);
+  const ok = await writeRaw(data);
   if (ok) {
     console.log(`🖨️  Receipt printed: ${receipt.transactionId}`);
   }
@@ -104,13 +87,13 @@ export async function printReceipt(receipt: ReceiptData): Promise<boolean> {
 }
 
 export async function testPrinterCommands(): Promise<boolean> {
-  console.log("🧪 Testing QR204 printer via shell echo...");
+  console.log("🧪 Testing QR204 printer via ttyAMA0...");
 
   const tests: Array<{ name: string; data: Buffer }> = [
     { name: "Plain text", data: Buffer.from("HELLO WORLD\n") },
     { name: "ESC init + text", data: Buffer.concat([Buffer.from([0x1b, 0x40]), Buffer.from("Test\n")]) },
     { name: "Full receipt", data: buildEscPos({
-      items: [{name: "PET Bottle", material: "plastic", weightGrams: 22, points: 10}],
+      items: [{ name: "PET Bottle", material: "plastic", weightGrams: 22, points: 10 }],
       totalPoints: 10,
       timestamp: new Date().toISOString(),
       transactionId: "TEST",
@@ -118,7 +101,7 @@ export async function testPrinterCommands(): Promise<boolean> {
   ];
 
   for (const test of tests) {
-    const ok = await writeToPrinter(test.data);
+    const ok = await writeRaw(test.data);
     if (ok) {
       console.log(`  ✅ Sent: ${test.name}`);
     } else {
@@ -128,8 +111,4 @@ export async function testPrinterCommands(): Promise<boolean> {
   }
 
   return true;
-}
-
-export function closePrinter(): void {
-  // no-op for shell-based writer
 }
