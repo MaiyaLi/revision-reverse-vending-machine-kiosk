@@ -898,13 +898,30 @@ export default function App() {
     }));
   };
 
-  // Print Receipt simulator message
-  const triggerPrintReceipt = () => {
+  // Print Receipt
+  const triggerPrintReceipt = async () => {
+    if (!receiptData.transactionId) {
+      console.warn('No transaction ID available for printing');
+      return;
+    }
+
     setPrintStatus('PRINTING');
-    setTimeout(() => {
-      setPrintStatus('DONE');
-      setTimeout(() => setPrintStatus('IDLE'), 3000);
-    }, 2000);
+    try {
+      const res = await fetch(`/api/receipt/print/${receiptData.transactionId}`, {
+        method: 'POST'
+      });
+      const data = await res.json();
+      if (data.success || data.printed) {
+        setPrintStatus('DONE');
+        setTimeout(() => setPrintStatus('IDLE'), 3000);
+      } else {
+        console.warn('Print failed:', data.error);
+        setPrintStatus('IDLE');
+      }
+    } catch (err) {
+      console.warn('Print request failed:', err);
+      setPrintStatus('IDLE');
+    }
   };
 
   const [notificationMsg, setNotificationMsg] = useState('');
