@@ -25,7 +25,30 @@ export interface ReceiptData {
   transactionId: string;
 }
 
-function initPrinter(): SerialPort | null {
+function waitForPort(path: string): Promise<SerialPort> {
+  return new Promise((resolve, reject) => {
+    const testPort = new SerialPort({
+      path,
+      baudRate: BAUD_RATE,
+      dataBits: 8,
+      stopBits: 1,
+      parity: "none",
+      autoOpen: false,
+    });
+
+    testPort.open((err) => {
+      if (err) {
+        reject(new Error(`Failed to open ${path}: ${err.message} (code: ${err.code})`));
+      } else {
+        console.log(`🖨️  Thermal printer connected on ${path}`);
+        parser = testPort.pipe(new ReadlineParser({ delimiter: "\n" }));
+        resolve(testPort);
+      }
+    });
+  });
+}
+
+async function initPrinter(): Promise<SerialPort | null> {
   if (port && port.isOpen) {
     return port;
   }
@@ -37,27 +60,10 @@ function initPrinter(): SerialPort | null {
 
   for (const path of pathsToTry) {
     try {
-      const testPort = new SerialPort({
-        path,
-        baudRate: BAUD_RATE,
-        dataBits: 8,
-        stopBits: 1,
-        parity: "none",
-        autoOpen: false,
-      });
-
-      testPort.open((err) => {
-        if (err) {
-          console.warn(`❌ Failed to open ${path}:`, err.message, "code:", err.code);
-        } else {
-          console.log(`🖨️  Thermal printer connected on ${path}`);
-          port = testPort;
-          parser = port.pipe(new ReadlineParser({ delimiter: "\n" }));
-          return;
-        }
-      });
+      port = await waitForPort(path);
+      return port;
     } catch (err: any) {
-      console.warn(`❌ Thermal printer init failed on ${path}:`, err.message);
+      console.warn(`❌ ${err.message}`);
     }
   }
 
@@ -117,7 +123,7 @@ function buildEscPos(receipt: ReceiptData): Buffer {
 }
 
 export async function printReceipt(receipt: ReceiptData): Promise<boolean> {
-  const printer = initPrinter();
+  const printer = await initPrinter();
   if (!printer || !printer.isOpen) {
     console.warn("🖨️  Printer not available");
     return false;
