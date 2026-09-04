@@ -377,6 +377,16 @@ app.post("/api/printer/test", async (req, res) => {
   }
 });
 
+// Test raw printer commands
+app.post("/api/printer/raw-test", async (req, res) => {
+  try {
+    const result = await receiptService.testPrinterCommands();
+    res.json({ success: true, result });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.post("/api/receipt/sms/:transactionId", async (req, res) => {
   try {
     const { phoneNumber } = req.body;

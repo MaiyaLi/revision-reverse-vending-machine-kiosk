@@ -176,6 +176,46 @@ export async function printReceipt(receipt: ReceiptData): Promise<boolean> {
   }
 }
 
+export async function testPrinterCommands(): Promise<boolean> {
+  const printer = await initPrinter();
+  if (!printer || !printer.isOpen) {
+    console.warn("🖨️  Printer not available for command test");
+    return false;
+  }
+
+  console.log("🧪 Testing raw printer commands...");
+
+  const tests = [
+    { name: "Plain text", data: Buffer.from("HELLO WORLD\n") },
+    { name: "ESC @ only", data: Buffer.from([0x1b, 0x40]) },
+    { name: "ESC @ + text", data: Buffer.concat([Buffer.from([0x1b, 0x40]), Buffer.from("Test\n")]) },
+    { name: "Full receipt", data: buildEscPos({
+      items: [{name: "Test", material: "plastic", weightGrams: 100, points: 10}],
+      totalPoints: 10,
+      timestamp: new Date().toISOString(),
+      transactionId: "TEST",
+    }) },
+  ];
+
+  for (const test of tests) {
+    try {
+      await new Promise((resolve, reject) => {
+        printer.write(test.data, (err) => {
+          if (err) return reject(err);
+          printer.flush?.();
+          resolve(true);
+        });
+      });
+      console.log(`  ✅ Sent: ${test.name}`);
+      await new Promise(r => setTimeout(r, 1000));
+    } catch (err: any) {
+      console.warn(`  ❌ ${test.name} failed:`, err.message);
+    }
+  }
+
+  return true;
+}
+
 export function closePrinter(): void {
   if (parser) {
     parser.destroy();
