@@ -57,35 +57,36 @@ function buildEscPos(receipt: ReceiptData): Buffer {
   chunks.push(ESC, Buffer.from([0x40])); // Initialize
   chunks.push(ESC, Buffer.from([0x61, 0x01])); // Center align
 
+  chunks.push(Buffer.from("REVISION RECYCLING KIOSK\n", "ascii"));
+  chunks.push(Buffer.from("IoT Autonomous Sorting System v5\n", "ascii"));
+  chunks.push(Buffer.from("Barangay Bel-Air, Makati\n", "ascii"));
+  chunks.push(Buffer.from("Machine ID: HW-P5-REVISION01\n\n", "ascii"));
+
   chunks.push(Buffer.from("================================\n", "ascii"));
-  chunks.push(Buffer.from("       ReVision RVM Kiosk\n", "ascii"));
-  chunks.push(Buffer.from("================================\n\n", "ascii"));
 
-  if (receipt.user?.name) {
-    chunks.push(Buffer.from(`User: ${receipt.user.name}\n`, "ascii"));
-  }
+  chunks.push(ESC, Buffer.from([0x61, 0x00])); // Left align
+  chunks.push(Buffer.from(`TRANSACTION ID: ${receipt.transactionId}\n`, "ascii"));
+  chunks.push(Buffer.from(`DATE & TIME: ${new Date(receipt.timestamp).toLocaleString()}\n`, "ascii"));
+  chunks.push(Buffer.from(`DISBURSE METHOD: ${receipt.user?.name ? 'Eco-Wallet' : 'Cash Dispenser'}\n`, "ascii"));
 
-  chunks.push(Buffer.from(`Date: ${new Date(receipt.timestamp).toLocaleString()}\n`, "ascii"));
-  chunks.push(Buffer.from(`Txn ID: ${receipt.transactionId}\n\n`, "ascii"));
-
-  chunks.push(Buffer.from("--------------------------------\n", "ascii"));
-  chunks.push(Buffer.from("Item               Qty  Points\n", "ascii"));
   chunks.push(Buffer.from("--------------------------------\n", "ascii"));
 
   for (const item of receipt.items) {
-    const name = item.name.length > 18 ? item.name.slice(0, 18) : item.name.padEnd(18, " ");
-    const qty = "1";
-    const pts = String(item.points).padStart(6, " ");
-    chunks.push(Buffer.from(`${name}${qty}  ${pts}\n`, "ascii"));
+    chunks.push(Buffer.from(`${item.name} x1\n`, "ascii"));
   }
 
   chunks.push(Buffer.from("--------------------------------\n", "ascii"));
-  const total = `TOTAL POINTS`.padEnd(18, " ") + String(receipt.totalPoints).padStart(6, " ");
-  chunks.push(Buffer.from(`${total}\n\n`, "ascii"));
+  chunks.push(Buffer.from(`MATERIALS DEPOSITED: ${receipt.items.length} items\n`, "ascii"));
+  chunks.push(Buffer.from(`NET MASS: ${(receipt.items.reduce((sum, i) => sum + i.weightGrams, 0) / 1000).toFixed(2)} Kg\n`, "ascii"));
+  chunks.push(Buffer.from(`ECO SAVED CO2 OFFSET: ${(receipt.items.reduce((sum, i) => sum + (i.material === 'plastic' ? 0.04 : i.material === 'aluminum' ? 0.09 : 0.02), 0)).toFixed(3)} Kg\n`, "ascii"));
 
+  chunks.push(Buffer.from("--------------------------------\n", "ascii"));
   chunks.push(ESC, Buffer.from([0x61, 0x01])); // Center align
+  chunks.push(Buffer.from(`NET RETURN VAL: P${receipt.totalPoints.toFixed(2)}\n`, "ascii"));
+
+  chunks.push(Buffer.from("================================\n\n", "ascii"));
   chunks.push(Buffer.from("Thank you for recycling!\n", "ascii"));
-  chunks.push(Buffer.from("Please keep this receipt.\n\n", "ascii"));
+  chunks.push(Buffer.from("Keep reducing plastic consumption!\n\n", "ascii"));
 
   chunks.push(ESC, Buffer.from([0x64, 0x05])); // Feed 5 lines
   chunks.push(GS, Buffer.from([0x56, 0x00])); // Full cut
