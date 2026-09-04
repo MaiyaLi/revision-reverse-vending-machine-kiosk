@@ -143,7 +143,10 @@ function buildEscPos(receipt: ReceiptData): Buffer {
   chunks.push(Buffer.from("Thank you for recycling!\n", "ascii"));
   chunks.push(Buffer.from("Please keep this receipt.\n\n", "ascii"));
 
+  chunks.push(ESC, Buffer.from([0x64, 0x05])); // Feed 5 lines
   chunks.push(GS, Buffer.from([0x56, 0x00])); // Full cut
+  chunks.push(LF);
+  chunks.push(LF);
   chunks.push(LF);
 
   return Buffer.concat(chunks);
