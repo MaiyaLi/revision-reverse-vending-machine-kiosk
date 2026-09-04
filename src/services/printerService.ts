@@ -1,13 +1,12 @@
 import { SerialPort } from "serialport";
 import { ReadlineParser } from "@serialport/parser-readline";
 
-const PORT_PATH = "/dev/serial0";
-const BAUD_RATES = [9600, 115200, 19200, 38400, 57600];
-const DEFAULT_BAUD = 9600;
+const USB_PATHS = ["/dev/usb/lp0", "/dev/usb/lp1"];
+const SERIAL_PATHS = ["/dev/serial0", "/dev/ttyAMA0"];
+const BAUD_RATE = 9600;
 
 let port: SerialPort | null = null;
 let parser: ReadlineParser | null = null;
-let initAttempts = 0;
 
 export interface ReceiptData {
   items: Array<{
@@ -26,22 +25,26 @@ export interface ReceiptData {
   transactionId: string;
 }
 
-function waitForPort(path: string, baudRate: number): Promise<SerialPort> {
+function waitForPort(path: string, baudRate?: number): Promise<SerialPort> {
   return new Promise((resolve, reject) => {
+    const options: any = { autoOpen: false };
+    if (baudRate) {
+      options.baudRate = baudRate;
+      options.dataBits = 8;
+      options.stopBits = 1;
+      options.parity = "none";
+    }
+
     const testPort = new SerialPort({
       path,
-      baudRate,
-      dataBits: 8,
-      stopBits: 1,
-      parity: "none",
-      autoOpen: false,
+      ...options,
     });
 
     testPort.open((err) => {
       if (err) {
-        reject(new Error(`Failed to open ${path} @ ${baudRate}: ${err.message} (code: ${err.code})`));
+        reject(new Error(`Failed to open ${path}${baudRate ? ` @ ${baudRate} baud` : ""}: ${err.message} (code: ${err.code})`));
       } else {
-        console.log(`🖨️  Thermal printer connected on ${path} @ ${baudRate} baud`);
+        console.log(`🖨️  Printer connected on ${path}${baudRate ? ` @ ${baudRate} baud` : ""}`);
         parser = testPort.pipe(new ReadlineParser({ delimiter: "\n" }));
         setTimeout(() => resolve(testPort), 300);
       }
@@ -54,19 +57,23 @@ async function initPrinter(): Promise<SerialPort | null> {
     return port;
   }
 
-  const pathsToTry = [PORT_PATH];
-  if (PORT_PATH !== "/dev/ttyAMA0") {
-    pathsToTry.unshift("/dev/ttyAMA0");
+  // Try USB first
+  for (const path of USB_PATHS) {
+    try {
+      port = await waitForPort(path);
+      return port;
+    } catch (err: any) {
+      console.warn(`❌ USB ${path}: ${err.message}`);
+    }
   }
 
-  for (const path of pathsToTry) {
-    for (const baud of BAUD_RATES) {
-      try {
-        port = await waitForPort(path, baud);
-        return port;
-      } catch (err: any) {
-        console.warn(`❌ ${err.message}`);
-      }
+  // Fall back to serial
+  for (const path of SERIAL_PATHS) {
+    try {
+      port = await waitForPort(path, BAUD_RATE);
+      return port;
+    } catch (err: any) {
+      console.warn(`❌ Serial ${path}: ${err.message}`);
     }
   }
 
