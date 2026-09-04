@@ -1,12 +1,16 @@
 import { SerialPort } from "serialport";
 import { ReadlineParser } from "@serialport/parser-readline";
 
-const USB_PATHS = ["/dev/usb/lp0", "/dev/usb/lp1"];
-const SERIAL_PATHS = ["/dev/serial0", "/dev/ttyAMA0"];
 const BAUD_RATE = 9600;
 
 let port: SerialPort | null = null;
 let parser: ReadlineParser | null = null;
+
+async function findUsbPrinter(): Promise<string | null> {
+  const ports = await SerialPort.list();
+  const usbPrinter = ports.find(p => p.path?.includes("usb") || p.path?.includes("lp") || p.manufacturer?.includes("gxmc") || p.vendorId === "28e9");
+  return usbPrinter?.path || null;
+}
 
 export interface ReceiptData {
   items: Array<{
@@ -57,8 +61,20 @@ async function initPrinter(): Promise<SerialPort | null> {
     return port;
   }
 
-  // Try USB first
-  for (const path of USB_PATHS) {
+  // Try auto-detected USB printer first
+  try {
+    const usbPath = await findUsbPrinter();
+    if (usbPath) {
+      port = await waitForPort(usbPath);
+      return port;
+    }
+  } catch (err: any) {
+    console.warn(`❌ USB auto-detect: ${err.message}`);
+  }
+
+  // Fall back to known USB paths
+  const usbPaths = ["/dev/usb/lp0", "/dev/usb/lp1", "/dev/lp0"];
+  for (const path of usbPaths) {
     try {
       port = await waitForPort(path);
       return port;
@@ -68,7 +84,8 @@ async function initPrinter(): Promise<SerialPort | null> {
   }
 
   // Fall back to serial
-  for (const path of SERIAL_PATHS) {
+  const serialPaths = ["/dev/serial0", "/dev/ttyAMA0"];
+  for (const path of serialPaths) {
     try {
       port = await waitForPort(path, BAUD_RATE);
       return port;
