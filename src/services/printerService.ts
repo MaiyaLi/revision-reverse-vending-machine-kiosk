@@ -2,7 +2,7 @@ import { exec } from "child_process";
 import { promisify } from "util";
 
 const execAsync = promisify(exec);
-const PORT_PATH = "/dev/serial0";
+const PORT_PATH = "/dev/ttyAMA0";
 const BAUD_RATE = 9600;
 
 export interface ReceiptData {

@@ -1,5 +1,5 @@
 import { db } from './database';
-import { printReceipt, testPrinterCommands, closePrinter } from './printerService';
+import { printReceipt, testPrinterCommands } from './printerService';
 
 export interface ReceiptData {
   items: Array<{
