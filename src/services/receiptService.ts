@@ -97,11 +97,11 @@ export class ReceiptService {
   }
 
   async printReceiptData(receiptData: ReceiptData): Promise<boolean> {
-    return await printReceipt(receiptData);
+    return printReceipt(receiptData);
   }
 
   async testPrinterCommands(): Promise<boolean> {
-    return await testPrinterCommands();
+    return testPrinterCommands();
   }
 
   async sendViaSMS(transactionId: string, phoneNumber: string): Promise<any> {

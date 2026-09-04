@@ -1,7 +1,5 @@
-import { exec } from "child_process";
-import { promisify } from "util";
+import { execSync } from "child_process";
 
-const execAsync = promisify(exec);
 const PORT_PATH = "/dev/ttyAMA0";
 const BAUD_RATE = 9600;
 
@@ -13,7 +11,7 @@ export interface ReceiptData {
   transactionId: string;
 }
 
-async function writeRaw(data: Buffer): Promise<boolean> {
+function writeRaw(data: Buffer): boolean {
   try {
     console.log("========================================");
     console.log("🖨️  PRINTER WRITE STARTED");
@@ -21,21 +19,30 @@ async function writeRaw(data: Buffer): Promise<boolean> {
     console.log("🖨️  Bytes:", data.length);
     console.log("🖨️  First 50 bytes hex:", data.slice(0, 50).toString("hex"));
     console.log("========================================");
-    await execAsync(`stty -F ${PORT_PATH} ${BAUD_RATE} cs8 -cstopb -parenck -ixon -ixoff -crtscts raw -echo 2>/dev/null || true`);
+
+    try {
+      execSync(`stty -F ${PORT_PATH} ${BAUD_RATE} cs8 -cstopb -parenck -ixon -ixoff -crtscts raw -echo 2>/dev/null || true`, { stdio: "ignore" });
+    } catch {
+      // ignore stty errors
+    }
+
     const tmpFile = `/tmp/printer-${Date.now()}.bin`;
-    const { writeFile } = await import("fs");
-    await writeFile(tmpFile, data);
+    const { writeFile } = require("fs");
+    writeFileSync(tmpFile, data);
     console.log("🖨️  Temp file written, catting to", PORT_PATH);
-    const { stdout, stderr } = await execAsync(`cat ${tmpFile} > ${PORT_PATH}`);
-    if (stdout) console.log("stdout:", stdout);
-    if (stderr) console.warn("stderr:", stderr);
-    await execAsync(`rm -f ${tmpFile}`);
+
+    execSync(`cat ${tmpFile} > ${PORT_PATH}`, { stdio: "ignore" });
+
+    try {
+      execSync(`rm -f ${tmpFile}`, { stdio: "ignore" });
+    } catch {
+      // ignore cleanup errors
+    }
+
     console.log("🖨️  PRINTER WRITE COMPLETED");
     return true;
   } catch (err: any) {
     console.warn("❌ PRINTER WRITE FAILED:", err.message);
-    if (err.stderr) console.warn("stderr:", err.stderr);
-    if (err.stdout) console.warn("stdout:", err.stdout);
     return false;
   }
 }
@@ -89,16 +96,16 @@ function buildEscPos(receipt: ReceiptData): Buffer {
   return Buffer.concat(chunks);
 }
 
-export async function printReceipt(receipt: ReceiptData): Promise<boolean> {
+export function printReceipt(receipt: ReceiptData): boolean {
   const data = buildEscPos(receipt);
-  const ok = await writeRaw(data);
+  const ok = writeRaw(data);
   if (ok) {
     console.log(`🖨️  Receipt printed: ${receipt.transactionId}`);
   }
   return ok;
 }
 
-export async function testPrinterCommands(): Promise<boolean> {
+export function testPrinterCommands(): boolean {
   console.log("🧪 Testing QR204 printer via ttyAMA0...");
 
   const tests: Array<{ name: string; data: Buffer }> = [
@@ -113,13 +120,17 @@ export async function testPrinterCommands(): Promise<boolean> {
   ];
 
   for (const test of tests) {
-    const ok = await writeRaw(test.data);
+    const ok = writeRaw(test.data);
     if (ok) {
       console.log(`  ✅ Sent: ${test.name}`);
     } else {
       console.warn(`  ❌ ${test.name} failed`);
     }
-    await new Promise(r => setTimeout(r, 2000));
+    try {
+      execSync("sleep 2", { stdio: "ignore" });
+    } catch {
+      // ignore sleep errors
+    }
   }
 
   return true;
