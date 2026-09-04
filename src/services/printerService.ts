@@ -2,7 +2,8 @@ import { SerialPort } from "serialport";
 import { ReadlineParser } from "@serialport/parser-readline";
 
 const PORT_PATH = "/dev/serial0";
-const BAUD_RATE = 9600;
+const BAUD_RATES = [9600, 115200, 19200, 38400, 57600];
+const DEFAULT_BAUD = 9600;
 
 let port: SerialPort | null = null;
 let parser: ReadlineParser | null = null;
@@ -25,11 +26,11 @@ export interface ReceiptData {
   transactionId: string;
 }
 
-function waitForPort(path: string): Promise<SerialPort> {
+function waitForPort(path: string, baudRate: number): Promise<SerialPort> {
   return new Promise((resolve, reject) => {
     const testPort = new SerialPort({
       path,
-      baudRate: BAUD_RATE,
+      baudRate,
       dataBits: 8,
       stopBits: 1,
       parity: "none",
@@ -38,9 +39,9 @@ function waitForPort(path: string): Promise<SerialPort> {
 
     testPort.open((err) => {
       if (err) {
-        reject(new Error(`Failed to open ${path}: ${err.message} (code: ${err.code})`));
+        reject(new Error(`Failed to open ${path} @ ${baudRate}: ${err.message} (code: ${err.code})`));
       } else {
-        console.log(`🖨️  Thermal printer connected on ${path}`);
+        console.log(`🖨️  Thermal printer connected on ${path} @ ${baudRate} baud`);
         parser = testPort.pipe(new ReadlineParser({ delimiter: "\n" }));
         setTimeout(() => resolve(testPort), 300);
       }
@@ -59,11 +60,13 @@ async function initPrinter(): Promise<SerialPort | null> {
   }
 
   for (const path of pathsToTry) {
-    try {
-      port = await waitForPort(path);
-      return port;
-    } catch (err: any) {
-      console.warn(`❌ ${err.message}`);
+    for (const baud of BAUD_RATES) {
+      try {
+        port = await waitForPort(path, baud);
+        return port;
+      } catch (err: any) {
+        console.warn(`❌ ${err.message}`);
+      }
     }
   }
 
