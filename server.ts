@@ -141,34 +141,18 @@ app.post("/api/deposit/item/add", async (req, res) => {
 
 app.post("/api/deposit/complete", async (req, res) => {
   try {
-    const { sessionRefId, userId, itemsSummary } = req.body;
+    const { sessionRefId, userId, itemsSummary, payoutMethod } = req.body;
 
-    const session = await depositService.completeSession(sessionRefId, userId);
+    const session = await depositService.completeSession(sessionRefId, userId, payoutMethod || 'wallet');
 
     const transactionId = `TXN-${Math.floor(100000 + Math.random() * 900000)}`;
-
-    const receiptData: ReceiptData = {
-      items: (itemsSummary || []).map((item: any) => ({
-        name: item.itemName || "Unknown",
-        material: item.detectedMaterial || "other",
-        weightGrams: item.weightGrams || 0,
-        points: item.ecoPoints || 0,
-      })),
-      totalPoints: session.total_eco_points || 0,
-      user: userId ? { name: "Valued Customer" } : undefined,
-      timestamp: new Date().toISOString(),
-      transactionId,
-    };
-
-    printReceipt(receiptData).catch((err) =>
-      console.warn("Receipt print failed:", err)
-    );
 
     res.json({
       success: true,
       transactionId,
       timestamp: new Date().toISOString(),
       amountCredited: session.total_payout,
+      payoutMethod: payoutMethod || 'wallet',
       updatedUser: userId ? await userService.getUserById(userId) : null
     });
   } catch (error: any) {
@@ -296,6 +280,101 @@ app.post("/api/redemption/withdraw", async (req, res) => {
       amountDeducted: amount,
       updatedUser,
       hardwareStatus: { status: 'Normal' }
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================
+// PAYOUT ENDPOINTS
+// ============================================
+
+// Credit wallet balance (for wallet payout method)
+app.post("/api/payout/wallet", async (req, res) => {
+  try {
+    const { userId, amount, sessionId } = req.body;
+
+    if (!userId || !amount || amount <= 0) {
+      return res.status(400).json({ error: "Invalid payout request" });
+    }
+
+    const user = await userService.getUserById(userId);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const updatedUser = await userService.updateWalletBalance(
+      user.id,
+      amount,
+      'DEPOSIT'
+    );
+
+    res.json({
+      success: true,
+      transactionId: `TXN-${Math.floor(100000 + Math.random() * 900000)}`,
+      timestamp: new Date().toISOString(),
+      amountCredited: amount,
+      updatedUser,
+      payoutMethod: 'wallet'
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Create disbursement (for QRPH/bank payout method)
+app.post("/api/payout/disburse", async (req, res) => {
+  try {
+    const { userId, amount, sessionId, channel, accountNumber, accountName } = req.body;
+
+    if (!amount || amount <= 0) {
+      return res.status(400).json({ error: "Invalid disbursement amount" });
+    }
+
+    const disbursement = await payoutService.createDisbursement({
+      sessionId: sessionId || '',
+      userId: userId || null,
+      amount,
+      channel: channel || 'GCASH',
+      accountNumber: accountNumber || '',
+      accountName: accountName || 'User'
+    });
+
+    res.json({
+      success: true,
+      transactionId: disbursement.externalId,
+      timestamp: new Date().toISOString(),
+      amountDisbursed: amount,
+      status: disbursement.status,
+      payoutMethod: 'qrph'
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Record cash dispensed (for cash payout method)
+app.post("/api/payout/cash", async (req, res) => {
+  try {
+    const { userId, amount, sessionId } = req.body;
+
+    if (!amount || amount <= 0) {
+      return res.status(400).json({ error: "Invalid cash amount" });
+    }
+
+    const cashout = await payoutService.createCashDispense({
+      sessionId: sessionId || '',
+      userId: userId || null,
+      amount
+    });
+
+    res.json({
+      success: true,
+      transactionId: cashout.externalId,
+      timestamp: new Date().toISOString(),
+      amountDispensed: amount,
+      payoutMethod: 'cash'
     });
   } catch (error: any) {
     res.status(500).json({ error: error.message });

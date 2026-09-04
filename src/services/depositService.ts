@@ -92,7 +92,8 @@ export class DepositService {
 
   async completeSession(
     sessionRefId: string,
-    userId: string | null
+    userId: string | null,
+    payoutMethod: string = 'wallet'
   ): Promise<any> {
     return await db.transaction(async (client) => {
       const sessionResult = await client.query(
@@ -146,7 +147,7 @@ export class DepositService {
         ]
       );
 
-      if (userId) {
+      if (userId && payoutMethod === 'wallet') {
         const payout = parseFloat(totalsRow.total_payout) || 0;
         const ecoPoints = parseInt(totalsRow.total_eco_points) || 0;
 

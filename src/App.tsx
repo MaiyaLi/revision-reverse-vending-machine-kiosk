@@ -601,7 +601,8 @@ export default function App() {
           body: JSON.stringify({
             sessionRefId: sessionRefId,
             userId: activeUser?.id || null,
-            itemsSummary: itemsGrouped
+            itemsSummary: itemsGrouped,
+            payoutMethod: payoutSelected
           })
         });
 
@@ -705,14 +706,15 @@ export default function App() {
     const deductAmount = totalPayout;
     
     try {
-      const res = await fetch("/api/redemption/withdraw", {
+      const res = await fetch("/api/payout/disburse", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           userId: activeUser?.id || null,
-          payoutMethod: "QRPh",
           amount: deductAmount,
-          provider: selectedBank
+          provider: selectedBank,
+          accountNumber: activeUser?.phoneNumber || '',
+          accountName: activeUser?.fullName || 'User'
         })
       });
       if (res.ok) {
@@ -722,10 +724,7 @@ export default function App() {
         }
       }
     } catch (e) {
-      console.warn("Simulated local wallet balance decrement.");
-      if (activeUser) {
-        activeUser.walletBalance -= deductAmount;
-      }
+      console.warn("QRPH disbursement failed:", e);
     }
 
     setReceiptData(prev => ({
@@ -752,19 +751,16 @@ export default function App() {
             setTimeout(async () => {
               const deductAmount = totalPayout;
               try {
-                await fetch("/api/redemption/withdraw", {
+                await fetch("/api/payout/cash", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({
                     userId: activeUser?.id || null,
-                    payoutMethod: "Cash/Coins",
                     amount: deductAmount
                   })
                 });
-              } catch (e) {}
-
-              if (activeUser) {
-                activeUser.walletBalance -= deductAmount;
+              } catch (e) {
+                console.warn("Cash payout recording failed:", e);
               }
 
               setReceiptData(prevReceipt => ({
@@ -777,7 +773,7 @@ export default function App() {
 
               setCurrentState('FINAL_RECEIPT_CLIENT');
               speakText("receiptTitle");
-    }, 500);
+            }, 500);
             return 100;
           }
           return prev + 20;
