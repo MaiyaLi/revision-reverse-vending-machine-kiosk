@@ -42,7 +42,7 @@ function waitForPort(path: string): Promise<SerialPort> {
       } else {
         console.log(`🖨️  Thermal printer connected on ${path}`);
         parser = testPort.pipe(new ReadlineParser({ delimiter: "\n" }));
-        resolve(testPort);
+        setTimeout(() => resolve(testPort), 300);
       }
     });
   });
@@ -131,7 +131,17 @@ export async function printReceipt(receipt: ReceiptData): Promise<boolean> {
 
   try {
     const data = buildEscPos(receipt);
-    printer.write(data);
+    await new Promise((resolve, reject) => {
+      if (!printer || !printer.isOpen) {
+        return reject(new Error("Printer not open"));
+      }
+      printer.write(data, (err) => {
+        if (err) return reject(err);
+        printer.flush?.();
+        resolve(true);
+      });
+    });
+    await new Promise(r => setTimeout(r, 500));
     return true;
   } catch (err: any) {
     console.warn("❌ Print failed:", err.message);
