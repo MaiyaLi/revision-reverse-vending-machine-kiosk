@@ -1,4 +1,22 @@
 import { db } from './database';
+import { printReceipt } from './printerService';
+
+export interface ReceiptData {
+  items: Array<{
+    name: string;
+    material: string;
+    weightGrams: number;
+    points: number;
+  }>;
+  totalPoints: number;
+  user?: {
+    name: string;
+    email?: string;
+    phone?: string;
+  };
+  timestamp: string;
+  transactionId: string;
+}
 
 function uuidv4(): string {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
@@ -51,15 +69,35 @@ export class ReceiptService {
 
   async printReceipt(transactionId: string): Promise<any> {
     const receipt = await db.queryOne(
-      `UPDATE receipts
-       SET "printedAt" = NOW(), "printedCount" = "printedCount" + 1
-       WHERE "transactionId" = $1
-       RETURNING *`,
+      `SELECT * FROM receipts WHERE "transactionId" = $1`,
       [transactionId]
     );
 
-    console.log('Receipt queued for printing:', transactionId);
+    if (!receipt) {
+      throw new Error('Receipt not found');
+    }
+
+    const receiptData: ReceiptData = {
+      items: [],
+      totalPoints: 0,
+      user: receipt.userId ? { name: 'Valued Customer' } : undefined,
+      timestamp: receipt.createdAt,
+      transactionId: receipt.transactionId,
+    };
+
+    await printReceipt(receiptData);
+
+    await db.query(
+      `UPDATE receipts SET "printedAt" = NOW(), "printedCount" = "printedCount" + 1 WHERE "transactionId" = $1`,
+      [transactionId]
+    );
+
+    console.log('Receipt printed:', transactionId);
     return receipt;
+  }
+
+  async printReceiptData(receiptData: ReceiptData): Promise<boolean> {
+    return await printReceipt(receiptData);
   }
 
   async sendViaSMS(transactionId: string, phoneNumber: string): Promise<any> {

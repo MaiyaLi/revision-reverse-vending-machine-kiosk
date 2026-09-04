@@ -11,7 +11,10 @@ import { depositService } from "./src/services/depositService";
 import { payoutService } from "./src/services/payoutService";
 import { receiptService } from "./src/services/receiptService";
 import { detectionService } from "./src/services/detectionService";
+import { printReceipt } from "./src/services/printerService";
 import userRoutes from "./src/routes/userRoutes";
+
+import type { ReceiptData } from "./src/services/receiptService";
 
 dotenv.config();
 
@@ -143,6 +146,23 @@ app.post("/api/deposit/complete", async (req, res) => {
     const session = await depositService.completeSession(sessionRefId, userId);
 
     const transactionId = `TXN-${Math.floor(100000 + Math.random() * 900000)}`;
+
+    const receiptData: ReceiptData = {
+      items: (itemsSummary || []).map((item: any) => ({
+        name: item.itemName || "Unknown",
+        material: item.detectedMaterial || "other",
+        weightGrams: item.weightGrams || 0,
+        points: item.ecoPoints || 0,
+      })),
+      totalPoints: session.total_eco_points || 0,
+      user: userId ? { name: "Valued Customer" } : undefined,
+      timestamp: new Date().toISOString(),
+      transactionId,
+    };
+
+    printReceipt(receiptData).catch((err) =>
+      console.warn("Receipt print failed:", err)
+    );
 
     res.json({
       success: true,
@@ -310,7 +330,27 @@ app.get("/api/receipt/:transactionId", async (req, res) => {
 app.post("/api/receipt/print/:transactionId", async (req, res) => {
   try {
     const result = await receiptService.printReceipt(req.params.transactionId);
-    res.json({ success: true });
+    res.json({ success: true, printed: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Test thermal printer
+app.post("/api/printer/test", async (req, res) => {
+  try {
+    const testReceipt: ReceiptData = {
+      items: [
+        { name: "PET Bottle", material: "plastic", weightGrams: 22, points: 10 },
+        { name: "Aluminum Can", material: "aluminum", weightGrams: 15, points: 8 },
+      ],
+      totalPoints: 18,
+      user: { name: "Test User" },
+      timestamp: new Date().toISOString(),
+      transactionId: `TXN-TEST-${Date.now()}`,
+    };
+    const printed = await receiptService.printReceiptData(testReceipt);
+    res.json({ success: true, printed, message: printed ? "Test receipt sent to printer" : "Printer not available" });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
