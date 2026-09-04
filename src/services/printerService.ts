@@ -6,6 +6,7 @@ const BAUD_RATE = 9600;
 
 let port: SerialPort | null = null;
 let parser: ReadlineParser | null = null;
+let initAttempts = 0;
 
 export interface ReceiptData {
   items: Array<{
@@ -29,30 +30,38 @@ function initPrinter(): SerialPort | null {
     return port;
   }
 
-  try {
-    port = new SerialPort({
-      path: PORT_PATH,
-      baudRate: BAUD_RATE,
-      dataBits: 8,
-      stopBits: 1,
-      parity: "none",
-      autoOpen: false,
-    });
-
-    port.open((err) => {
-      if (err) {
-        console.warn("❌ Failed to open thermal printer:", err.message);
-      } else {
-        console.log("🖨️  Thermal printer connected on /dev/serial0");
-      }
-    });
-
-    parser = port.pipe(new ReadlineParser({ delimiter: "\n" }));
-    return port;
-  } catch (err: any) {
-    console.warn("❌ Thermal printer init failed:", err.message);
-    return null;
+  const pathsToTry = [PORT_PATH];
+  if (PORT_PATH !== "/dev/ttyAMA0") {
+    pathsToTry.unshift("/dev/ttyAMA0");
   }
+
+  for (const path of pathsToTry) {
+    try {
+      const testPort = new SerialPort({
+        path,
+        baudRate: BAUD_RATE,
+        dataBits: 8,
+        stopBits: 1,
+        parity: "none",
+        autoOpen: false,
+      });
+
+      testPort.open((err) => {
+        if (err) {
+          console.warn(`❌ Failed to open ${path}:`, err.message, "code:", err.code);
+        } else {
+          console.log(`🖨️  Thermal printer connected on ${path}`);
+          port = testPort;
+          parser = port.pipe(new ReadlineParser({ delimiter: "\n" }));
+          return;
+        }
+      });
+    } catch (err: any) {
+      console.warn(`❌ Thermal printer init failed on ${path}:`, err.message);
+    }
+  }
+
+  return null;
 }
 
 function buildEscPos(receipt: ReceiptData): Buffer {
