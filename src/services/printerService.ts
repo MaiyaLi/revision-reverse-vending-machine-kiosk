@@ -186,13 +186,19 @@ export async function testPrinterCommands(): Promise<boolean> {
     return false;
   }
 
-  console.log("🧪 Testing raw printer commands...");
+  console.log("🧪 Testing QR204 raw printer commands...");
 
   const tests = [
-    { name: "Plain text", data: Buffer.from("HELLO WORLD\n") },
-    { name: "ESC @ only", data: Buffer.from([0x1b, 0x40]) },
-    { name: "ESC @ + text", data: Buffer.concat([Buffer.from([0x1b, 0x40]), Buffer.from("Test\n")]) },
-    { name: "Full receipt", data: buildEscPos({
+    { name: "Plain text only", data: Buffer.from("HELLO WORLD\n") },
+    { name: "ESC init + text", data: Buffer.concat([Buffer.from([0x1b, 0x40]), Buffer.from("Test\n")]) },
+    { name: "ESC init + feed + text + cut", data: Buffer.concat([
+      Buffer.from([0x1b, 0x40]),
+      Buffer.from([0x1b, 0x64, 0x03]),
+      Buffer.from("Line 1\nLine 2\nLine 3\n"),
+      Buffer.from([0x1b, 0x64, 0x05]),
+      Buffer.from([0x1d, 0x56, 0x00]),
+    ])},
+    { name: "Full receipt with extra feed", data: buildEscPos({
       items: [{name: "Test", material: "plastic", weightGrams: 100, points: 10}],
       totalPoints: 10,
       timestamp: new Date().toISOString(),
@@ -210,7 +216,7 @@ export async function testPrinterCommands(): Promise<boolean> {
         });
       });
       console.log(`  ✅ Sent: ${test.name}`);
-      await new Promise(r => setTimeout(r, 1000));
+      await new Promise(r => setTimeout(r, 2000));
     } catch (err: any) {
       console.warn(`  ❌ ${test.name} failed:`, err.message);
     }
