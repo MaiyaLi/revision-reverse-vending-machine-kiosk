@@ -15,20 +15,25 @@ export interface ReceiptData {
 
 async function writeRaw(data: Buffer): Promise<boolean> {
   try {
-    console.log(`🖨️  Writing ${data.length} bytes to ${PORT_PATH}...`);
+    console.log("========================================");
+    console.log("🖨️  PRINTER WRITE STARTED");
+    console.log("🖨️  Port:", PORT_PATH);
+    console.log("🖨️  Bytes:", data.length);
+    console.log("🖨️  First 50 bytes hex:", data.slice(0, 50).toString("hex"));
+    console.log("========================================");
     await execAsync(`stty -F ${PORT_PATH} ${BAUD_RATE} cs8 -cstopb -parenck -ixon -ixoff -crtscts raw -echo 2>/dev/null || true`);
     const tmpFile = `/tmp/printer-${Date.now()}.bin`;
     const { writeFile } = await import("fs");
     await writeFile(tmpFile, data);
-    console.log(`🖨️  Wrote temp file ${tmpFile}, sending to ${PORT_PATH}...`);
+    console.log("🖨️  Temp file written, catting to", PORT_PATH);
     const { stdout, stderr } = await execAsync(`cat ${tmpFile} > ${PORT_PATH}`);
     if (stdout) console.log("stdout:", stdout);
     if (stderr) console.warn("stderr:", stderr);
     await execAsync(`rm -f ${tmpFile}`);
-    console.log("🖨️  Print command completed successfully");
+    console.log("🖨️  PRINTER WRITE COMPLETED");
     return true;
   } catch (err: any) {
-    console.warn("❌ Printer write failed:", err.message);
+    console.warn("❌ PRINTER WRITE FAILED:", err.message);
     if (err.stderr) console.warn("stderr:", err.stderr);
     if (err.stdout) console.warn("stdout:", err.stdout);
     return false;
