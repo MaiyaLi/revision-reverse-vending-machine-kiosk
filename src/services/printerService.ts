@@ -1,4 +1,5 @@
 import { execSync } from "child_process";
+import { writeFileSync } from "fs";
 
 const PORT_PATH = "/dev/ttyAMA0";
 const BAUD_RATE = 9600;
@@ -27,7 +28,6 @@ function writeRaw(data: Buffer): boolean {
     }
 
     const tmpFile = `/tmp/printer-${Date.now()}.bin`;
-    const { writeFile } = require("fs");
     writeFileSync(tmpFile, data);
     console.log("🖨️  Temp file written, catting to", PORT_PATH);
 
