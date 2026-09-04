@@ -329,6 +329,27 @@ app.get("/api/receipt/:transactionId", async (req, res) => {
 
 app.post("/api/receipt/print/:transactionId", async (req, res) => {
   try {
+    const { items, totalPoints, user } = req.body;
+
+    if (items && totalPoints !== undefined) {
+      const receiptData: ReceiptData = {
+        items: items.map((item: any) => ({
+          name: item.name || "Unknown",
+          material: item.material || "other",
+          weightGrams: item.weightGrams || 0,
+          points: item.points || 0,
+        })),
+        totalPoints,
+        user: user || { name: "Valued Customer" },
+        timestamp: new Date().toISOString(),
+        transactionId: req.params.transactionId,
+      };
+
+      const printed = await receiptService.printReceiptData(receiptData);
+      res.json({ success: true, printed });
+      return;
+    }
+
     const result = await receiptService.printReceipt(req.params.transactionId);
     res.json({ success: true, printed: true });
   } catch (error: any) {

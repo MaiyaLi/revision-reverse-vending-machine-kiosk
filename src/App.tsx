@@ -908,7 +908,20 @@ export default function App() {
     setPrintStatus('PRINTING');
     try {
       const res = await fetch(`/api/receipt/print/${receiptData.transactionId}`, {
-        method: 'POST'
+        method: 'POST',
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          items: processedItemsList
+            .filter(i => i.status === 'accepted')
+            .map(i => ({
+              name: i.itemName || i.detectedMaterial,
+              material: i.detectedMaterial,
+              weightGrams: i.weightGrams || 0,
+              points: i.ecoPoints || 0,
+            })),
+          totalPoints: totalPoints,
+          user: activeUser ? { name: activeUser.name || 'Valued Customer' } : undefined,
+        })
       });
       const data = await res.json();
       if (data.success || data.printed) {
