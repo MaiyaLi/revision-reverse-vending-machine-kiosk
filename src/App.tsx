@@ -900,39 +900,52 @@ export default function App() {
 
   // Print Receipt
   const triggerPrintReceipt = async () => {
+    console.log('🖨️ Print button clicked');
+    console.log('  receiptData:', receiptData);
+    console.log('  transactionId:', receiptData.transactionId);
+    console.log('  processedItemsList:', processedItemsList.length, 'items');
+
     if (!receiptData.transactionId) {
-      console.warn('No transaction ID available for printing');
+      console.warn('❌ No transaction ID available for printing');
       return;
     }
 
     setPrintStatus('PRINTING');
     try {
+      const requestBody = {
+        items: processedItemsList
+          .filter(i => i.status === 'accepted')
+          .map(i => ({
+            name: i.itemName || i.detectedMaterial,
+            material: i.detectedMaterial,
+            weightGrams: i.weightGrams || 0,
+            points: i.ecoPoints || 0,
+          })),
+        totalPoints: totalPoints,
+        user: activeUser ? { name: activeUser.name || 'Valued Customer' } : undefined,
+      };
+
+      console.log('🖨️ Sending print request:', requestBody);
+
       const res = await fetch(`/api/receipt/print/${receiptData.transactionId}`, {
         method: 'POST',
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          items: processedItemsList
-            .filter(i => i.status === 'accepted')
-            .map(i => ({
-              name: i.itemName || i.detectedMaterial,
-              material: i.detectedMaterial,
-              weightGrams: i.weightGrams || 0,
-              points: i.ecoPoints || 0,
-            })),
-          totalPoints: totalPoints,
-          user: activeUser ? { name: activeUser.name || 'Valued Customer' } : undefined,
-        })
+        body: JSON.stringify(requestBody)
       });
+
+      console.log('🖨️ Response status:', res.status);
       const data = await res.json();
+      console.log('🖨️ Response data:', data);
+
       if (data.success || data.printed) {
         setPrintStatus('DONE');
         setTimeout(() => setPrintStatus('IDLE'), 3000);
       } else {
-        console.warn('Print failed:', data.error);
+        console.warn('❌ Print failed:', data.error);
         setPrintStatus('IDLE');
       }
     } catch (err) {
-      console.warn('Print request failed:', err);
+      console.warn('❌ Print request failed:', err);
       setPrintStatus('IDLE');
     }
   };
