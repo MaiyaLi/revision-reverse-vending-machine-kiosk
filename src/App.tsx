@@ -675,7 +675,7 @@ export default function App() {
   });
 
   const bankLogos: Record<string, string> = {
-    'GCash': '/images/banks/gcash.svg?v=2',
+    'GCash': '/images/banks/gcash.png?v=2',
     'Maya': '/images/banks/maya.svg?v=2',
     'BPI': '/images/banks/bpi.svg?v=2',
     'BDO': '/images/banks/bdo.svg?v=2',
