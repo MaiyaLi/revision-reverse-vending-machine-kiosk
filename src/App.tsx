@@ -675,12 +675,12 @@ export default function App() {
   });
 
   const bankLogos: Record<string, string> = {
-    'GCash': 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/42/GCash_logo.svg/1200px-GCash_logo.svg.png',
-    'Maya': 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4a/Maya_%28mobile_payments%29_logo.svg/1200px-Maya_%28mobile_payments%29_logo.svg.png',
-    'BPI': 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/7e/BPI_logo.svg/1200px-BPI_logo.svg.png',
-    'BDO': 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9a/BDO_Unibank_logo.svg/1200px-BDO_Unibank_logo.svg.png',
-    'UnionBank': 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5a/UnionBank_logo.svg/1200px-UnionBank_logo.svg.png',
-    'Landbank': 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/6e/Landbank_of_the_Philippines_logo.svg/1200px-Landbank_of_the_Philippines_logo.svg.png'
+    'GCash': '/images/banks/gcash.svg',
+    'Maya': '/images/banks/maya.svg',
+    'BPI': '/images/banks/bpi.svg',
+    'BDO': '/images/banks/bdo.svg',
+    'UnionBank': '/images/banks/unionbank.svg',
+    'Landbank': '/images/banks/landbank.svg'
   };
 
   const redeemUser = () => activeUser || {
@@ -2110,11 +2110,7 @@ export default function App() {
                       className="w-24 h-24 object-contain rounded-xl"
                       onError={(e) => {
                         const target = e.target as HTMLImageElement;
-                        target.style.display = 'none';
-                        const fallback = document.createElement('span');
-                        fallback.className = 'text-6xl font-black';
-                        fallback.textContent = bank.charAt(0);
-                        target.parentElement?.insertBefore(fallback, target);
+                        target.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><rect width="200" height="200" rx="20" fill="%23ccc"/><text x="100" y="120" font-family="Arial" font-size="80" text-anchor="middle" fill="%23333">?</text></svg>';
                       }}
                     />
                     <span className="font-black text-2xl md:text-3xl">{bank}</span>
@@ -2158,15 +2154,15 @@ export default function App() {
               <div className={`bg-white p-6 rounded-[32px] inline-block shadow-inner mx-auto border-4 ${isLight ? 'border-sky-500' : 'border-emerald-500'}`}>
                 {selectedBank && (
                   <div className="flex justify-center mb-4">
-                    <img 
-                      src={bankLogos[selectedBank]} 
-                      alt={`${selectedBank} logo`}
-                      className="h-12 object-contain"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.style.display = 'none';
-                      }}
-                    />
+                     <img 
+                       src={bankLogos[selectedBank]} 
+                       alt={`${selectedBank} logo`}
+                       className="h-12 object-contain"
+                       onError={(e) => {
+                         const target = e.target as HTMLImageElement;
+                         target.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><rect width="200" height="200" rx="20" fill="%23ccc"/><text x="100" y="120" font-family="Arial" font-size="80" text-anchor="middle" fill="%23333">?</text></svg>';
+                       }}
+                     />
                   </div>
                 )}
                 {qrCodeDataUrl ? (
