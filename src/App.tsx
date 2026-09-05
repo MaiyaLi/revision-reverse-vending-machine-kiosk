@@ -1578,7 +1578,7 @@ export default function App() {
                 <div className={`${cCard} border-emerald-500/40 p-8 md:p-10 rounded-3xl shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-6 text-center sm:text-left`}>
                   <div className="flex flex-col sm:flex-row items-center gap-6">
                     <div className="w-20 h-20 bg-emerald-500/10 rounded-full flex items-center justify-center text-emerald-500 border-2 border-emerald-500/20 flex-shrink-0">
-                      <Leaf className="w-10 h-10" />
+                      <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 2h8l1 5v13a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V7l1-5Z"/><path d="M7 7h10"/><path d="M12 12v6"/></svg>
                     </div>
                     <div className="space-y-1">
                       <h4 className={`font-black ${cTextHeading} text-2xl md:text-3xl`}>{t('plasticBottle')}</h4>
@@ -1606,7 +1606,7 @@ export default function App() {
                 <div className={`${cCard} border-sky-500/40 p-8 md:p-10 rounded-3xl shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-6 text-center sm:text-left`}>
                   <div className="flex flex-col sm:flex-row items-center gap-6">
                     <div className="w-20 h-20 bg-sky-500/10 rounded-full flex items-center justify-center text-sky-500 border-2 border-sky-500/20 flex-shrink-0">
-                      <Coins className="w-10 h-10" />
+                      <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/></svg>
                     </div>
                     <div className="space-y-1">
                       <h4 className={`font-black ${cTextHeading} text-2xl md:text-3xl`}>{t('aluminumCan')}</h4>
@@ -1634,7 +1634,7 @@ export default function App() {
                 <div className={`${cCard} border-teal-500/40 p-8 md:p-10 rounded-3xl shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-6 text-center sm:text-left`}>
                   <div className="flex flex-col sm:flex-row items-center gap-6">
                     <div className="w-20 h-20 bg-teal-500/10 rounded-full flex items-center justify-center text-teal-500 border-2 border-teal-500/20 flex-shrink-0">
-                      <FileText className="w-10 h-10" />
+                      <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 2h8l1 5v13a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V7l1-5Z"/><path d="M7 7h10"/><path d="M12 12v6"/></svg>
                     </div>
                     <div className="space-y-1">
                       <h4 className={`font-black ${cTextHeading} text-2xl md:text-3xl`}>{t('glassBottle')}</h4>
