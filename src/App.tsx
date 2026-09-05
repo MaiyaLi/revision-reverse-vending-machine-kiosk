@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
-  Tv, Touchpad, HelpCircle, ArrowLeft, Plus, Minus, UserCheck, User,
+  Tv, Touchpad, HelpCircle, ArrowLeft, Plus, Minus, UserCheck, 
   Trash2, ShieldAlert, Cpu, Database, Wifi, Sliders, Volume2, 
   VolumeX, Accessibility, CheckCircle2, AlertTriangle, Play, Pause,
   Lock, RefreshCw, Smartphone, Mail, Sparkles, Send, Coins, FileText,
@@ -1221,7 +1221,7 @@ export default function App() {
                   className={`${btnTeal} w-80 h-80 md:w-96 md:h-96 rounded-3xl flex flex-col items-center justify-center gap-6 group transition-all transform hover:-translate-y-2 hover:shadow-teal-500/20 shadow-lg`}
                 >
                   <div className="bg-teal-500 text-teal-950 p-5 rounded-2xl group-hover:scale-110 transition-transform flex-shrink-0">
-                    <User className="w-14 h-14" />
+                    <svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                   </div>
                   <div className="text-center space-y-2">
                     <span className="font-black text-2xl md:text-3xl block">Guest Mode</span>
