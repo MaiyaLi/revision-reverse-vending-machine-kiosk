@@ -4,7 +4,7 @@ import {
   Trash2, ShieldAlert, Cpu, Database, Wifi, Sliders, Volume2, 
   VolumeX, Accessibility, CheckCircle2, AlertTriangle, Play, Pause,
   Lock, RefreshCw, Smartphone, Mail, Sparkles, Send, Coins, FileText,
-  DollarSign, MapPin, Milestone, TrendingUp, Compass, Leaf, Camera
+  DollarSign, MapPin, Milestone, TrendingUp, Compass, Leaf, Camera, X, Home
 } from 'lucide-react';
 import { Language, AppState, UserProfile, TransactionHistory, DepositedItem, SystemTelemetry, translations } from './types';
 import VirtualKeyboard from './components/VirtualKeyboard';
@@ -1248,7 +1248,7 @@ export default function App() {
             <div className={`w-full max-w-4xl mx-auto ${cCard} p-10 rounded-3xl space-y-6 my-auto py-4 shadow-2xl`}>
               <div className={`flex items-center justify-between border-b ${cBorder} pb-4`}>
                 <h3 className={`text-3xl font-black ${cTextTitle} uppercase tracking-wider flex items-center gap-3`}>
-                  <span className="text-3xl">📝</span> {t('registerTitle')}
+                  <FileText className="w-8 h-8" /> {t('registerTitle')}
                 </h3>
                 <span className={`text-sm ${isLight ? 'bg-slate-100 text-slate-600' : 'bg-slate-800 text-slate-400'} px-4 py-1.5 rounded-full font-bold`}>{t('required')} *</span>
               </div>
@@ -1539,7 +1539,9 @@ export default function App() {
                   onClick={() => setCurrentState('NEW_USER_REGISTRATION')}
                   className="w-full h-56 sm:h-64 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-3xl text-xl sm:text-2xl flex flex-col items-center justify-center gap-4 text-center shadow-lg active:scale-95 transition-all"
                 >
-                  <span className="text-4xl sm:text-5xl">📝</span>
+                  <div className="bg-white/20 p-3 rounded-xl">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+                  </div>
                   <span>No, Register Now</span>
                 </button>
 
@@ -1550,7 +1552,9 @@ export default function App() {
                   }}
                   className={`w-full h-56 sm:h-64 ${isLight ? 'bg-slate-200 text-slate-705 hover:bg-slate-250 border-slate-300' : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border-slate-700'} border rounded-3xl text-xl sm:text-2xl flex flex-col items-center justify-center gap-4 text-center font-black transition-all active:scale-95`}
                 >
-                  <span className="text-4xl sm:text-5xl">👤</span>
+                  <div className="bg-teal-500/20 p-3 rounded-xl">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                  </div>
                   <span>Yes, Continue as Guest</span>
                 </button>
               </div>
@@ -1685,7 +1689,9 @@ export default function App() {
                   onClick={() => setCurrentState('MAIN_MENU')}
                   className={`w-80 h-80 md:w-96 md:h-96 ${isLight ? 'bg-slate-200 text-slate-705 hover:bg-slate-250 border-slate-350' : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border-slate-705'} border rounded-3xl text-2xl font-black flex flex-col items-center justify-center gap-6 transition-all active:scale-95`}
                 >
-                  <span className="text-5xl">❌</span>
+                  <div className="bg-red-500/10 p-4 rounded-2xl">
+                    <X className="w-14 h-14 text-red-500" />
+                  </div>
                   <span>Cancel Plan</span>
                 </button>
               </div>
@@ -2079,7 +2085,7 @@ export default function App() {
                   onClick={() => setCurrentState('MAIN_MENU')}
                   className={`w-80 h-80 md:w-96 md:h-96 ${isLight ? 'bg-slate-200 text-slate-705 hover:bg-slate-250 border-slate-355' : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border-slate-705'} border text-2xl font-black rounded-3xl flex flex-col items-center justify-center gap-6 transition-all active:scale-95`}
                 >
-                  <span className="text-5xl">🏠</span>
+                  <Home className="w-14 h-14" />
                   <span>Return Main Menu</span>
                 </button>
               </div>
