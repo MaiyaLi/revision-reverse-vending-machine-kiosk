@@ -675,12 +675,12 @@ export default function App() {
   });
 
   const bankLogos: Record<string, string> = {
-    'GCash': '/images/banks/gcash.svg',
-    'Maya': '/images/banks/maya.svg',
-    'BPI': '/images/banks/bpi.svg',
-    'BDO': '/images/banks/bdo.svg',
-    'UnionBank': '/images/banks/unionbank.svg',
-    'Landbank': '/images/banks/landbank.svg'
+    'GCash': '/images/banks/gcash.svg?v=2',
+    'Maya': '/images/banks/maya.svg?v=2',
+    'BPI': '/images/banks/bpi.svg?v=2',
+    'BDO': '/images/banks/bdo.svg?v=2',
+    'UnionBank': '/images/banks/unionbank.svg?v=2',
+    'Landbank': '/images/banks/landbank.svg?v=2'
   };
 
   const redeemUser = () => activeUser || {
