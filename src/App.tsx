@@ -1578,7 +1578,7 @@ export default function App() {
                 <div className={`${cCard} border-emerald-500/40 p-8 md:p-10 rounded-3xl shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-6 text-center sm:text-left`}>
                   <div className="flex flex-col sm:flex-row items-center gap-6">
                     <div className="w-20 h-20 bg-emerald-500/10 rounded-full flex items-center justify-center text-emerald-500 border-2 border-emerald-500/20 flex-shrink-0">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 2h6l1 3v17a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2V5l1-3Z"/><path d="M8 5h8"/><path d="M10 9h4"/></svg>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 6h20l2 4v44a4 4 0 0 1-4 4H24a4 4 0 0 1-4-4V10l2-4Z"/><path d="M20 10h24"/><path d="M26 16h12"/><path d="M28 22h8"/><path d="M30 28h4"/></svg>
                     </div>
                     <div className="space-y-1">
                       <h4 className={`font-black ${cTextHeading} text-2xl md:text-3xl`}>{t('plasticBottle')}</h4>
@@ -1606,7 +1606,7 @@ export default function App() {
                 <div className={`${cCard} border-sky-500/40 p-8 md:p-10 rounded-3xl shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-6 text-center sm:text-left`}>
                   <div className="flex flex-col sm:flex-row items-center gap-6">
                     <div className="w-20 h-20 bg-sky-500/10 rounded-full flex items-center justify-center text-sky-500 border-2 border-sky-500/20 flex-shrink-0">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 2h10l1 3v14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V5l1-3Z"/><path d="M7 5h10"/><path d="M7 5v14"/><path d="M17 5v14"/></svg>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8h28l2 4v36a4 4 0 0 1-4 4H20a4 4 0 0 1-4-4V12l2-4Z"/><path d="M18 12h28"/><path d="M24 18h16"/><path d="M24 24h16"/><path d="M24 30h16"/><path d="M24 36h16"/><path d="M18 48h28"/></svg>
                     </div>
                     <div className="space-y-1">
                       <h4 className={`font-black ${cTextHeading} text-2xl md:text-3xl`}>{t('aluminumCan')}</h4>
@@ -1634,7 +1634,7 @@ export default function App() {
                 <div className={`${cCard} border-teal-500/40 p-8 md:p-10 rounded-3xl shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-6 text-center sm:text-left`}>
                   <div className="flex flex-col sm:flex-row items-center gap-6">
                     <div className="w-20 h-20 bg-teal-500/10 rounded-full flex items-center justify-center text-teal-500 border-2 border-teal-500/20 flex-shrink-0">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 2h8l1 3v13a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V5l1-3Z"/><path d="M7 5h10"/><path d="M10 9h4"/></svg>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M24 6h16l2 4v36a4 4 0 0 1-4 4H26a4 4 0 0 1-4-4V10l2-4Z"/><path d="M22 10h20"/><path d="M28 16h8"/><path d="M26 22h12"/><path d="M28 28h8"/><path d="M24 34h16"/></svg>
                     </div>
                     <div className="space-y-1">
                       <h4 className={`font-black ${cTextHeading} text-2xl md:text-3xl`}>{t('glassBottle')}</h4>
