@@ -1221,7 +1221,7 @@ export default function App() {
                   className={`${btnTeal} w-80 h-80 md:w-96 md:h-96 rounded-3xl flex flex-col items-center justify-center gap-6 group transition-all transform hover:-translate-y-2 hover:shadow-teal-500/20 shadow-lg`}
                 >
                   <div className="bg-teal-500 text-teal-950 p-5 rounded-2xl group-hover:scale-110 transition-transform flex-shrink-0">
-                    <img src="/images/icons/user.png?v=2" alt="User" className="w-14 h-14 object-contain" onError={(e) => { const target = e.target as HTMLImageElement; target.src = 'data:image/svg+xml;charset=utf-8,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2\"/><circle cx=\"12\" cy=\"7\" r=\"4\"/></svg>'; }} />
+                    <svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                   </div>
                   <div className="text-center space-y-2">
                     <span className="font-black text-2xl md:text-3xl block">Guest Mode</span>
@@ -1540,7 +1540,7 @@ export default function App() {
                   className="w-full h-56 sm:h-64 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-3xl text-xl sm:text-2xl flex flex-col items-center justify-center gap-4 text-center shadow-lg active:scale-95 transition-all"
                 >
                   <div className="bg-white/20 p-3 rounded-xl">
-                    <img src="/images/icons/user.png?v=2" alt="User" className="w-10 h-10 object-contain" onError={(e) => { const target = e.target as HTMLImageElement; target.src = 'data:image/svg+xml;charset=utf-8,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2\"/><circle cx=\"9\" cy=\"7\" r=\"4\"/><line x1=\"19\" y1=\"8\" x2=\"19\" y2=\"14\"/><line x1=\"22\" y1=\"11\" x2=\"16\" y2=\"11\"/></svg>'; }} />
+                    <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
                   </div>
                   <span>No, Register Now</span>
                 </button>
@@ -1553,7 +1553,7 @@ export default function App() {
                   className={`w-full h-56 sm:h-64 ${isLight ? 'bg-slate-200 text-slate-705 hover:bg-slate-250 border-slate-300' : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border-slate-700'} border rounded-3xl text-xl sm:text-2xl flex flex-col items-center justify-center gap-4 text-center font-black transition-all active:scale-95`}
                 >
                   <div className="bg-teal-500/20 p-3 rounded-xl">
-                    <img src="/images/icons/user.png?v=2" alt="User" className="w-10 h-10 object-contain" onError={(e) => { const target = e.target as HTMLImageElement; target.src = 'data:image/svg+xml;charset=utf-8,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2\"/><circle cx=\"12\" cy=\"7\" r=\"4\"/></svg>'; }} />
+                    <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                   </div>
                   <span>Yes, Continue as Guest</span>
                 </button>
@@ -1578,7 +1578,7 @@ export default function App() {
                 <div className={`${cCard} border-emerald-500/40 p-8 md:p-10 rounded-3xl shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-6 text-center sm:text-left`}>
                   <div className="flex flex-col sm:flex-row items-center gap-6">
                     <div className="w-20 h-20 bg-emerald-500/10 rounded-full flex items-center justify-center text-emerald-500 border-2 border-emerald-500/20 flex-shrink-0">
-                      <img src="/images/icons/plastic-bottle.png?v=2" alt="Plastic Bottle" className="w-10 h-10 object-contain" onError={(e) => { const target = e.target as HTMLImageElement; target.src = 'data:image/svg+xml;charset=utf-8,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M8 2h8l1 5v13a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V7l1-5Z\"/><path d=\"M7 7h10\"/><path d=\"M12 12v6\"/></svg>'; }} />
+                      <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 2h6l1 3v17a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2V5l1-3Z"/><path d="M8 5h8"/><path d="M10 9h4"/></svg>
                     </div>
                     <div className="space-y-1">
                       <h4 className={`font-black ${cTextHeading} text-2xl md:text-3xl`}>{t('plasticBottle')}</h4>
@@ -1606,7 +1606,7 @@ export default function App() {
                 <div className={`${cCard} border-sky-500/40 p-8 md:p-10 rounded-3xl shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-6 text-center sm:text-left`}>
                   <div className="flex flex-col sm:flex-row items-center gap-6">
                     <div className="w-20 h-20 bg-sky-500/10 rounded-full flex items-center justify-center text-sky-500 border-2 border-sky-500/20 flex-shrink-0">
-                      <img src="/images/icons/aluminum-can.png?v=2" alt="Aluminum Can" className="w-10 h-10 object-contain" onError={(e) => { const target = e.target as HTMLImageElement; target.src = 'data:image/svg+xml;charset=utf-8,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M7 2h10v4.5c0 1.5-1.5 3-3.5 3s-3.5-1.5-3.5-3V2Z\"/><path d=\"M7 6.5h10\"/><path d=\"M7 6.5V20c0 1.5 1.5 3 3.5 3s3.5-1.5 3.5-3V6.5\"/><path d=\"M7 20h10\"/></svg>'; }} />
+                      <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 2h10l1 3v14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V5l1-3Z"/><path d="M7 5h10"/><path d="M7 5v14"/><path d="M17 5v14"/></svg>
                     </div>
                     <div className="space-y-1">
                       <h4 className={`font-black ${cTextHeading} text-2xl md:text-3xl`}>{t('aluminumCan')}</h4>
@@ -1634,7 +1634,7 @@ export default function App() {
                 <div className={`${cCard} border-teal-500/40 p-8 md:p-10 rounded-3xl shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-6 text-center sm:text-left`}>
                   <div className="flex flex-col sm:flex-row items-center gap-6">
                     <div className="w-20 h-20 bg-teal-500/10 rounded-full flex items-center justify-center text-teal-500 border-2 border-teal-500/20 flex-shrink-0">
-                      <img src="/images/icons/glass-bottle.png?v=2" alt="Glass Bottle" className="w-10 h-10 object-contain" onError={(e) => { const target = e.target as HTMLImageElement; target.src = 'data:image/svg+xml;charset=utf-8,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M8 2h8l1 5v13a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V7l1-5Z\"/><path d=\"M7 7h10\"/><path d=\"M12 12v6\"/></svg>'; }} />
+                      <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 2h8l1 3v13a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V5l1-3Z"/><path d="M7 5h10"/><path d="M10 9h4"/></svg>
                     </div>
                     <div className="space-y-1">
                       <h4 className={`font-black ${cTextHeading} text-2xl md:text-3xl`}>{t('glassBottle')}</h4>
