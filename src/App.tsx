@@ -1577,8 +1577,8 @@ export default function App() {
                 {/* Plastik */}
                 <div className={`${cCard} border-emerald-500/40 p-8 md:p-10 rounded-3xl shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-6 text-center sm:text-left`}>
                   <div className="flex flex-col sm:flex-row items-center gap-6">
-                    <div className="w-20 h-20 bg-emerald-500/10 rounded-full flex items-center justify-center text-emerald-500 border-2 border-emerald-500/20 flex-shrink-0">
-                      <img src="/images/icons/plastic-bottle.avif?v=2" alt="Plastic Bottle" className="w-12 h-12 object-contain mix-blend-multiply" onError={(e) => { const target = e.target as HTMLImageElement; target.src = 'data:image/svg+xml;charset=utf-8,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 64 64\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\"><path d=\"M22 6h20l2 4v44a4 4 0 0 1-4 4H24a4 4 0 0 1-4-4V10l2-4Z\"/><path d=\"M20 10h24\"/><path d=\"M26 16h12\"/><path d=\"M28 22h8\"/><path d=\"M30 28h4\"/></svg>'; }} />
+                    <div className="w-20 h-20 bg-emerald-500/10 rounded-full flex items-center justify-center text-emerald-500 border-2 border-emerald-500/20 flex-shrink-0 dark:bg-emerald-500/20 dark:border-emerald-500/40 dark:shadow-[0_0_20px_rgba(16,185,129,0.35)]">
+                      <img src="/images/icons/plastic-bottle.avif?v=2" alt="Plastic Bottle" className="w-12 h-12 object-contain mix-blend-multiply dark:mix-blend-normal" onError={(e) => { const target = e.target as HTMLImageElement; target.src = 'data:image/svg+xml;charset=utf-8,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 64 64\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\"><path d=\"M22 6h20l2 4v44a4 4 0 0 1-4 4H24a4 4 0 0 1-4-4V10l2-4Z\"/><path d=\"M20 10h24\"/><path d=\"M26 16h12\"/><path d=\"M28 22h8\"/><path d=\"M30 28h4\"/></svg>'; }} />
                     </div>
                     <div className="space-y-1">
                       <h4 className={`font-black ${cTextHeading} text-2xl md:text-3xl`}>{t('plasticBottle')}</h4>
@@ -1605,8 +1605,8 @@ export default function App() {
                 {/* Lata */}
                 <div className={`${cCard} border-sky-500/40 p-8 md:p-10 rounded-3xl shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-6 text-center sm:text-left`}>
                   <div className="flex flex-col sm:flex-row items-center gap-6">
-                    <div className="w-20 h-20 bg-sky-500/10 rounded-full flex items-center justify-center text-sky-500 border-2 border-sky-500/20 flex-shrink-0">
-                      <img src="/images/icons/aluminum-can.jpg?v=2" alt="Aluminum Can" className="w-12 h-12 object-contain mix-blend-multiply" onError={(e) => { const target = e.target as HTMLImageElement; target.src = 'data:image/svg+xml;charset=utf-8,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 64 64\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\"><path d=\"M18 8h28l2 4v36a4 4 0 0 1-4 4H20a4 4 0 0 1-4-4V12l2-4Z\"/><path d=\"M18 12h28\"/><path d=\"M24 18h16\"/><path d=\"M24 24h16\"/><path d=\"M24 30h16\"/><path d=\"M24 36h16\"/><path d=\"M18 48h28\"/></svg>'; }} />
+                    <div className="w-20 h-20 bg-sky-500/10 rounded-full flex items-center justify-center text-sky-500 border-2 border-sky-500/20 flex-shrink-0 dark:bg-sky-500/20 dark:border-sky-500/40 dark:shadow-[0_0_20px_rgba(14,165,233,0.35)]">
+                      <img src="/images/icons/aluminum-can.jpg?v=2" alt="Aluminum Can" className="w-12 h-12 object-contain mix-blend-multiply dark:mix-blend-normal" onError={(e) => { const target = e.target as HTMLImageElement; target.src = 'data:image/svg+xml;charset=utf-8,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 64 64\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\"><path d=\"M18 8h28l2 4v36a4 4 0 0 1-4 4H20a4 4 0 0 1-4-4V12l2-4Z\"/><path d=\"M18 12h28\"/><path d=\"M24 18h16\"/><path d=\"M24 24h16\"/><path d=\"M24 30h16\"/><path d=\"M24 36h16\"/><path d=\"M18 48h28\"/></svg>'; }} />
                     </div>
                     <div className="space-y-1">
                       <h4 className={`font-black ${cTextHeading} text-2xl md:text-3xl`}>{t('aluminumCan')}</h4>
@@ -1633,8 +1633,8 @@ export default function App() {
                 {/* Glass */}
                 <div className={`${cCard} border-teal-500/40 p-8 md:p-10 rounded-3xl shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-6 text-center sm:text-left`}>
                   <div className="flex flex-col sm:flex-row items-center gap-6">
-                    <div className="w-20 h-20 bg-teal-500/10 rounded-full flex items-center justify-center text-teal-500 border-2 border-teal-500/20 flex-shrink-0">
-                      <img src="/images/icons/glass-bottle.png?v=2" alt="Glass Bottle" className="w-12 h-12 object-contain mix-blend-multiply" onError={(e) => { const target = e.target as HTMLImageElement; target.src = 'data:image/svg+xml;charset=utf-8,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 64 64\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\"><path d=\"M24 6h16l2 4v36a4 4 0 0 1-4 4H26a4 4 0 0 1-4-4V10l2-4Z\"/><path d=\"M22 10h20\"/><path d=\"M28 16h8\"/><path d=\"M26 22h12\"/><path d=\"M28 28h8\"/><path d=\"M24 34h16\"/></svg>'; }} />
+                    <div className="w-20 h-20 bg-teal-500/10 rounded-full flex items-center justify-center text-teal-500 border-2 border-teal-500/20 flex-shrink-0 dark:bg-teal-500/20 dark:border-teal-500/40 dark:shadow-[0_0_20px_rgba(20,184,166,0.35)]">
+                      <img src="/images/icons/glass-bottle.png?v=2" alt="Glass Bottle" className="w-12 h-12 object-contain mix-blend-multiply dark:mix-blend-normal" onError={(e) => { const target = e.target as HTMLImageElement; target.src = 'data:image/svg+xml;charset=utf-8,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 64 64\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\"><path d=\"M24 6h16l2 4v36a4 4 0 0 1-4 4H26a4 4 0 0 1-4-4V10l2-4Z\"/><path d=\"M22 10h20\"/><path d=\"M28 16h8\"/><path d=\"M26 22h12\"/><path d=\"M28 28h8\"/><path d=\"M24 34h16\"/></svg>'; }} />
                     </div>
                     <div className="space-y-1">
                       <h4 className={`font-black ${cTextHeading} text-2xl md:text-3xl`}>{t('glassBottle')}</h4>
