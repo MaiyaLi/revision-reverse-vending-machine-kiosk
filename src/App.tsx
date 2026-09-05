@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
-  Tv, Touchpad, HelpCircle, ArrowLeft, Plus, Minus, UserCheck, 
+  Tv, Touchpad, HelpCircle, ArrowLeft, Plus, Minus, UserCheck, User,
   Trash2, ShieldAlert, Cpu, Database, Wifi, Sliders, Volume2, 
   VolumeX, Accessibility, CheckCircle2, AlertTriangle, Play, Pause,
   Lock, RefreshCw, Smartphone, Mail, Sparkles, Send, Coins, FileText,
@@ -1186,10 +1186,10 @@ export default function App() {
                     setCurrentState('NEW_USER_REGISTRATION');
                     speakText("newUser");
                   }}
-                  className={`${btnEmerald} w-80 h-80 md:w-96 md:h-96 rounded-3xl flex flex-col items-center justify-center gap-6 transition-all shadow-lg`}
+                  className={`${btnEmerald} w-80 h-80 md:w-96 md:h-96 rounded-3xl flex flex-col items-center justify-center gap-6 group transition-all transform hover:-translate-y-2 hover:shadow-emerald-500/20 shadow-lg`}
                 >
-                  <div className="bg-emerald-500/10 p-5 rounded-2xl flex-shrink-0">
-                    <Plus className="w-14 h-14 text-emerald-500 font-black" />
+                  <div className="bg-emerald-500 text-emerald-950 p-5 rounded-2xl group-hover:scale-110 transition-transform flex-shrink-0">
+                    <Plus className="w-14 h-14" />
                   </div>
                   <div className="text-center space-y-2">
                     <span className="font-black text-2xl md:text-3xl block">New User</span>
@@ -1202,10 +1202,10 @@ export default function App() {
                     setCurrentState('LOGIN_SELECT');
                     speakText("existingUser");
                   }}
-                  className={`${btnSky} w-80 h-80 md:w-96 md:h-96 rounded-3xl flex flex-col items-center justify-center gap-6 transition-all shadow-lg`}
+                  className={`${btnSky} w-80 h-80 md:w-96 md:h-96 rounded-3xl flex flex-col items-center justify-center gap-6 group transition-all transform hover:-translate-y-2 hover:shadow-sky-500/20 shadow-lg`}
                 >
-                  <div className="bg-sky-500/10 p-5 rounded-2xl flex-shrink-0">
-                    <UserCheck className="w-14 h-14 text-sky-500" />
+                  <div className="bg-sky-500 text-sky-950 p-5 rounded-2xl group-hover:scale-110 transition-transform flex-shrink-0">
+                    <UserCheck className="w-14 h-14" />
                   </div>
                   <div className="text-center space-y-2">
                     <span className="font-black text-2xl md:text-3xl block">Existing User</span>
@@ -1218,10 +1218,10 @@ export default function App() {
                     setCurrentState('GUEST_NOTICE');
                     speakText("continueAsGuest");
                   }}
-                  className={`${btnTeal} w-80 h-80 md:w-96 md:h-96 rounded-3xl flex flex-col items-center justify-center gap-6 transition-all shadow-lg`}
+                  className={`${btnTeal} w-80 h-80 md:w-96 md:h-96 rounded-3xl flex flex-col items-center justify-center gap-6 group transition-all transform hover:-translate-y-2 hover:shadow-teal-500/20 shadow-lg`}
                 >
-                  <div className="bg-teal-500/10 p-5 rounded-2xl flex-shrink-0 text-5xl">
-                    👤
+                  <div className="bg-teal-500 text-teal-950 p-5 rounded-2xl group-hover:scale-110 transition-transform flex-shrink-0">
+                    <User className="w-14 h-14" />
                   </div>
                   <div className="text-center space-y-2">
                     <span className="font-black text-2xl md:text-3xl block">Guest Mode</span>
