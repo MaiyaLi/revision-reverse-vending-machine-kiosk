@@ -1,4 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
-  <rect width="200" height="200" rx="20" fill="#007a3d"/>
-  <text x="100" y="120" font-family="Arial, sans-serif" font-size="50" font-weight="bold" fill="white" text-anchor="middle">LB</text>
+  <rect width="200" height="200" rx="32" fill="#007a3d"/>
+  <rect x="20" y="70" width="160" height="60" rx="12" fill="#fff"/>
+  <text x="100" y="106" font-family="Arial Black, Arial, sans-serif" font-size="30" font-weight="900" fill="#007a3d" text-anchor="middle" letter-spacing="2">LAND</text>
+  <text x="100" y="132" font-family="Arial Black, Arial, sans-serif" font-size="30" font-weight="900" fill="#007a3d" text-anchor="middle" letter-spacing="2">BANK</text>
 </svg>
