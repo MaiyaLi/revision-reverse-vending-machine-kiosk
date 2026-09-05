@@ -2110,7 +2110,7 @@ export default function App() {
                       className="w-24 h-24 object-contain rounded-xl"
                       onError={(e) => {
                         const target = e.target as HTMLImageElement;
-                        target.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><rect width="200" height="200" rx="20" fill="%23ccc"/><text x="100" y="120" font-family="Arial" font-size="80" text-anchor="middle" fill="%23333">?</text></svg>';
+                        target.src = 'data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><rect width="200" height="200" rx="20" fill="%23ccc"/><text x="100" y="120" font-family="Arial" font-size="80" text-anchor="middle" fill="%23333">?</text></svg>';
                       }}
                     />
                     <span className="font-black text-2xl md:text-3xl">{bank}</span>
@@ -2160,7 +2160,7 @@ export default function App() {
                        className="h-12 object-contain"
                        onError={(e) => {
                          const target = e.target as HTMLImageElement;
-                         target.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><rect width="200" height="200" rx="20" fill="%23ccc"/><text x="100" y="120" font-family="Arial" font-size="80" text-anchor="middle" fill="%23333">?</text></svg>';
+                         target.src = 'data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><rect width="200" height="200" rx="20" fill="%23ccc"/><text x="100" y="120" font-family="Arial" font-size="80" text-anchor="middle" fill="%23333">?</text></svg>';
                        }}
                      />
                   </div>
