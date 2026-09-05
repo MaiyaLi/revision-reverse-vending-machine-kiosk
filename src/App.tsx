@@ -2102,18 +2102,17 @@ export default function App() {
                   <button 
                     key={bank}
                     onClick={() => setSelectedBank(bank)}
-                    className={`w-80 h-80 md:w-96 md:h-96 rounded-3xl border text-center transition-all flex flex-col items-center justify-center gap-6 ${selectedBank === bank ? 'bg-sky-500/10 border-sky-500 text-sky-600 dark:text-white shadow-lg font-black scale-105' : isLight ? 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100' : 'bg-slate-950 text-slate-400 border-slate-850 hover:border-slate-750'}`}
+                    className={`w-80 h-80 md:w-96 md:h-96 rounded-3xl border text-center transition-all flex items-center justify-center ${selectedBank === bank ? 'bg-sky-500/10 border-sky-500 text-sky-600 dark:text-white shadow-lg font-black scale-105' : isLight ? 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100' : 'bg-slate-950 text-slate-400 border-slate-850 hover:border-slate-750'}`}
                   >
                     <img 
                       src={bankLogos[bank]} 
                       alt={`${bank} logo`}
-                      className="w-24 h-24 object-contain rounded-xl"
+                      className="w-48 h-48 md:w-56 md:h-56 object-contain"
                       onError={(e) => {
                         const target = e.target as HTMLImageElement;
                         target.src = 'data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><rect width="200" height="200" rx="20" fill="%23ccc"/><text x="100" y="120" font-family="Arial" font-size="80" text-anchor="middle" fill="%23333">?</text></svg>';
                       }}
                     />
-                    <span className="font-black text-2xl md:text-3xl">{bank}</span>
                   </button>
                 ))}
               </div>
