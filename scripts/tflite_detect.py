@@ -5,16 +5,19 @@ import os
 try:
     import cv2
     import numpy as np
+    from tensorflow.lite.python.interpreter import Interpreter
+except Exception:
     try:
         from tflite_runtime.interpreter import Interpreter
     except Exception:
         try:
             from tensorflow.lite import Interpreter
         except Exception:
-            from tensorflow.lite.python.interpreter import Interpreter
-except Exception as e:
-    print(json.dumps({"error": f"dependency import failed: {e}"}))
-    sys.exit(1)
+            try:
+                from tensorflow.python.lite import Interpreter
+            except Exception as e:
+                print(json.dumps({"error": f"dependency import failed: {e}"}))
+                sys.exit(1)
 
 MODEL_URL = "https://storage.googleapis.com/download.tensorflow.org/models/tflite/coco_ssd_mobilenet_v1_1.0_quant_2018_06_29.zip"
 MODEL_DIR = os.path.join(os.path.dirname(__file__), "models")
