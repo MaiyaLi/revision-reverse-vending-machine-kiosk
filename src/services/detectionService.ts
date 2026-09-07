@@ -2,6 +2,9 @@ import { spawn } from "child_process";
 import fs from "fs";
 import path from "path";
 import { GoogleGenAI } from "@google/genai";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 export interface BoundingBox {
   x: number;
