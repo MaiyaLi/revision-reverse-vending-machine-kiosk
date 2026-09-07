@@ -29,10 +29,12 @@ export interface MultiDetectionResult {
 export class LocalDetectionService {
   private pythonScript: string;
   private modelPath: string;
+  private pythonBin: string;
 
   constructor() {
     this.pythonScript = path.join(process.cwd(), "scripts", "yolo_detect.py");
     this.modelPath = path.join(process.cwd(), "models", "yolov8n.pt");
+    this.pythonBin = path.join(process.cwd(), ".venv", "bin", "python");
   }
 
   async detectFromImage(imageBase64: string): Promise<MultiDetectionResult> {
@@ -66,7 +68,7 @@ export class LocalDetectionService {
         args.push(this.modelPath);
       }
 
-      const python = spawn("python3", args, { timeout: 30000 });
+      const python = spawn(this.pythonBin, args, { timeout: 30000 });
       let stdout = "";
       let stderr = "";
 

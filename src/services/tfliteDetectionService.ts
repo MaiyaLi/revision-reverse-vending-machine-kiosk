@@ -28,9 +28,12 @@ export interface MultiDetectionResult {
 
 export class TFLiteDetectionService {
   private pythonScript: string;
+  private pythonBin: string;
 
   constructor() {
     this.pythonScript = path.join(process.cwd(), "scripts", "tflite_detect.py");
+    const venvPython = path.join(process.cwd(), ".venv", "bin", "python");
+    this.pythonBin = venvPython;
   }
 
   async detectFromImage(imageBase64: string): Promise<MultiDetectionResult> {
@@ -59,7 +62,7 @@ export class TFLiteDetectionService {
 
   private runPythonDetect(imagePath: string): Promise<{ items: DetectionResult[] }> {
     return new Promise((resolve, reject) => {
-      const python = spawn("python3", [this.pythonScript, imagePath], { timeout: 60000 });
+      const python = spawn(this.pythonBin, [this.pythonScript, imagePath], { timeout: 60000 });
       let stdout = "";
       let stderr = "";
 
