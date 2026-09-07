@@ -28,6 +28,7 @@ export interface MultiDetectionResult {
   items: DetectionResult[];
   timestamp: string;
   imageBase64: string | null;
+  error?: string;
 }
 
 export class DetectionService {
@@ -84,6 +85,7 @@ export class DetectionService {
       const items: DetectionResult[] = [];
 
       console.log("🧠 Using TFLite detection...");
+      let tfliteError: string | undefined;
       try {
         const tfliteResult = await tfliteDetectionService.detectFromImage(image);
         for (const item of tfliteResult.items) {
@@ -99,8 +101,13 @@ export class DetectionService {
         } else {
           console.log("⚠️ TFLite detection returned 0 items");
         }
+        if (tfliteResult.error) {
+          tfliteError = tfliteResult.error;
+          console.warn("⚠️ TFLite reported error:", tfliteError);
+        }
       } catch (tfliteErr) {
         console.warn("❌ TFLite detection failed:", tfliteErr);
+        tfliteError = (tfliteErr as Error)?.message || String(tfliteErr);
       }
 
       for (const item of items) {
@@ -113,7 +120,8 @@ export class DetectionService {
       return {
         items,
         timestamp: new Date().toISOString(),
-        imageBase64: image
+        imageBase64: image,
+        error: tfliteError,
       };
     } catch (error: any) {
       console.error("❌ Multi-detection error:", error);

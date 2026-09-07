@@ -2480,13 +2480,19 @@ export default function App() {
                     <span className="absolute top-4 left-4 bg-emerald-600/90 text-white text-xs px-3 py-1 rounded-lg font-mono font-black z-10">
                       DETECTION RESULTS
                     </span>
-                    <div className="mt-12 w-full text-center space-y-3">
-                      {detectionItems.length === 0 ? (
-                        <div className={`p-6 rounded-2xl ${backendCameraActive ? 'bg-emerald-950/40 border border-emerald-500 text-emerald-400' : 'bg-slate-800 border border-slate-700 text-slate-400'}`}>
-                          <div className="text-3xl font-black mb-2">⏳ Waiting...</div>
-                          <div className="text-sm opacity-80">No items detected yet</div>
-                        </div>
-                      ) : (
+                     <div className="mt-12 w-full text-center space-y-3">
+                       {detectionItems.length === 0 ? (
+                         <div className={`p-6 rounded-2xl ${backendCameraActive ? 'bg-emerald-950/40 border border-emerald-500 text-emerald-400' : 'bg-slate-800 border border-slate-700 text-slate-400'}`}>
+                           <div className="text-3xl font-black mb-2">⏳ Waiting...</div>
+                           <div className="text-sm opacity-80">No items detected yet</div>
+                           {detectionResult?.error ? (
+                             <div className="mt-3 text-xs text-red-400 bg-red-950/30 border border-red-500/40 rounded-xl p-2 text-left">
+                               <div className="font-black mb-1">Detection Error</div>
+                               {detectionResult.error}
+                             </div>
+                           ) : null}
+                         </div>
+                       ) : (
                         detectionItems.map((item, idx) => (
                           <div key={idx} className={`p-4 rounded-2xl ${item.detectedMaterial === 'plastic' ? 'bg-teal-950/40 border border-teal-500 text-teal-400' : 
                            item.detectedMaterial === 'aluminum' ? 'bg-sky-950/40 border border-sky-500 text-sky-400' : 
