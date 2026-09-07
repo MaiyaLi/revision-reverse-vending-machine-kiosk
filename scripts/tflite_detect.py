@@ -143,7 +143,7 @@ def main():
             })
 
         sys.stderr.write(json.dumps({"debug_top_scores": [round(float(s), 2) for s in scores[:5]]}) + "\n")
-        sys.stderr.write(json.dumps({"debug_top_classes": [int(c) for c in classes[:5]]) + "\n")
+        sys.stderr.write(json.dumps({"debug_top_classes": [int(c) for c in classes[:5]]}) + "\n")
         print(json.dumps({"items": detections}))
     except Exception as e:
         print(json.dumps({"error": str(e)}))
