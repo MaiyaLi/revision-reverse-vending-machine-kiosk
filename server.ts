@@ -777,7 +777,7 @@ app.get("/api/detection/history", (req, res) => {
 // Start background detection service
 app.post("/api/detection/background/start", (req, res) => {
   try {
-    const interval = parseInt(req.body?.intervalMs) || 2000;
+    const interval = parseInt(req.body?.intervalMs) || 15000;
     detectionService.startBackgroundDetection(interval);
     res.json({ success: true, message: `Background detection started (interval: ${interval}ms)` });
   } catch (error: any) {
@@ -863,8 +863,8 @@ async function startServer() {
       console.log(`💳 Xendit integration: ${process.env.XENDIT_SECRET_KEY ? 'CONFIGURED' : 'NOT CONFIGURED'}`);
       
       // Start background detection service automatically
-      detectionService.startBackgroundDetection(3000);
-      console.log(`🔍 Background camera detection started (interval: 3000ms)`);
+      detectionService.startBackgroundDetection(15000);
+      console.log(`🔍 Background camera detection started (interval: 15000ms)`);
     });
   } catch (error) {
     console.error("❌ Failed to start server:", error);

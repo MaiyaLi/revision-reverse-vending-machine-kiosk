@@ -223,6 +223,9 @@ If no items are detected, return: {"items": []}`
     }
   }
 
+  private quotaCooldownUntil = 0;
+  private consecutiveQuotaFails = 0;
+
   async detectMultipleItems(imageBase64?: string): Promise<MultiDetectionResult> {
     try {
       const image = imageBase64 || await this.captureImage();
@@ -249,18 +252,29 @@ If no items are detected, return: {"items": []}`
       }
       console.log("🤖 Gemini AI initialized, sending request...");
       
-      const MAX_RETRIES = 2;
+      const now = Date.now();
+      if (now < this.quotaCooldownUntil) {
+        const waitMs = Math.ceil((this.quotaCooldownUntil - now) / 1000);
+        console.log(`⏳ Quota cooldown active, skipping detection for ~${waitMs}s`);
+        return {
+          items: [],
+          timestamp: new Date().toISOString(),
+          imageBase64: image
+        };
+      }
+      
+      const MAX_RETRIES = 3;
       let lastError: any = null;
       
       for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
         try {
           const base64Data = image.replace(/^data:image\/\w+;base64,/, "");
-              const response = await this.ai.models.generateContent({
-                model: "gemini-3.6-flash",
-                contents: [
-                  { inlineData: { data: base64Data, mimeType: "image/jpeg" } },
-                  {
-                    text: `You are a recycling classifier for a reverse vending machine. This is a fixed camera view. Look carefully for ANY recyclable containers or objects.
+               const response = await this.ai.models.generateContent({
+                 model: "gemini-3.6-flash",
+                 contents: [
+                   { inlineData: { data: base64Data, mimeType: "image/jpeg" } },
+                   {
+                     text: `You are a recycling classifier for a reverse vending machine. This is a fixed camera view. Look carefully for ANY recyclable containers or objects.
 
 LOOK FOR THESE SPECIFIC ITEMS:
 - Plastic: PET bottles, water bottles, soda bottles, clear/blue plastic containers, bottles with caps
@@ -328,15 +342,31 @@ If absolutely nothing is visible: {"items": []}`
           
           if (items.length > 0) {
             console.log(`✅ Detection successful on attempt ${attempt}: ${items.length} items found`);
+            this.consecutiveQuotaFails = 0;
+            this.quotaCooldownUntil = 0;
             break;
           } else {
             console.log(`⚠️ No items detected on attempt ${attempt}`);
           }
         } catch (err: any) {
           lastError = err;
-          console.error(`❌ Gemini detection attempt ${attempt} error:`, err?.message || err);
+          const status = err?.status || err?.code || err?.cause?.code;
+          const isQuota = status === 429 || status === 'RESOURCE_EXHAUSTED';
+          const isUnavailable = status === 503 || status === 'UNAVAILABLE';
+          
+          if (isQuota || isUnavailable) {
+            this.consecutiveQuotaFails++;
+            const backoffMs = Math.min(5000 * Math.pow(2, this.consecutiveQuotaFails), 60000);
+            this.quotaCooldownUntil = Date.now() + backoffMs;
+            console.error(`❌ Gemini quota/unavailable (${status}), cooling down for ${backoffMs}ms`);
+          } else {
+            this.consecutiveQuotaFails = 0;
+            console.error(`❌ Gemini detection attempt ${attempt} error:`, err?.message || err);
+          }
+          
           if (attempt < MAX_RETRIES) {
-            await new Promise(resolve => setTimeout(resolve, 500));
+            const delay = isQuota ? Math.min(1000 * Math.pow(2, attempt), 10000) : 500;
+            await new Promise(resolve => setTimeout(resolve, delay));
           }
         }
       }
@@ -363,13 +393,22 @@ If absolutely nothing is visible: {"items": []}`
     }
   }
 
-  async startBackgroundDetection(intervalMs: number = 4000) {
+  async startBackgroundDetection(intervalMs: number = 15000) {
     if (this.isDetecting) return;
     this.isDetecting = true;
     console.log(`🔍 Background camera detection started (interval: ${intervalMs}ms)`);
 
     const detect = async () => {
       if (!this.isDetecting) return;
+      
+      const now = Date.now();
+      if (now < this.quotaCooldownUntil) {
+        const waitMs = Math.ceil((this.quotaCooldownUntil - now) / 1000);
+        console.log(`⏳ Quota cooldown active, delaying background detection by ~${waitMs}s`);
+        setTimeout(detect, Math.min(this.quotaCooldownUntil - now + 1000, intervalMs));
+        return;
+      }
+      
       console.log("⏳ Running detection cycle...");
       try {
         const multiResult = await this.detectMultipleItems();
