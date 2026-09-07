@@ -3,6 +3,7 @@ import fs from "fs";
 import path from "path";
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
+import { tfliteDetectionService, MultiDetectionResult as TFLiteMultiDetectionResult } from "./tfliteDetectionService";
 import { localDetectionService, MultiDetectionResult as LocalMultiDetectionResult } from "./localDetectionService";
 
 dotenv.config();
@@ -39,6 +40,14 @@ export class DetectionService {
 
   constructor() {
     const useLocal = process.env.USE_LOCAL_DETECTION === "true";
+    const useTflite = process.env.USE_TFLITE === "true";
+
+    if (useTflite) {
+      console.log("🧠 Using TFLite local detection (Gemini disabled by USE_TFLITE)");
+      this.ai = null;
+      return;
+    }
+
     if (useLocal) {
       console.log("🖥️ Using local YOLO detection (Gemini disabled by USE_LOCAL_DETECTION)");
       this.ai = null;
@@ -250,7 +259,41 @@ If no items are detected, return: {"items": []}`
 
       const items: DetectionResult[] = [];
 
+      const useTflite = process.env.USE_TFLITE === "true";
       const useLocal = process.env.USE_LOCAL_DETECTION === "true";
+      
+      if (useTflite) {
+        console.log("🧠 Using TFLite detection...");
+        try {
+          const tfliteResult = await tfliteDetectionService.detectFromImage(image);
+          for (const item of tfliteResult.items) {
+            items.push({
+              ...item,
+              timestamp: new Date().toISOString(),
+              imageBase64: image,
+              reasoning: "Detected via local TFLite model"
+            });
+          }
+          if (items.length > 0) {
+            console.log(`✅ TFLite detection found ${items.length} items`);
+          }
+        } catch (tfliteErr) {
+          console.warn("❌ TFLite detection failed:", tfliteErr);
+        }
+        
+        for (const item of items) {
+          this.detectionHistory.unshift(item);
+        }
+        if (this.detectionHistory.length > 50) {
+          this.detectionHistory = this.detectionHistory.slice(0, 50);
+        }
+        
+        return {
+          items,
+          timestamp: new Date().toISOString(),
+          imageBase64: image
+        };
+      }
       
       if (useLocal) {
         console.log("🖥️ Using local YOLO detection...");
@@ -410,24 +453,43 @@ If absolutely nothing is visible: {"items": []}`
         const isUnavailable = status === 503 || status === 'UNAVAILABLE';
         
         if (isQuota || isUnavailable || !this.ai) {
-          console.log("⚠️ Falling back to local YOLO detection...");
+          console.log("⚠️ Falling back to local TFLite detection...");
           try {
-            const localResult = await localDetectionService.detectFromImage(image);
-            if (localResult.items.length > 0) {
-              console.log(`✅ Local detection found ${localResult.items.length} items`);
-              for (const item of localResult.items) {
+            const tfliteResult = await tfliteDetectionService.detectFromImage(image);
+            if (tfliteResult.items.length > 0) {
+              console.log(`✅ TFLite detection found ${tfliteResult.items.length} items`);
+              for (const item of tfliteResult.items) {
                 items.push({
                   ...item,
                   timestamp: new Date().toISOString(),
                   imageBase64: image,
-                  reasoning: "Detected via local YOLO model"
+                  reasoning: "Detected via local TFLite model"
                 });
               }
               this.consecutiveQuotaFails = 0;
               this.quotaCooldownUntil = 0;
             }
-          } catch (localErr) {
-            console.warn("❌ Local detection failed:", localErr);
+          } catch (tfliteErr) {
+            console.warn("❌ TFLite detection failed:", tfliteErr);
+            console.log("⚠️ Falling back to local YOLO detection...");
+            try {
+              const localResult = await localDetectionService.detectFromImage(image);
+              if (localResult.items.length > 0) {
+                console.log(`✅ Local detection found ${localResult.items.length} items`);
+                for (const item of localResult.items) {
+                  items.push({
+                    ...item,
+                    timestamp: new Date().toISOString(),
+                    imageBase64: image,
+                    reasoning: "Detected via local YOLO model"
+                  });
+                }
+                this.consecutiveQuotaFails = 0;
+                this.quotaCooldownUntil = 0;
+              }
+            } catch (localErr) {
+              console.warn("❌ Local detection failed:", localErr);
+            }
           }
         }
       }

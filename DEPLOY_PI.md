@@ -178,6 +178,35 @@ sudo raspi-config nonint do_camera 0
 sudo reboot
 ```
 
+## Local TFLite Detection (OpenCV + TFLite + NumPy)
+
+For fully offline detection with no quota limits, you can use TensorFlow Lite with OpenCV and NumPy:
+
+```bash
+# Install Python dependencies
+sudo apt update
+sudo apt install -y python3-pip python3-dev
+pip3 install opencv-python-headless numpy tflite-runtime
+
+# Create models directory
+mkdir -p models
+
+# Download SSD MobileNet V2 TFLite model (~10MB)
+wget -O models/ssd_mobilenet.tflite https://storage.googleapis.com/tensorflow-lite-models/ssd_mobilenet_v2_fpnlite_640x640_coco17_tpu_8.tflite
+```
+
+Then set in `.env`:
+```env
+USE_TFLITE="true"
+```
+
+Restart the server:
+```bash
+node node_modules/.bin/tsx server.ts
+```
+
+**Note:** TFLite detection uses a general COCO-trained model. It will detect bottles and cups, then map them to plastic/aluminum/glass categories. For production accuracy, you would fine-tune a custom TFLite model on your specific recycling items.
+
 ## Local YOLO Detection (No Gemini Quota)
 
 If you want to avoid Gemini API quota limits, you can run YOLO detection locally on the Pi:
