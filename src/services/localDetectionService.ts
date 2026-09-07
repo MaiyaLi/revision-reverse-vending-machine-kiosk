@@ -71,12 +71,6 @@ export class LocalDetectionService {
         args.push(this.modelPath);
       }
 
-      console.log(`[YOLO DEBUG] pythonBin=${this.pythonBin}`);
-      console.log(`[YOLO DEBUG] script=${this.pythonScript}`);
-      console.log(`[YOLO DEBUG] imagePath=${imagePath}`);
-      console.log(`[YOLO DEBUG] imageSize=${fs.statSync(imagePath).size} bytes`);
-      console.log(`[YOLO DEBUG] modelPath=${this.modelPath} exists=${fs.existsSync(this.modelPath)}`);
-
       const python = spawn(this.pythonBin, args, { timeout: 30000 });
       let stdout = "";
       let stderr = "";
@@ -90,9 +84,6 @@ export class LocalDetectionService {
       });
 
       python.on("close", (code) => {
-        console.log(`[YOLO DEBUG] exitCode=${code}`);
-        console.log(`[YOLO DEBUG] stdout=${stdout}`);
-        console.log(`[YOLO DEBUG] stderr=${stderr}`);
         if (code !== 0) {
           return reject(new Error(`Python exited with ${code}: ${stderr}`));
         }
@@ -109,7 +100,6 @@ export class LocalDetectionService {
       });
 
       python.on("error", (err) => {
-        console.log(`[YOLO DEBUG] spawnError=${err.message}`);
         reject(new Error(`Failed to start python: ${err.message}`));
       });
     });
