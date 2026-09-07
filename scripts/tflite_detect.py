@@ -120,8 +120,6 @@ def main():
             class_id = int(classes[i])
             class_name = labels[class_id] if class_id < len(labels) else str(class_id)
             material = MATERIAL_MAP.get(class_name.lower())
-            if not material:
-                continue
 
             ymin, xmin, ymax, xmax = boxes[i]
             x1 = max(0, int(xmin * w))
@@ -130,7 +128,7 @@ def main():
             y2 = min(h, int(ymax * h))
 
             detections.append({
-                "detectedMaterial": material,
+                "detectedMaterial": material or "other",
                 "itemName": class_name,
                 "confidence": round(score, 2),
                 "estimatedWeightGrams": 0,
@@ -144,6 +142,7 @@ def main():
 
         sys.stderr.write(json.dumps({"debug_top_scores": [round(float(s), 2) for s in scores[:5]]}) + "\n")
         sys.stderr.write(json.dumps({"debug_top_classes": [int(c) for c in classes[:5]]}) + "\n")
+        sys.stderr.write(json.dumps({"debug_detections": [d["itemName"] for d in detections]}) + "\n")
         print(json.dumps({"items": detections}))
     except Exception as e:
         print(json.dumps({"error": str(e)}))
