@@ -2406,22 +2406,31 @@ export default function App() {
                 </p>
               </div>
 
-               <div className="flex justify-center pt-4 gap-4">
-                 <button 
-                   type="button"
-                   onClick={() => setCurrentState('MAIN_MENU')}
-                   className={`px-8 py-4 ${isLight ? 'bg-slate-200 text-slate-705 hover:bg-slate-250 border-slate-350' : 'bg-slate-800 text-slate-300 hover:bg-slate-755 border-slate-705'} border rounded-2xl text-base font-black transition-all active:scale-[0.98] shadow-md`}
-                 >
-                   Return to Main Menu
-                 </button>
-                 <button 
-                   type="button"
-                   onClick={() => setCurrentState('DETECTION_TEST')}
-                   className={`px-8 py-4 ${isLight ? 'bg-blue-100 text-blue-800 hover:bg-blue-200 border-blue-300' : 'bg-blue-900/40 text-blue-300 hover:bg-blue-850 border-blue-500'} border rounded-2xl text-base font-black transition-all active:scale-[0.98] shadow-md`}
-                 >
-                   Camera Detection Test
-                 </button>
-               </div>
+                <div className="flex justify-center pt-4 gap-4">
+                  <button 
+                    type="button"
+                    onClick={() => setCurrentState('MAIN_MENU')}
+                    className={`px-8 py-4 ${isLight ? 'bg-slate-200 text-slate-705 hover:bg-slate-250 border-slate-350' : 'bg-slate-800 text-slate-300 hover:bg-slate-755 border-slate-705'} border rounded-2xl text-base font-black transition-all active:scale-[0.98] shadow-md`}
+                  >
+                    Return to Main Menu
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={() => setCurrentState('DETECTION_TEST')}
+                    className={`px-8 py-4 ${isLight ? 'bg-blue-100 text-blue-800 hover:bg-blue-200 border-blue-300' : 'bg-blue-900/40 text-blue-300 hover:bg-blue-850 border-blue-500'} border rounded-2xl text-base font-black transition-all active:scale-[0.98] shadow-md`}
+                  >
+                    Camera Detection Test
+                  </button>
+                  <a
+                    href="http://localhost:5000"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`px-8 py-4 ${isLight ? 'bg-red-100 text-red-800 hover:bg-red-200 border-red-300' : 'bg-red-900/40 text-red-300 hover:bg-red-850 border-red-500'} border rounded-2xl text-base font-black transition-all active:scale-[0.98] shadow-md inline-flex items-center justify-center gap-2`}
+                  >
+                    <Camera className="w-5 h-5" />
+                    Surveillance Camera
+                  </a>
+                </div>
               </div>
             )}
 
