@@ -255,12 +255,12 @@ If no items are detected, return: {"items": []}`
       for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
         try {
           const base64Data = image.replace(/^data:image\/\w+;base64,/, "");
-          const response = await this.ai.models.generateContent({
-            model: "gemini-3.6-flash",
-            contents: [
-              { inlineData: { data: base64Data, mimeType: "image/jpeg" } },
-               {
-                 text: `You are a recycling classifier for a reverse vending machine. This is a fixed camera view. Look carefully for ANY recyclable containers or objects.
+              const response = await this.ai.models.generateContent({
+                model: "gemini-2.5-flash",
+                contents: [
+                  { inlineData: { data: base64Data, mimeType: "image/jpeg" } },
+                  {
+                    text: `You are a recycling classifier for a reverse vending machine. This is a fixed camera view. Look carefully for ANY recyclable containers or objects.
 
 LOOK FOR THESE SPECIFIC ITEMS:
 - Plastic: PET bottles, water bottles, soda bottles, clear/blue plastic containers, bottles with caps
@@ -334,7 +334,7 @@ If absolutely nothing is visible: {"items": []}`
           }
         } catch (err: any) {
           lastError = err;
-          console.warn(`❌ Gemini detection attempt ${attempt} failed:`, err.message);
+          console.error(`❌ Gemini detection attempt ${attempt} error:`, err?.message || err);
           if (attempt < MAX_RETRIES) {
             await new Promise(resolve => setTimeout(resolve, 500));
           }
