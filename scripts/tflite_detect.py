@@ -65,7 +65,7 @@ def ensure_model():
             import urllib.request
             import zipfile
             zip_path = os.path.join(MODEL_DIR, "coco_ssd_mobilenet.zip")
-            print(json.dumps({"status": "downloading_model", "url": MODEL_URL}))
+            sys.stderr.write(json.dumps({"status": "downloading_model", "url": MODEL_URL}) + "\n")
             urllib.request.urlretrieve(MODEL_URL, zip_path)
             with zipfile.ZipFile(zip_path, "r") as zf:
                 zf.extractall(MODEL_DIR)
