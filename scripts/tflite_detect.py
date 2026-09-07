@@ -5,7 +5,10 @@ import os
 try:
     import cv2
     import numpy as np
-    from tflite_runtime.interpreter import load_delegate, Interpreter
+    try:
+        from tflite_runtime.interpreter import Interpreter
+    except Exception:
+        from tensorflow.lite import Interpreter
 except Exception as e:
     print(json.dumps({"error": f"dependency import failed: {e}"}))
     sys.exit(1)
