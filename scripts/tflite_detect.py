@@ -126,10 +126,10 @@ def main():
                 "confidence": round(score, 2),
                 "estimatedWeightGrams": 0,
                 "boundingBox": {
-                    "x": x1,
-                    "y": y1,
-                    "width": max(1, x2 - x1),
-                    "height": max(1, y2 - y1),
+                    "x": round(x1 / w * 100, 1),
+                    "y": round(y1 / h * 100, 1),
+                    "width": round(max(1, x2 - x1) / w * 100, 1),
+                    "height": round(max(1, y2 - y1) / h * 100, 1),
                 },
             })
 

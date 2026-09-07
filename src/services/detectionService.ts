@@ -39,27 +39,30 @@ export class DetectionService {
   private lastImage: string | null = null;
 
   constructor() {
+    const useTflite = process.env.USE_TFLITE !== "false";
     const useLocal = process.env.USE_LOCAL_DETECTION === "true";
-    const useTflite = process.env.USE_TFLITE === "true";
+    const useGemini = process.env.USE_GEMINI === "true";
 
     if (useTflite) {
-      console.log("🧠 Using TFLite local detection (Gemini disabled by USE_TFLITE)");
+      console.log("🧠 Using TFLite local detection (default)");
       this.ai = null;
       return;
     }
 
     if (useLocal) {
-      console.log("🖥️ Using local YOLO detection (Gemini disabled by USE_LOCAL_DETECTION)");
+      console.log("🖥️ Using local YOLO detection");
       this.ai = null;
       return;
     }
 
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (apiKey && apiKey !== "MY_GEMINI_API_KEY") {
-      try {
-        this.ai = new GoogleGenAI({ apiKey });
-      } catch (err) {
-        console.warn("Failed to initialize Gemini client:", err);
+    if (useGemini) {
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (apiKey && apiKey !== "MY_GEMINI_API_KEY") {
+        try {
+          this.ai = new GoogleGenAI({ apiKey });
+        } catch (err) {
+          console.warn("Failed to initialize Gemini client:", err);
+        }
       }
     }
   }
@@ -259,8 +262,9 @@ If no items are detected, return: {"items": []}`
 
       const items: DetectionResult[] = [];
 
-      const useTflite = process.env.USE_TFLITE === "true";
+      const useTflite = process.env.USE_TFLITE !== "false";
       const useLocal = process.env.USE_LOCAL_DETECTION === "true";
+      const useGemini = process.env.USE_GEMINI === "true";
       
       if (useTflite) {
         console.log("🧠 Using TFLite detection...");
@@ -339,29 +343,38 @@ If no items are detected, return: {"items": []}`
         };
       }
       
+      if (!useGemini || !this.ai) {
+        console.log("⚠️ Gemini disabled or not initialized, skipping cloud detection");
+        return {
+          items: [],
+          timestamp: new Date().toISOString(),
+          imageBase64: image
+        };
+      }
+
       const MAX_RETRIES = 3;
       let lastError: any = null;
       
       for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
         try {
           const base64Data = image.replace(/^data:image\/\w+;base64,/, "");
-               const response = await this.ai.models.generateContent({
-                 model: "gemini-3.6-flash",
-                 contents: [
-                   { inlineData: { data: base64Data, mimeType: "image/jpeg" } },
-                   {
-                     text: `You are a recycling classifier for a reverse vending machine. This is a fixed camera view. Look carefully for ANY recyclable containers or objects.
+          const response = await this.ai.models.generateContent({
+            model: "gemini-3.6-flash",
+            contents: [
+              { inlineData: { data: base64Data, mimeType: "image/jpeg" } },
+              {
+                text: `You are a recycling classifier for a reverse vending machine. Analyze this image and detect ALL recyclable items present.
 
 LOOK FOR THESE SPECIFIC ITEMS:
 - Plastic: PET bottles, water bottles, soda bottles, clear/blue plastic containers, bottles with caps
 - Aluminum: Silver cans, soda cans, beer cans, energy drink cans, cans with pull tabs
 - Glass: Green/brown beer bottles, clear glass bottles, glass jars, wine bottles
 
-Classify EACH visible item as ONE of:
-1. "plastic" - bottles, containers, cups, wrappers, anything plastic-looking
-2. "aluminum" - cans, foil, metallic containers
-3. "glass" - bottles, jars, anything glass/transparent
-4. "other" - non-recyclable or unclear
+Classify EACH item as ONE of:
+1. "plastic" - clear/translucent bottles, soda bottles, water bottles, containers with plastic appearance, caps visible
+2. "aluminum" - metallic cans, silver beverage cans, aluminum foil containers, cans with pull tabs
+3. "glass" - transparent glass bottles, beer bottles, glass jars, green/brown glass containers
+4. "other" - anything else, non-recyclable items, or unclear
 
 IMPORTANT RULES:
 - If you see ANY container or bottle-like object, classify it
@@ -369,18 +382,19 @@ IMPORTANT RULES:
 - Even partially visible items should be detected
 - Empty/clear bottles count as plastic
 - The camera may have glare or poor lighting - do your best
-- Look for the specific shapes: plastic bottles have narrow necks, aluminum cans are cylindrical, glass bottles have wider bodies
+- Look for specific shapes: plastic bottles have narrow necks, aluminum cans are cylindrical, glass bottles have wider bodies
 
-For EACH detected item, provide bounding box percentages (0-100):
-- x: left edge %
-- y: top edge %
-- width: width %
-- height: height %
+For EACH detected item, estimate its bounding box location as percentages (0-100) relative to image dimensions:
+- x: left position percentage
+- y: top position percentage  
+- width: width percentage
+- height: height percentage
 
-Return JSON: {"items": [{"detectedMaterial": "...", "itemName": "...", "confidence": 0.0-1.0, "estimatedWeightGrams": number, "reasoning": "...", "boundingBox": {"x": number, "y": number, "width": number, "height": number}}]}
+Return a JSON array of ALL detected items:
+{"items": [{"detectedMaterial": "...", "itemName": "...", "confidence": 0.0-1.0, "estimatedWeightGrams": number, "reasoning": "...", "boundingBox": {"x": number, "y": number, "width": number, "height": number}}]}
 
-If absolutely nothing is visible: {"items": []}`
-                }
+If no items are detected, return: {"items": []}`
+              }
             ],
             config: {
               responseMimeType: "application/json"

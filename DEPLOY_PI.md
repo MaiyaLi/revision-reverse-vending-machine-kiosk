@@ -93,8 +93,8 @@ nano .env
 ### Required `.env` values:
 
 ```env
-# Gemini AI API Key (get from https://aistudio.google.com/app/apikey)
-GEMINI_API_KEY="your_actual_gemini_api_key"
+# Local detection is enabled by default. No API keys required.
+USE_TFLITE="true"
 
 # PostgreSQL connection
 DATABASE_URL="postgresql://revision_user:your_password@localhost:5432/revision_rvm"
@@ -107,6 +107,9 @@ XENDIT_WEBHOOK_TOKEN=""
 NODE_ENV="production"
 PORT="3000"
 APP_URL="http://localhost:3000"
+
+# Admin panel access
+ADMIN_API_KEY="your_secure_admin_api_key_here"
 ```
 
 ## Step 4: Initialize Database
@@ -178,9 +181,9 @@ sudo raspi-config nonint do_camera 0
 sudo reboot
 ```
 
-## Local TFLite Detection (OpenCV + TFLite + NumPy)
+## Local TFLite Detection (OpenCV + TFLite + NumPy) - DEFAULT
 
-For fully offline detection with no quota limits, you can use TensorFlow Lite with OpenCV and NumPy:
+The kiosk now uses TensorFlow Lite with OpenCV and NumPy by default for fully offline detection with no quota limits:
 
 ```bash
 # Install Python dependencies
@@ -190,12 +193,15 @@ pip3 install opencv-python-headless numpy tflite-runtime
 
 # Create models directory
 mkdir -p models
+cd models
 
 # Download SSD MobileNet V2 TFLite model (~10MB)
-wget -O models/ssd_mobilenet.tflite https://storage.googleapis.com/tensorflow-lite-models/ssd_mobilenet_v2_fpnlite_640x640_coco17_tpu_8.tflite
+wget https://storage.googleapis.com/download.tensorflow.org/models/tflite/coco_ssd_mobilenet_v1_1.0_quant_2018_06_29.zip
+unzip coco_ssd_mobilenet_v1_1.0_quant_2018_06_29.zip
+cd ..
 ```
 
-Then set in `.env`:
+The `.env` file already defaults to TFLite:
 ```env
 USE_TFLITE="true"
 ```
@@ -205,9 +211,9 @@ Restart the server:
 node node_modules/.bin/tsx server.ts
 ```
 
-**Note:** TFLite detection uses a general COCO-trained model. It will detect bottles and cups, then map them to plastic/aluminum/glass categories. For production accuracy, you would fine-tune a custom TFLite model on your specific recycling items.
+**Note:** TFLite detection uses a COCO-trained model. It detects general objects like `bottle`, `cup`, `wine glass`, then maps them to plastic/aluminum/glass categories. For production accuracy, you would fine-tune a custom TFLite model on your specific recycling items.
 
-## Local YOLO Detection (No Gemini Quota)
+## Local YOLO Detection (Alternative to TFLite)
 
 If you want to avoid Gemini API quota limits, you can run YOLO detection locally on the Pi:
 
@@ -244,8 +250,10 @@ node node_modules/.bin/tsx server.ts
 4. Set quantities and click "Start Deposit Scan"
 5. Allow camera access when prompted
 6. Hold a bottle/can in front of the camera
-7. The system will capture the image and send it to Gemini AI for classification
+7. The system will capture the image and detect items using local TFLite/OpenCV
 8. Results show detected material, confidence, and reward value
+
+**Note:** Detection now runs locally by default using TFLite + OpenCV + NumPy. No internet or Gemini API key is required for basic detection.
 
 ## Important Notes
 
