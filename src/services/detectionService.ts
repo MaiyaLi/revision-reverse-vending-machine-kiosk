@@ -110,8 +110,20 @@ export class DetectionService {
         yoloError = (yoloErr as Error)?.message || String(yoloErr);
       }
 
-      for (const item of items) {
-        this.detectionHistory.unshift(item);
+      if (items.length > 0) {
+        for (const item of items) {
+          this.detectionHistory.unshift(item);
+        }
+      } else {
+        this.detectionHistory.unshift({
+          detectedMaterial: "other",
+          itemName: "No items detected",
+          confidence: 0,
+          estimatedWeightGrams: 0,
+          timestamp: new Date().toISOString(),
+          imageBase64: image,
+          reasoning: "YOLO returned 0 detections for this frame"
+        });
       }
       if (this.detectionHistory.length > 50) {
         this.detectionHistory = this.detectionHistory.slice(0, 50);
