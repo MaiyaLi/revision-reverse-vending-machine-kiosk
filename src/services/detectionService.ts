@@ -2,7 +2,7 @@ import { spawn } from "child_process";
 import fs from "fs";
 import path from "path";
 import dotenv from "dotenv";
-import { tfliteDetectionService } from "./tfliteDetectionService";
+import { localDetectionService } from "./localDetectionService";
 
 dotenv.config();
 
@@ -37,7 +37,7 @@ export class DetectionService {
   private lastImage: string | null = null;
 
   constructor() {
-    console.log("🧠 Using TFLite local detection");
+    console.log("🧠 Using YOLO local detection (Ultralytics)");
   }
 
   getLastImage(): string | null {
@@ -84,30 +84,30 @@ export class DetectionService {
 
       const items: DetectionResult[] = [];
 
-      console.log("🧠 Using TFLite detection...");
-      let tfliteError: string | undefined;
+      console.log("🧠 Using YOLO detection...");
+      let yoloError: string | undefined;
       try {
-        const tfliteResult = await tfliteDetectionService.detectFromImage(image);
-        for (const item of tfliteResult.items) {
+        const yoloResult = await localDetectionService.detectFromImage(image);
+        for (const item of yoloResult.items) {
           items.push({
             ...item,
             timestamp: new Date().toISOString(),
             imageBase64: image,
-            reasoning: "Detected via local TFLite model"
+            reasoning: "Detected via local YOLO model"
           });
         }
         if (items.length > 0) {
-          console.log(`✅ TFLite detection found ${items.length} items`);
+          console.log(`✅ YOLO detection found ${items.length} items`);
         } else {
-          console.log("⚠️ TFLite detection returned 0 items");
+          console.log("⚠️ YOLO detection returned 0 items");
         }
-        if (tfliteResult.error) {
-          tfliteError = tfliteResult.error;
-          console.warn("⚠️ TFLite reported error:", tfliteError);
+        if (yoloResult.error) {
+          yoloError = yoloResult.error;
+          console.warn("⚠️ YOLO reported error:", yoloError);
         }
-      } catch (tfliteErr) {
-        console.warn("❌ TFLite detection failed:", tfliteErr);
-        tfliteError = (tfliteErr as Error)?.message || String(tfliteErr);
+      } catch (yoloErr) {
+        console.warn("❌ YOLO detection failed:", yoloErr);
+        yoloError = (yoloErr as Error)?.message || String(yoloErr);
       }
 
       for (const item of items) {
@@ -121,7 +121,7 @@ export class DetectionService {
         items,
         timestamp: new Date().toISOString(),
         imageBase64: image,
-        error: tfliteError,
+        error: yoloError,
       };
     } catch (error: any) {
       console.error("❌ Multi-detection error:", error);

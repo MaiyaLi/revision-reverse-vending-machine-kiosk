@@ -24,6 +24,7 @@ export interface MultiDetectionResult {
   items: DetectionResult[];
   timestamp: string;
   imageBase64: string | null;
+  error?: string;
 }
 
 export class LocalDetectionService {
@@ -52,11 +53,13 @@ export class LocalDetectionService {
         imageBase64,
       };
     } catch (error: any) {
-      console.error("Local detection error:", error);
+      const message = error?.message || String(error);
+      console.error("Local detection error:", message);
       return {
         items: [],
         timestamp: new Date().toISOString(),
         imageBase64: imageBase64,
+        error: message,
       };
     }
   }

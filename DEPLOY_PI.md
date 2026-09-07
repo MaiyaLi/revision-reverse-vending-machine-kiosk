@@ -93,9 +93,7 @@ nano .env
 
 ```env
 # Local detection is enabled by default. No API keys required.
-USE_TFLITE="true"
-
-# PostgreSQL connection
+USE_YOLO="true"
 DATABASE_URL="postgresql://revision_user:your_password@localhost:5432/revision_rvm"
 
 # Xendit (optional, for payout testing)
@@ -180,58 +178,24 @@ sudo raspi-config nonint do_camera 0
 sudo reboot
 ```
 
-## Local TFLite Detection (OpenCV + TFLite + NumPy) - DEFAULT
+## Local YOLO Detection (Ultralytics + OpenCV + NumPy) - DEFAULT
 
-The kiosk now uses TensorFlow Lite with OpenCV and NumPy by default for fully offline detection with no quota limits:
-
-```bash
-# Install Python dependencies
-sudo apt update
-sudo apt install -y python3-pip python3-dev
-pip3 install opencv-python-headless numpy tflite-runtime
-
-# Create models directory
-mkdir -p models
-cd models
-
-# Download SSD MobileNet V2 TFLite model (~10MB)
-wget https://storage.googleapis.com/download.tensorflow.org/models/tflite/coco_ssd_mobilenet_v1_1.0_quant_2018_06_29.zip
-unzip coco_ssd_mobilenet_v1_1.0_quant_2018_06_29.zip
-cd ..
-```
-
-The `.env` file already defaults to TFLite:
-```env
-USE_TFLITE="true"
-```
-
-Restart the server:
-```bash
-node node_modules/.bin/tsx server.ts
-```
-
-**Note:** TFLite detection uses a COCO-trained model. It detects general objects like `bottle`, `cup`, `wine glass`, then maps them to plastic/aluminum/glass categories. For production accuracy, you would fine-tune a custom TFLite model on your specific recycling items.
-
-## Local YOLO Detection (Alternative to TFLite)
-
-If you want to use YOLO instead of TFLite, you can run YOLO detection locally on the Pi:
+The kiosk now uses YOLO (Ultralytics) with OpenCV and NumPy by default for fully offline detection with no quota limits:
 
 ```bash
 # Install Python dependencies
 sudo apt update
 sudo apt install -y python3-pip python3-dev
-pip3 install ultralytics opencv-python-headless
+pip3 install ultralytics opencv-python-headless numpy
 
-# Create models directory
+# Create models directory and download YOLOv8 nano model (~6MB)
 mkdir -p models
-
-# Download YOLOv8 nano model (6MB)
 wget -O models/yolov8n.pt https://github.com/ultralytics/assets/releases/download/v8.3.0/yolov8n.pt
 ```
 
-Then set in `.env`:
+The `.env` file already defaults to YOLO:
 ```env
-USE_LOCAL_DETECTION="true"
+USE_YOLO="true"
 ```
 
 Restart the server:
@@ -239,7 +203,7 @@ Restart the server:
 node node_modules/.bin/tsx server.ts
 ```
 
-**Note:** Local YOLO detection is less accurate than TFLite for specialized recycling items, but it works offline as an alternative.
+**Note:** YOLO detection uses a COCO-pretrained model. It detects general objects like `bottle`, `cup`, `wine glass`, `can`, then maps them to plastic/aluminum/glass categories. For production accuracy, you would fine-tune a custom YOLO model on your specific recycling items.
 
 ## Testing Bottle Classification
 
@@ -249,14 +213,14 @@ node node_modules/.bin/tsx server.ts
 4. Set quantities and click "Start Deposit Scan"
 5. Allow camera access when prompted
 6. Hold a bottle/can in front of the camera
-7. The system will capture the image and detect items using local TFLite/OpenCV
+7. The system will capture the image and detect items using local YOLO/OpenCV
 8. Results show detected material, confidence, and reward value
 
-**Note:** Detection runs locally by default using TFLite + OpenCV + NumPy. No cloud API key is required.
+**Note:** Detection runs locally by default using YOLO + OpenCV + NumPy. No cloud API key is required.
 
 ## Important Notes
 
-- **Offline capable**: TFLite detection runs locally without internet
+- **Offline capable**: YOLO detection runs locally without internet
 - **Camera permissions**: The browser must have camera access permissions
 - **PostgreSQL optional**: The server runs in demo mode without PostgreSQL (no persistent data)
 - **Display**: For kiosk mode, connect a touchscreen monitor to the Pi's HDMI port

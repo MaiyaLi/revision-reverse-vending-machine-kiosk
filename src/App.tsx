@@ -1773,7 +1773,7 @@ export default function App() {
                         <span className={`w-10 h-10 rounded-xl ${isLight ? 'bg-slate-200 text-slate-700' : 'bg-slate-800 text-white'} flex items-center justify-center font-black font-mono text-base`}>1</span>
                         <div>
                           <p className="text-sm font-black">Optics Image Recognition Frame</p>
-                          <span className="text-xs block opacity-80 font-mono font-bold">TFLite + OpenCV detection</span>
+                          <span className="text-xs block opacity-80 font-mono font-bold">YOLO + OpenCV detection</span>
                         </div>
                       </div>
                       <span className="text-sm font-mono font-black">
