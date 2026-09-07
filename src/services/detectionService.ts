@@ -3,6 +3,7 @@ import fs from "fs";
 import path from "path";
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
+import { localDetectionService, MultiDetectionResult as LocalMultiDetectionResult } from "./localDetectionService";
 
 dotenv.config();
 
@@ -37,6 +38,13 @@ export class DetectionService {
   private lastImage: string | null = null;
 
   constructor() {
+    const useLocal = process.env.USE_LOCAL_DETECTION === "true";
+    if (useLocal) {
+      console.log("🖥️ Using local YOLO detection (Gemini disabled by USE_LOCAL_DETECTION)");
+      this.ai = null;
+      return;
+    }
+
     const apiKey = process.env.GEMINI_API_KEY;
     if (apiKey && apiKey !== "MY_GEMINI_API_KEY") {
       try {
@@ -242,15 +250,40 @@ If no items are detected, return: {"items": []}`
 
       const items: DetectionResult[] = [];
 
-      if (!this.ai) {
-        console.log("❌ Gemini AI not initialized - check GEMINI_API_KEY");
+      const useLocal = process.env.USE_LOCAL_DETECTION === "true";
+      
+      if (useLocal) {
+        console.log("🖥️ Using local YOLO detection...");
+        try {
+          const localResult = await localDetectionService.detectFromImage(image);
+          for (const item of localResult.items) {
+            items.push({
+              ...item,
+              timestamp: new Date().toISOString(),
+              imageBase64: image,
+              reasoning: "Detected via local YOLO model"
+            });
+          }
+          if (items.length > 0) {
+            console.log(`✅ Local detection found ${items.length} items`);
+          }
+        } catch (localErr) {
+          console.warn("❌ Local detection failed:", localErr);
+        }
+        
+        for (const item of items) {
+          this.detectionHistory.unshift(item);
+        }
+        if (this.detectionHistory.length > 50) {
+          this.detectionHistory = this.detectionHistory.slice(0, 50);
+        }
+        
         return {
-          items: [],
+          items,
           timestamp: new Date().toISOString(),
           imageBase64: image
         };
       }
-      console.log("🤖 Gemini AI initialized, sending request...");
       
       const now = Date.now();
       if (now < this.quotaCooldownUntil) {
@@ -367,6 +400,34 @@ If absolutely nothing is visible: {"items": []}`
           if (attempt < MAX_RETRIES) {
             const delay = isQuota ? Math.min(1000 * Math.pow(2, attempt), 10000) : 500;
             await new Promise(resolve => setTimeout(resolve, delay));
+          }
+        }
+      }
+
+      if (items.length === 0 && lastError) {
+        const status = lastError?.status || lastError?.code || lastError?.cause?.code;
+        const isQuota = status === 429 || status === 'RESOURCE_EXHAUSTED';
+        const isUnavailable = status === 503 || status === 'UNAVAILABLE';
+        
+        if (isQuota || isUnavailable || !this.ai) {
+          console.log("⚠️ Falling back to local YOLO detection...");
+          try {
+            const localResult = await localDetectionService.detectFromImage(image);
+            if (localResult.items.length > 0) {
+              console.log(`✅ Local detection found ${localResult.items.length} items`);
+              for (const item of localResult.items) {
+                items.push({
+                  ...item,
+                  timestamp: new Date().toISOString(),
+                  imageBase64: image,
+                  reasoning: "Detected via local YOLO model"
+                });
+              }
+              this.consecutiveQuotaFails = 0;
+              this.quotaCooldownUntil = 0;
+            }
+          } catch (localErr) {
+            console.warn("❌ Local detection failed:", localErr);
           }
         }
       }

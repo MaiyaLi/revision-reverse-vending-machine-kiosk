@@ -178,6 +178,35 @@ sudo raspi-config nonint do_camera 0
 sudo reboot
 ```
 
+## Local YOLO Detection (No Gemini Quota)
+
+If you want to avoid Gemini API quota limits, you can run YOLO detection locally on the Pi:
+
+```bash
+# Install Python dependencies
+sudo apt update
+sudo apt install -y python3-pip python3-dev
+pip3 install ultralytics opencv-python-headless
+
+# Create models directory
+mkdir -p models
+
+# Download YOLOv8 nano model (6MB)
+wget -O models/yolov8n.pt https://github.com/ultralytics/assets/releases/download/v8.3.0/yolov8n.pt
+```
+
+Then set in `.env`:
+```env
+USE_LOCAL_DETECTION="true"
+```
+
+Restart the server:
+```bash
+node node_modules/.bin/tsx server.ts
+```
+
+**Note:** Local YOLO detection is less accurate than Gemini for specialized recycling items, but it has no quota limits and works offline.
+
 ## Testing Bottle Classification
 
 1. Open the kiosk UI in a browser
