@@ -1,7 +1,6 @@
 import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
-import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
 
 // Import database services
@@ -33,25 +32,6 @@ app.use((req, res, next) => {
 });
 
 app.use(express.json({ limit: '10mb' }));
-
-// Initialize Gemini Client
-const apiKey = process.env.GEMINI_API_KEY;
-let ai: GoogleGenAI | null = null;
-if (apiKey && apiKey !== "MY_GEMINI_API_KEY") {
-  try {
-    ai = new GoogleGenAI({
-      apiKey: apiKey,
-      httpOptions: {
-        headers: {
-          'User-Agent': 'aistudio-build',
-        }
-      }
-    });
-    console.log("Gemini API Client initialized successfully.");
-  } catch (err) {
-    console.error("Failed to initialize GoogleGenAI:", err);
-  }
-}
 
 // ============================================
 // HEALTH CHECK
@@ -638,62 +618,6 @@ app.post("/api/detect-waste", async (req, res) => {
       materialType = "glass";
       itemName = "Premium Glass Beverage Bottle";
       estimatedWeight = hardwareWeight || 280;
-    }
-
-    // Try Gemini API if available
-    if (ai && imageBase64) {
-      try {
-        const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, "");
-
-        const response = await ai.models.generateContent({
-          model: "gemini-3.6-flash",
-          contents: [
-            {
-              inlineData: {
-                data: base64Data,
-                mimeType: "image/jpeg"
-              }
-            },
-            {
-              text: `You are a recycling classifier for a reverse vending machine. Analyze this image and identify the recyclable item.
-
-LOOK FOR THESE SPECIFIC ITEMS:
-- Plastic: PET bottles, water bottles, soda bottles, clear/blue plastic containers, bottles with caps
-- Aluminum: Silver cans, soda cans, beer cans, energy drink cans, cans with pull tabs
-- Glass: Green/brown beer bottles, clear glass bottles, glass jars, wine bottles
-
-Classify the item as ONE of:
-1. "plastic" - bottles, containers, cups, wrappers, anything plastic-looking
-2. "aluminum" - cans, foil, metallic containers
-3. "glass" - bottles, jars, anything glass/transparent
-4. "other" - non-recyclable or unclear
-
-IMPORTANT RULES:
-- If you see ANY container or bottle-like object, classify it
-- Be generous with classification - if it looks like a container, classify it
-- Even partially visible items should be detected
-- Empty/clear bottles count as plastic
-- The camera may have glare or poor lighting - do your best
-- Look for the specific shapes: plastic bottles have narrow necks, aluminum cans are cylindrical, glass bottles have wider bodies
-
-Respond ONLY in JSON: {"detectedMaterial": "...", "confidence": 0.0-1.0, "reasoning": "..."}`
-            }
-          ],
-          config: {
-            responseMimeType: "application/json"
-          }
-        });
-
-        const responseText = response.text || "";
-        const parsed = JSON.parse(responseText.trim());
-
-        if (parsed.confidence && parsed.confidence >= 0.3) {
-          materialType = parsed.detectedMaterial || materialType;
-          confidence = parsed.confidence;
-        }
-      } catch (err: any) {
-        console.warn("Gemini API fallback:", err.message);
-      }
     }
 
     res.json({

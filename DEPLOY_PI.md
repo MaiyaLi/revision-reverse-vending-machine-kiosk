@@ -7,7 +7,6 @@ This guide will walk you through deploying the ReVision Reverse Vending Machine 
 - Raspberry Pi 5 (4GB or 8GB RAM recommended)
 - Raspberry Pi OS (64-bit) or Ubuntu Server 64-bit
 - USB webcam or Raspberry Pi Camera Module
-- Internet connection (for Gemini AI API calls)
 - PostgreSQL database (can be local or remote)
 
 ## Step 1: Push to GitHub
@@ -215,7 +214,7 @@ node node_modules/.bin/tsx server.ts
 
 ## Local YOLO Detection (Alternative to TFLite)
 
-If you want to avoid Gemini API quota limits, you can run YOLO detection locally on the Pi:
+If you want to use YOLO instead of TFLite, you can run YOLO detection locally on the Pi:
 
 ```bash
 # Install Python dependencies
@@ -240,7 +239,7 @@ Restart the server:
 node node_modules/.bin/tsx server.ts
 ```
 
-**Note:** Local YOLO detection is less accurate than Gemini for specialized recycling items, but it has no quota limits and works offline.
+**Note:** Local YOLO detection is less accurate than TFLite for specialized recycling items, but it works offline as an alternative.
 
 ## Testing Bottle Classification
 
@@ -253,11 +252,11 @@ node node_modules/.bin/tsx server.ts
 7. The system will capture the image and detect items using local TFLite/OpenCV
 8. Results show detected material, confidence, and reward value
 
-**Note:** Detection now runs locally by default using TFLite + OpenCV + NumPy. No internet or Gemini API key is required for basic detection.
+**Note:** Detection runs locally by default using TFLite + OpenCV + NumPy. No cloud API key is required.
 
 ## Important Notes
 
-- **Internet required**: Gemini AI classification requires an internet connection
+- **Offline capable**: TFLite detection runs locally without internet
 - **Camera permissions**: The browser must have camera access permissions
 - **PostgreSQL optional**: The server runs in demo mode without PostgreSQL (no persistent data)
 - **Display**: For kiosk mode, connect a touchscreen monitor to the Pi's HDMI port
