@@ -8,7 +8,10 @@ try:
     try:
         from tflite_runtime.interpreter import Interpreter
     except Exception:
-        from tensorflow.lite import Interpreter
+        try:
+            from tensorflow.lite import Interpreter
+        except Exception:
+            from tensorflow.lite.python.interpreter import Interpreter
 except Exception as e:
     print(json.dumps({"error": f"dependency import failed: {e}"}))
     sys.exit(1)
