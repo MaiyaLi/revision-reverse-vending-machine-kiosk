@@ -52,7 +52,7 @@ export class DetectionService {
     try {
       const tmpFile = `/tmp/rvm-detect-${Date.now()}.jpg`;
       const { execSync } = await import("child_process");
-      execSync(`rpicam-still -o ${tmpFile} --width 1280 --height 720 --nopreview --timeout 400 --quality 92 --sharpness 1.5 --contrast 1.2 --brightness 1.1`, {
+      execSync(`rpicam-still -o ${tmpFile} --width 640 --height 480 --nopreview --timeout 400 --quality 92`, {
         stdio: "ignore",
         timeout: 8000
       });
