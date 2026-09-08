@@ -1,4 +1,3 @@
-version: "3.9"
 services:
   frigate:
     container_name: frigate
@@ -14,18 +13,8 @@ services:
       - frigate_clips:/media/frigate/clips
       - frigate_recordings:/media/frigate/recordings
       - frigate_backup:/media/frigate/backups
-      # Pi camera devices
+      # Pi camera devices - /dev:/dev gives full access
       - /dev:/dev
-      - /dev/vchiq:/dev/vchiq
-      - /dev/vcsm:/dev/vcsm
-      - /dev/dri:/dev/dri
-    devices:
-      - /dev/vchiq:/dev/vchiq
-      - /dev/dri:/dev/dri
-      - /dev/media0:/dev/media0
-      - /dev/media1:/dev/media1
-      - /dev/media4:/dev/media4
-      - /dev/video11:/dev/video11
     ports:
       - "5000:5000"
       - "1935:1935"
@@ -34,13 +23,6 @@ services:
       - "8555:8555/udp"
     tmpfs:
       - /tmp/cache
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: v4l2
-              count: 1
-              capabilities: [video]
 
 volumes:
   frigate_clips:
