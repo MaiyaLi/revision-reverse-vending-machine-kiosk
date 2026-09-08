@@ -1,6 +1,7 @@
 services:
   frigate:
     container_name: frigate
+    network_mode: host
     privileged: true
     restart: unless-stopped
     image: ghcr.io/blakeblackshear/frigate:stable
@@ -13,7 +14,6 @@ services:
       - frigate_clips:/media/frigate/clips
       - frigate_recordings:/media/frigate/recordings
       - frigate_backup:/media/frigate/backups
-      # Pi camera devices - /dev:/dev gives full access
       - /dev:/dev
     ports:
       - "5000:5000"
