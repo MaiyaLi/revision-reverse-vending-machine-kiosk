@@ -2421,15 +2421,15 @@ export default function App() {
                   >
                     Camera Detection Test
                   </button>
-                  <a
-                    href="http://localhost:5000"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={`px-8 py-4 ${isLight ? 'bg-red-100 text-red-800 hover:bg-red-200 border-red-300' : 'bg-red-900/40 text-red-300 hover:bg-red-850 border-red-500'} border rounded-2xl text-base font-black transition-all active:scale-[0.98] shadow-md inline-flex items-center justify-center gap-2`}
-                  >
-                    <Camera className="w-5 h-5" />
-                    Surveillance Camera
-                  </a>
+<a
+                      href="https://192.168.254.112:8971"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`px-8 py-4 ${isLight ? 'bg-red-100 text-red-800 hover:bg-red-200 border-red-300' : 'bg-red-900/40 text-red-300 hover:bg-red-850 border-red-500'} border rounded-2xl text-base font-black transition-all active:scale-[0.98] shadow-md inline-flex items-center justify-center gap-2`}
+                    >
+                      <Camera className="w-5 h-5" />
+                      Surveillance Camera
+                    </a>
                 </div>
               </div>
             )}
