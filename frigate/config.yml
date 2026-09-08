@@ -1,0 +1,103 @@
+# Frigate configuration for ReVision RVM Kiosk
+# Surveillance camera (CSI-0) - motion-triggered recording
+
+# go2rtc: Serve CSI-0 camera as RTSP stream using libcamera-vid
+go2rtc:
+  streams:
+    surveillance:
+      - exec:libcamera-vid -t 0 --inline --width 640 --height 480 --framerate 15 --codec h264 -o -
+
+# CPU-only detectors for Raspberry Pi
+detectors:
+  cpu1:
+    type: cpu
+  cpu2:
+    type: cpu
+
+# Lightweight model for Pi
+model:
+  width: 320
+  height: 320
+  labelmap: coco
+  labelcast_filter: true
+
+cameras:
+  surveillance:
+    ffmpeg:
+      inputs:
+        - path: rtsp://localhost:8554/surveillance
+          roles:
+            - detect
+            - record
+    width: 640
+    height: 480
+    fps: 15
+
+    objects:
+      track:
+        - person
+      filters:
+        person:
+          min_area: 5000
+          max_area: 100000
+          min_score: 0.5
+          max_score: 0.9999
+          min_hit_inertia: 0.2
+          max_hit_inertia: 0.5
+
+    motion:
+      width: 640
+      height: 480
+      fps: 15
+      max_disappeared: 25
+      min_movement: 30
+      stationary:
+        interval: 10
+        distance: 1
+        max_update: 0
+
+    # Record when motion/person detected
+    record:
+      enabled: true
+      clip_duration: 10
+      expire_days: 7
+      retain_days: 7
+      enabled_in_config: true
+
+    snapshots:
+      enabled: true
+      timestamp: false
+      bounding_box: true
+      crop: true
+      height: 1080
+      retain:
+        default: 14
+
+webserver:
+  port: 5000
+  url: ""
+
+live:
+  stream_resolution: 1080
+  bounding_box: true
+  quality: 80
+
+ffmpeg:
+  output:
+    - '-segflags', '+faststart'
+    - '-tune', 'zerolatency'
+    - '-movflags', '+faststart'
+    - '-rtmp_transport', 'tcp'
+    - '-profile:v', 'main'
+    - '-preset', 'superfast'
+    - '-threads', '2'
+
+  output_args:
+    - '-f', 'segment'
+    - '-segment_time', '10'
+    - '-reset_timestamps', '1'
+    - '-strftime', '1'
+    - '-c:v', 'libx264'
+    - '-preset', 'superfast'
+    - '-tune', 'zerolatency'
+    - '-r', '4'
