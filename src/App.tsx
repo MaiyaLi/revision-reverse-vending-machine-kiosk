@@ -952,6 +952,48 @@ export default function App() {
     setTimeout(() => setNotificationMsg(''), 4000);
   };
 
+  const sendReceiptSMS = async () => {
+    if (!receiptData.transactionId || !activeUser?.phoneNumber) {
+      triggerNotification(lang === 'en' ? 'No phone number on file' : 'Walang phone number sa record');
+      return;
+    }
+    try {
+      const res = await fetch(`/api/receipt/sms/${receiptData.transactionId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phoneNumber: activeUser.phoneNumber })
+      });
+      if (res.ok) {
+        triggerNotification(t('receiptSent'));
+      } else {
+        triggerNotification('Failed to send SMS');
+      }
+    } catch (err) {
+      triggerNotification('Failed to send SMS');
+    }
+  };
+
+  const sendReceiptEmail = async () => {
+    if (!receiptData.transactionId || !activeUser?.email) {
+      triggerNotification(lang === 'en' ? 'No email on file' : 'Walang email sa record');
+      return;
+    }
+    try {
+      const res = await fetch(`/api/receipt/email/${receiptData.transactionId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ emailAddress: activeUser.email })
+      });
+      if (res.ok) {
+        triggerNotification(t('receiptSent'));
+      } else {
+        triggerNotification('Failed to send email');
+      }
+    } catch (err) {
+      triggerNotification('Failed to send email');
+    }
+  };
+
   // State text translators
   const t = (key: keyof typeof translations['en']) => {
     return translations[lang][key] || key;
@@ -2347,7 +2389,7 @@ export default function App() {
                 </button>
 
                 <button 
-                  onClick={() => triggerNotification(t('receiptSent'))}
+                  onClick={sendReceiptSMS}
                   className={`w-full h-56 sm:h-64 rounded-3xl font-black text-xl sm:text-2xl flex flex-col items-center justify-center gap-4 border transition-all ${isLight ? 'bg-slate-100 hover:bg-slate-200 text-slate-850 border-slate-300' : 'bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-850'} active:scale-95 shadow-lg`}
                 >
                   <Smartphone className="w-12 h-12 text-sky-500 dark:text-sky-400" />
@@ -2355,7 +2397,7 @@ export default function App() {
                 </button>
 
                 <button 
-                  onClick={() => triggerNotification(t('receiptSent'))}
+                  onClick={sendReceiptEmail}
                   className={`w-full h-56 sm:h-64 rounded-3xl font-black text-xl sm:text-2xl flex flex-col items-center justify-center gap-4 border transition-all ${isLight ? 'bg-slate-100 hover:bg-slate-200 text-slate-850 border-slate-300' : 'bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-850'} active:scale-95 shadow-lg`}
                 >
                   <Mail className="w-12 h-12 text-teal-500 dark:text-teal-400" />
