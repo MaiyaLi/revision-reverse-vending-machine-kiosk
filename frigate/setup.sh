@@ -13,11 +13,11 @@ echo ""
 echo "📷 Enabling Pi Camera Interface..."
 sudo raspi-config nonint do_camera 0
 
-# 2. Verify camera
+# 2. Verify camera (may fail on some Pi versions - non-fatal)
 echo ""
 echo "🔍 Checking camera..."
-vcgencmd get_camera
-ls /dev/video* /dev/media* 2>/dev/null || true
+sudo vcgencmd get_camera 2>/dev/null || echo "⚠️ vcgencmd not available (may be Pi OS Bookworm+) - skipping"
+ls /dev/video* /dev/media* 2>/dev/null || echo "⚠️ No camera devices found"
 
 # 3. Install Docker
 echo ""
