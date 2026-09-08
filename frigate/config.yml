@@ -5,6 +5,7 @@
 go2rtc:
   streams:
     surveillance:
+      # Use libcamera-vid inside the container (has access to /dev/vchiq)
       - exec:libcamera-vid -t 0 --inline --width 640 --height 480 --framerate 15 --codec h264 -o -
 
 # CPU-only detectors for Raspberry Pi
@@ -56,13 +57,11 @@ cameras:
         distance: 1
         max_update: 0
 
-    # Record when motion/person detected
     record:
       enabled: true
       clip_duration: 10
       expire_days: 7
       retain_days: 7
-      enabled_in_config: true
 
     snapshots:
       enabled: true
@@ -87,7 +86,6 @@ ffmpeg:
     - '-segflags', '+faststart'
     - '-tune', 'zerolatency'
     - '-movflags', '+faststart'
-    - '-rtmp_transport', 'tcp'
     - '-profile:v', 'main'
     - '-preset', 'superfast'
     - '-threads', '2'

@@ -5,11 +5,8 @@ services:
     privileged: true
     restart: unless-stopped
     image: ghcr.io/blakeblackshear/frigate:stable
-    depends_on:
-      - rtsp_proxy
     environment:
       FRIGATE_RTSP_PASSWORD: ""
-      # Enable NVIDIA GPU if available (Pi 5 has VideoCore)
       ENABLE_RTSP: "true"
     volumes:
       - /etc/localtime:/etc/localtime:ro
@@ -17,8 +14,18 @@ services:
       - frigate_clips:/media/frigate/clips
       - frigate_recordings:/media/frigate/recordings
       - frigate_backup:/media/frigate/backups
-      # Camera access
+      # Pi camera devices
       - /dev:/dev
+      - /dev/vchiq:/dev/vchiq
+      - /dev/vcsm:/dev/vcsm
+      - /dev/dri:/dev/dri
+    devices:
+      - /dev/vchiq:/dev/vchiq
+      - /dev/dri:/dev/dri
+      - /dev/media0:/dev/media0
+      - /dev/media1:/dev/media1
+      - /dev/media4:/dev/media4
+      - /dev/video11:/dev/video11
     ports:
       - "5000:5000"
       - "1935:1935"
@@ -31,7 +38,6 @@ services:
       resources:
         reservations:
           devices:
-            # Pi CSI camera access
             - driver: v4l2
               count: 1
               capabilities: [video]
