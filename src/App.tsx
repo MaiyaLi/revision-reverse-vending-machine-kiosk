@@ -674,6 +674,10 @@ export default function App() {
     co2: '0.000'
   });
 
+  // Coin deposit state
+  const [coinDepositAmount, setCoinDepositAmount] = useState(0);
+  const [coinDepositStep, setCoinDepositStep] = useState<'INPUT' | 'PROCESSING' | 'DONE'>('INPUT');
+
   const bankLogos: Record<string, string> = {
     'GCash': '/images/banks/gcash.png?v=2',
     'Maya': '/images/banks/maya.svg?v=2',
@@ -1059,8 +1063,125 @@ export default function App() {
         <div className="bg-blue-600 text-white px-4 py-2.5 text-center text-xs font-semibold flex items-center justify-center gap-2 animate-bounce z-40">
           <CheckCircle2 className="w-4 h-4" />
           <span>{notificationMsg}</span>
-        </div>
-      )}
+            </div>
+          )}
+
+          {/* ========================================================= */}
+          {/* STATE 11: COIN DEPOSIT */}
+          {/* ========================================================= */}
+          {currentState === 'COIN_DEPOSIT' && activeUser && (
+            <div className="w-full max-w-3xl mx-auto space-y-8 my-auto py-4 animate-fade-in">
+              <div className={`${cCard} p-8 md:p-10 rounded-3xl space-y-6 border shadow-2xl`}>
+                <div className="text-center space-y-2">
+                  <h3 className={`text-4xl md:text-5xl font-black ${cTextTitle} uppercase tracking-widest`}>{t('coinDepositTitle')}</h3>
+                  <p className={`text-base ${cTextSubtitle}`}>Add funds to your Eco-Wallet using physical coins</p>
+                </div>
+
+                <div className={`${cCardInset} p-6 rounded-2xl text-center`}>
+                  <span className={`text-sm ${cTextMuted} font-black uppercase tracking-wider block`}>{t('coinDepositBalance')}</span>
+                  <p className="text-5xl font-black text-emerald-500 font-mono mt-2">₱{(activeUser.walletBalance || 0).toFixed(2)}</p>
+                </div>
+
+                {coinDepositStep === 'INPUT' && (
+                  <div className="space-y-6">
+                    <div className="space-y-2">
+                      <label className={`text-lg font-black ${cTextNormal} block`}>{t('coinDepositAmount')}</label>
+                      <div className="flex items-center gap-4">
+                        <input
+                          type="number"
+                          min="0"
+                          max={activeUser.walletBalance || 0}
+                          step="1"
+                          value={coinDepositAmount || ''}
+                          onChange={(e) => {
+                            const val = parseFloat(e.target.value);
+                            if (isNaN(val) || val < 0) {
+                              setCoinDepositAmount(0);
+                            } else if (val > (activeUser.walletBalance || 0)) {
+                              setCoinDepositAmount(activeUser.walletBalance || 0);
+                            } else {
+                              setCoinDepositAmount(val);
+                            }
+                          }}
+                          className={`${cInput} w-full p-4 rounded-2xl text-2xl font-black text-center`}
+                          placeholder="0"
+                        />
+                        <button
+                          onClick={() => setCoinDepositAmount(activeUser.walletBalance || 0)}
+                          className={`px-6 py-4 rounded-2xl font-black text-lg ${isLight ? 'bg-slate-200 text-slate-800 hover:bg-slate-300' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'} border active:scale-95 transition-all`}
+                        >
+                          {t('coinDepositMax')}
+                        </button>
+                      </div>
+                      <p className={`text-xs ${cTextMuted} font-bold`}>Maximum: ₱{(activeUser.walletBalance || 0).toFixed(2)}</p>
+                    </div>
+
+                    <div className="flex gap-4">
+                      <button
+                        onClick={async () => {
+                          if (coinDepositAmount <= 0) {
+                            triggerNotification(lang === 'en' ? 'Enter a valid amount' : 'Ilagay ang valid na halaga');
+                            return;
+                          }
+                          setCoinDepositStep('PROCESSING');
+                          try {
+                            const res = await fetch("/api/redemption/coin-deposit", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({
+                                userId: activeUser.id,
+                                amount: coinDepositAmount
+                              })
+                            });
+                            if (res.ok) {
+                              const data = await res.json();
+                              if (data.updatedUser) {
+                                setActiveUser(data.updatedUser);
+                              }
+                              setReceiptData({
+                                transactionId: data.transactionId || "TXN-" + Math.floor(100000 + Math.random() * 900000),
+                                date: new Date().toISOString().replace('T', ' ').substring(0, 16),
+                                materials: 'Coin Deposit',
+                                weight: '0.00',
+                                reward: coinDepositAmount,
+                                method: 'Coin Deposit',
+                                co2: '0.000'
+                              });
+                              setCoinDepositStep('DONE');
+                              speakText("receiptTitle");
+                              setCurrentState('FINAL_RECEIPT_CLIENT');
+                            } else {
+                              triggerNotification('Failed to process deposit');
+                              setCoinDepositStep('INPUT');
+                            }
+                          } catch (err) {
+                            triggerNotification('Failed to process deposit');
+                            setCoinDepositStep('INPUT');
+                          }
+                        }}
+                        className="flex-1 py-4 bg-gradient-to-r from-amber-600 to-amber-500 text-white font-black rounded-2xl text-lg hover:brightness-110 shadow-lg active:scale-95 transition-all"
+                      >
+                        {t('coinDepositConfirm')}
+                      </button>
+                      <button
+                        onClick={() => setCurrentState('REDEEM_BALANCE_SCREEN')}
+                        className={`px-8 py-4 ${isLight ? 'bg-slate-200 text-slate-700 hover:bg-slate-300 border-slate-350' : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border-slate-700'} border rounded-2xl text-lg font-black transition-all active:scale-95`}
+                      >
+                        {t('back')}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {coinDepositStep === 'PROCESSING' && (
+                  <div className="text-center space-y-4">
+                    <div className="inline-block w-16 h-16 border-4 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+                    <p className={`text-xl font-black ${cTextNormal}`}>Processing coin deposit...</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
       {/* DYNAMIC SCREEN TRANSITIONS CONTENT VIEW */}
       <div className="flex-1 flex flex-col p-6 md:p-12 items-stretch justify-start relative min-h-0 overflow-y-auto">
@@ -2098,39 +2219,51 @@ export default function App() {
                 </div>
               </div>
 
-              {/* REDEMPTION ACTION BUTTONS */}
-              <div className="flex flex-row flex-wrap justify-center gap-8 max-w-7xl mx-auto w-full">
-                <button 
-                  onClick={() => {
-                    setCurrentState('QRPH_SELECT_PROVIDER');
-                    speakText("selectBank");
-                  }}
-                  className="w-80 h-80 md:w-96 md:h-96 bg-sky-600 hover:bg-sky-500 font-black text-white text-2xl rounded-3xl flex flex-col items-center justify-center gap-6 shadow-lg active:scale-95 transition-all"
-                >
-                  <Smartphone className="w-14 h-14" /> 
-                  <span>Redeem via QRPh</span>
-                </button>
+               {/* REDEMPTION ACTION BUTTONS */}
+               <div className="flex flex-row flex-wrap justify-center gap-8 max-w-7xl mx-auto w-full">
+                 <button 
+                   onClick={() => {
+                     setCoinDepositAmount(0);
+                     setCoinDepositStep('INPUT');
+                     setCurrentState('COIN_DEPOSIT');
+                   }}
+                   className="w-80 h-80 md:w-96 md:h-96 bg-amber-600 hover:bg-amber-500 font-black text-white text-2xl rounded-3xl flex flex-col items-center justify-center gap-6 shadow-lg active:scale-95 transition-all"
+                 >
+                   <Coins className="w-14 h-14" /> 
+                   <span>Deposit Coins</span>
+                 </button>
 
-                <button 
-                  onClick={() => {
-                    setIntendedDispenserProgress(0);
-                    setCurrentState('DISPENSING_CASH');
-                    speakText("dispensingProgress");
-                  }}
-                  className="w-80 h-80 md:w-96 md:h-96 bg-emerald-600 hover:bg-emerald-500 font-black text-white text-2xl rounded-3xl flex flex-col items-center justify-center gap-6 shadow-lg active:scale-95 transition-all"
-                >
-                  <Coins className="w-14 h-14" /> 
-                  <span>Cash Out Coins</span>
-                </button>
+                 <button 
+                   onClick={() => {
+                     setCurrentState('QRPH_SELECT_PROVIDER');
+                     speakText("selectBank");
+                   }}
+                   className="w-80 h-80 md:w-96 md:h-96 bg-sky-600 hover:bg-sky-500 font-black text-white text-2xl rounded-3xl flex flex-col items-center justify-center gap-6 shadow-lg active:scale-95 transition-all"
+                 >
+                   <Smartphone className="w-14 h-14" /> 
+                   <span>Redeem via QRPh</span>
+                 </button>
 
-                <button 
-                  onClick={() => setCurrentState('MAIN_MENU')}
-                  className={`w-80 h-80 md:w-96 md:h-96 ${isLight ? 'bg-slate-200 text-slate-705 hover:bg-slate-250 border-slate-355' : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border-slate-705'} border text-2xl font-black rounded-3xl flex flex-col items-center justify-center gap-6 transition-all active:scale-95`}
-                >
-                  <Home className="w-14 h-14" />
-                  <span>Return Main Menu</span>
-                </button>
-              </div>
+                 <button 
+                   onClick={() => {
+                     setIntendedDispenserProgress(0);
+                     setCurrentState('DISPENSING_CASH');
+                     speakText("dispensingProgress");
+                   }}
+                   className="w-80 h-80 md:w-96 md:h-96 bg-emerald-600 hover:bg-emerald-500 font-black text-white text-2xl rounded-3xl flex flex-col items-center justify-center gap-6 shadow-lg active:scale-95 transition-all"
+                 >
+                   <Coins className="w-14 h-14" /> 
+                   <span>Cash Out Coins</span>
+                 </button>
+
+                 <button 
+                   onClick={() => setCurrentState('MAIN_MENU')}
+                   className={`w-80 h-80 md:w-96 md:h-96 ${isLight ? 'bg-slate-200 text-slate-705 hover:bg-slate-250 border-slate-355' : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border-slate-705'} border text-2xl font-black rounded-3xl flex flex-col items-center justify-center gap-6 transition-all active:scale-95`}
+                 >
+                   <Home className="w-14 h-14" />
+                   <span>Return Main Menu</span>
+                 </button>
+               </div>
 
             </div>
           )}
