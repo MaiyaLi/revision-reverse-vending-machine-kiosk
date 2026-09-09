@@ -811,6 +811,8 @@ export default function App() {
         const data = await res.json();
         const user = {
           ...data.user,
+          email: data.user.emailAddress || data.user.email || null,
+          phoneNumber: data.user.phoneNumber || data.user.mobileNumber || null,
           walletBalance: Number(data.user?.walletBalance || 0),
           ecoPoints: Number(data.user?.ecoPoints || 0),
           co2ReducedKg: Number(data.user?.co2ReducedKg || 0),
@@ -868,6 +870,8 @@ export default function App() {
         const data = await res.json();
         const user = {
           ...data.user,
+          email: data.user.emailAddress || data.user.email || null,
+          phoneNumber: data.user.phoneNumber || data.user.mobileNumber || null,
           walletBalance: Number(data.user?.walletBalance || 0),
           ecoPoints: Number(data.user?.ecoPoints || 0),
           co2ReducedKg: Number(data.user?.co2ReducedKg || 0),
@@ -2221,18 +2225,6 @@ export default function App() {
 
                {/* REDEMPTION ACTION BUTTONS */}
                <div className="flex flex-row flex-wrap justify-center gap-8 max-w-7xl mx-auto w-full">
-                 <button 
-                   onClick={() => {
-                     setCoinDepositAmount(0);
-                     setCoinDepositStep('INPUT');
-                     setCurrentState('COIN_DEPOSIT');
-                   }}
-                   className="w-80 h-80 md:w-96 md:h-96 bg-amber-600 hover:bg-amber-500 font-black text-white text-2xl rounded-3xl flex flex-col items-center justify-center gap-6 shadow-lg active:scale-95 transition-all"
-                 >
-                   <Coins className="w-14 h-14" /> 
-                   <span>Deposit Coins</span>
-                 </button>
-
                  <button 
                    onClick={() => {
                      setCurrentState('QRPH_SELECT_PROVIDER');
