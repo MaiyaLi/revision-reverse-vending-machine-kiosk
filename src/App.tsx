@@ -2093,65 +2093,20 @@ export default function App() {
                 </div>
               </div>
 
-              {/* PAYMENT STRATEGY DECISIONS */}
-              <div className="space-y-4 pt-2">
-                <span className={`text-sm md:text-base ${cTextSubtitle} block text-center font-black`}>Choose how you would like to receive your ₱{totalPayout.toFixed(2)}:</span>
-                
-                <div className="flex flex-row flex-wrap justify-center gap-8 max-w-7xl mx-auto w-full">
-                  
-                  {activeUser ? (
-                    <button 
-                      onClick={() => saveSessionRewards('wallet')}
-                      className={`border w-80 h-80 md:w-96 md:h-96 rounded-3xl flex flex-col items-center justify-center gap-6 text-center transition-all ${isLight ? 'bg-sky-50 hover:bg-sky-100 border-sky-200 shadow-md shadow-sky-100/50' : 'bg-sky-900/60 hover:bg-sky-850 border-sky-500'} active:scale-95`}
-                    >
-                      <div className="bg-sky-500/10 p-5 rounded-2xl flex-shrink-0">
-                        <Database className="w-14 h-14 text-sky-500 dark:text-sky-400 animate-pulse" />
-                      </div>
-                      <div className="space-y-1">
-                        <span className={`text-2xl font-black block ${isLight ? 'text-sky-950' : 'text-white'}`}>{t('keepInWallet')}</span>
-                        <span className={`text-sm ${isLight ? 'text-slate-600' : 'text-slate-300'} font-bold block`}>Add to account balance</span>
-                      </div>
-                    </button>
-                  ) : (
-                    <div className={`${cCardInset} border-dashed border-2 border-slate-500/40 opacity-60 w-80 h-80 md:w-96 md:h-96 rounded-3xl flex flex-col items-center justify-center gap-6 text-center`}>
-                      <div className="bg-slate-500/10 p-5 rounded-2xl flex-shrink-0">
-                        <Lock className="w-12 h-12 text-slate-400 dark:text-slate-500" />
-                      </div>
-                      <div className="space-y-1">
-                        <span className="text-xl text-slate-500 uppercase block font-black">Keep in Wallet (Unavailable)</span>
-                        <span className="text-sm text-slate-500 font-bold block">Login prior to depositing</span>
-                      </div>
-                    </div>
-                  )}
-
-                  <button 
-                    onClick={() => saveSessionRewards('qrph')}
-                    className={`border w-80 h-80 md:w-96 md:h-96 rounded-3xl flex flex-col items-center justify-center gap-6 text-center transition-all ${isLight ? 'bg-emerald-50 hover:bg-emerald-100 border-emerald-200 shadow-md shadow-emerald-100/50' : 'bg-emerald-900/60 hover:bg-emerald-850 border-emerald-500'} active:scale-95`}
-                  >
-                    <div className="bg-emerald-500/10 p-5 rounded-2xl flex-shrink-0">
-                      <Smartphone className="w-14 h-14 text-emerald-500 dark:text-emerald-400" />
-                    </div>
-                    <div className="space-y-1">
-                      <span className={`text-2xl font-black block ${isLight ? 'text-emerald-950' : 'text-white'}`}>{t('redeemViaQRPh')}</span>
-                      <span className={`text-sm ${isLight ? 'text-slate-600' : 'text-slate-300'} font-bold block`}>GCash / Maya / Bank app</span>
-                    </div>
-                  </button>
-
-                  <button 
-                    onClick={() => saveSessionRewards('cash')}
-                    className={`border w-80 h-80 md:w-96 md:h-96 rounded-3xl flex flex-col items-center justify-center gap-6 text-center transition-all ${isLight ? 'bg-amber-50 hover:bg-amber-100 border-amber-200 shadow-md shadow-amber-100/50' : 'bg-amber-900/60 hover:bg-amber-850 border-amber-500'} active:scale-95`}
-                  >
-                    <div className="bg-amber-500/10 p-5 rounded-2xl flex-shrink-0">
-                      <Coins className="w-14 h-14 text-amber-500 dark:text-amber-400" />
-                    </div>
-                    <div className="space-y-1">
-                      <span className={`text-2xl font-black block ${isLight ? 'text-amber-950' : 'text-white'}`}>{t('redeemViaCash')}</span>
-                      <span className={`text-sm ${isLight ? 'text-slate-600' : 'text-slate-300'} font-bold block`}>Dispense Coins</span>
-                    </div>
-                  </button>
-
-                </div>
-              </div>
+               {/* PAYMENT STRATEGY DECISIONS */}
+               <div className="space-y-4 pt-2">
+                 <span className={`text-sm md:text-base ${cTextSubtitle} block text-center font-black`}>Dispensing your ₱{totalPayout.toFixed(2)} as coins...</span>
+                 
+                 <div className="flex flex-row flex-wrap justify-center gap-8 max-w-7xl mx-auto w-full">
+                   <button 
+                     onClick={() => saveSessionRewards('cash')}
+                     className="w-80 h-80 md:w-96 md:h-96 bg-amber-600 hover:bg-amber-500 font-black text-white text-2xl rounded-3xl flex flex-col items-center justify-center gap-6 shadow-lg active:scale-95 transition-all"
+                   >
+                     <Coins className="w-14 h-14" /> 
+                     <span>Dispense Coins</span>
+                   </button>
+                 </div>
+               </div>
             </div>
           )}
 
