@@ -37,8 +37,9 @@ export class ReceiptService {
     totalReward: number;
     payoutMethod: string;
     payoutStatus: string;
+    transactionId?: string;
   }): Promise<any> {
-    const transactionId = `TXN-${Math.floor(100000 + Math.random() * 900000)}`;
+    const transactionId = params.transactionId || `TXN-${Math.floor(100000 + Math.random() * 900000)}`;
 
     const receipt = await db.queryOne(
       `INSERT INTO receipts (

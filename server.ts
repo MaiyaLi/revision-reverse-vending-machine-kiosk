@@ -127,11 +127,27 @@ app.post("/api/deposit/complete", async (req, res) => {
 
     const transactionId = `TXN-${Math.floor(100000 + Math.random() * 900000)}`;
 
+    // Persist the receipt record so email/SMS/print endpoints can find it later
+    try {
+      await receiptService.createReceipt({
+        sessionId: session.id,
+        userId: userId || null,
+        materialsDeposited: itemsSummary ? `${itemsSummary.plastic || 0} Plastics, ${itemsSummary.aluminum || 0} Cans, ${itemsSummary.glass || 0} Glass` : '',
+        totalWeightKg: (session.totalWeightGrams || 0) / 1000,
+        totalReward: session.totalPayout || 0,
+        payoutMethod: payoutMethod || 'wallet',
+        payoutStatus: 'COMPLETED',
+        transactionId
+      });
+    } catch (receiptErr) {
+      console.warn('Could not create receipt record:', (receiptErr as Error).message);
+    }
+
     res.json({
       success: true,
       transactionId,
       timestamp: new Date().toISOString(),
-      amountCredited: session.total_payout,
+      amountCredited: session.totalPayout,
       payoutMethod: payoutMethod || 'wallet',
       updatedUser: userId ? await userService.getUserById(userId) : null
     });
