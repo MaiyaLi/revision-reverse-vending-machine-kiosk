@@ -2235,7 +2235,7 @@ export default function App() {
                            placeholder="0"
                          />
                          <button
-                           onClick={() => setCashOutAmount(activeUser.walletBalance || 0)}
+                            onClick={() => setCashOutAmount(Math.floor(activeUser.walletBalance || 0))}
                            className={`px-6 py-4 rounded-2xl font-black text-lg ${isLight ? 'bg-slate-200 text-slate-800 hover:bg-slate-300' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'} border active:scale-95 transition-all`}
                          >
                            MAX
