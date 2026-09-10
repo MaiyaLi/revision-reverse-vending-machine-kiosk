@@ -706,9 +706,8 @@ export default function App() {
     }
   };
 
-  // --- QRPH Payout Generation ---
-  const [selectedBank, setSelectedBank] = useState('GCash');
-  const [qrCodeDataUrl, setQrCodeDataUrl] = useState('');
+  // --- GCash/Maya QR Payout ---
+  const [selectedProvider, setSelectedProvider] = useState<'GCash' | 'Maya'>('GCash');
   const [payoutReference, setPayoutReference] = useState('');
   const [receiptData, setReceiptData] = useState({
     transactionId: '',
@@ -722,11 +721,7 @@ export default function App() {
 
   const bankLogos: Record<string, string> = {
     'GCash': '/images/banks/gcash.png?v=2',
-    'Maya': '/images/banks/maya.svg?v=2',
-    'BPI': '/images/banks/bpi.svg?v=2',
-    'BDO': '/images/banks/bdo.svg?v=2',
-    'UnionBank': '/images/banks/unionbank.svg?v=2',
-    'Landbank': '/images/banks/landbank.svg?v=2'
+    'Maya': '/images/banks/maya.svg?v=2'
   };
 
   const redeemUser = () => activeUser || {
@@ -741,10 +736,6 @@ export default function App() {
   const generateQRPhPayout = () => {
     const refNum = "REF-" + Math.floor(10000000 + Math.random() * 90000000);
     setPayoutReference(refNum);
-    
-    const rvmPayload = `QRPH_PAY_TO_RVM_REVISION_PROVIDER_${selectedBank}_REF_${refNum}_AMOUNT_PHP_${totalPayout}`;
-    setQrCodeDataUrl(`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(rvmPayload)}`);
-    
     setCurrentState('QRPH_DISPLAY');
   };
 
@@ -758,7 +749,7 @@ export default function App() {
         body: JSON.stringify({
           userId: activeUser?.id || null,
           amount: deductAmount,
-          provider: selectedBank,
+          provider: selectedProvider,
           accountNumber: activeUser?.phoneNumber || '',
           accountName: activeUser?.fullName || 'User'
         })
@@ -777,7 +768,7 @@ export default function App() {
       ...prev,
       transactionId: prev.transactionId || "TXN-" + Math.floor(100000 + Math.random() * 900000),
       date: new Date().toISOString().replace('T', ' ').substring(0, 16),
-      method: `QRPh Bank Transfer (${selectedBank})`,
+      method: `${selectedProvider} Transfer`,
       reward: deductAmount
     }));
 
@@ -2308,25 +2299,25 @@ export default function App() {
                 <p className={`text-base ${cTextSubtitle}`}>{t('selectBank')}</p>
               </div>
 
-              <div className="grid grid-cols-2 gap-8 max-w-5xl mx-auto w-full justify-items-center">
-                {['GCash', 'Maya', 'BPI', 'BDO', 'UnionBank', 'Landbank'].map((bank) => (
-                  <button 
-                    key={bank}
-                    onClick={() => setSelectedBank(bank)}
-                    className={`w-80 h-80 md:w-96 md:h-96 rounded-3xl border text-center transition-all flex items-center justify-center ${selectedBank === bank ? 'bg-sky-500/10 border-sky-500 text-sky-600 dark:text-white shadow-lg font-black scale-105' : isLight ? 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100' : 'bg-slate-950 text-slate-400 border-slate-850 hover:border-slate-750'}`}
-                  >
-                    <img 
-                      src={bankLogos[bank]} 
-                      alt={`${bank} logo`}
-                      className="w-48 h-48 md:w-56 md:h-56 object-contain"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.src = 'data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><rect width="200" height="200" rx="20" fill="%23ccc"/><text x="100" y="120" font-family="Arial" font-size="80" text-anchor="middle" fill="%23333">?</text></svg>';
-                      }}
-                    />
-                  </button>
-                ))}
-              </div>
+               <div className="grid grid-cols-2 gap-8 max-w-5xl mx-auto w-full justify-items-center">
+                 {['GCash', 'Maya'].map((provider) => (
+                   <button 
+                     key={provider}
+                     onClick={() => setSelectedProvider(provider)}
+                     className={`w-80 h-80 md:w-96 md:h-96 rounded-3xl border text-center transition-all flex items-center justify-center ${selectedProvider === provider ? 'bg-sky-500/10 border-sky-500 text-sky-600 dark:text-white shadow-lg font-black scale-105' : isLight ? 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100' : 'bg-slate-950 text-slate-400 border-slate-850 hover:border-slate-750'}`}
+                   >
+                     <img 
+                       src={bankLogos[provider]} 
+                       alt={`${provider} logo`}
+                       className="w-48 h-48 md:w-56 md:h-56 object-contain"
+                       onError={(e) => {
+                         const target = e.target as HTMLImageElement;
+                         target.src = 'data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><rect width="200" height="200" rx="20" fill="%23ccc"/><text x="100" y="120" font-family="Arial" font-size="80" text-anchor="middle" fill="%23333">?</text></svg>';
+                       }}
+                     />
+                   </button>
+                 ))}
+               </div>
 
               <div className={`flex flex-col gap-4 pt-6 border-t ${cBorder} max-w-xl mx-auto w-full`}>
                 <button 
@@ -2356,17 +2347,17 @@ export default function App() {
           {currentState === 'QRPH_DISPLAY' && (
             <div className={`w-full max-w-3xl mx-auto ${cCard} p-10 rounded-3xl text-center space-y-8 my-auto py-6 shadow-2xl`}>
               <div className="space-y-2 text-center">
-                <h3 className={`text-3xl md:text-4xl font-black ${cTextHeading}`}>{selectedBank} QRPh Node Active</h3>
-                <p className="text-sm md:text-base text-sky-500 dark:text-sky-300 font-black">{t('generatingQRPh')}</p>
+                 <h3 className={`text-3xl md:text-4xl font-black ${cTextHeading}`}>{selectedProvider} Payout</h3>
+                 <p className="text-sm md:text-base text-sky-500 dark:text-sky-300 font-black">Scan to send payment</p>
               </div>
 
               {/* OUTWARD QR DIGITAL CANVAS */}
               <div className={`bg-white p-6 rounded-[32px] inline-block shadow-inner mx-auto border-4 ${isLight ? 'border-sky-500' : 'border-emerald-500'}`}>
-                {selectedBank && (
+                {selectedProvider && (
                   <div className="flex justify-center mb-4">
                      <img 
-                       src={bankLogos[selectedBank]} 
-                       alt={`${selectedBank} logo`}
+                       src={bankLogos[selectedProvider]} 
+                       alt={`${selectedProvider} logo`}
                        className="h-12 object-contain"
                        onError={(e) => {
                          const target = e.target as HTMLImageElement;
@@ -2375,46 +2366,42 @@ export default function App() {
                      />
                   </div>
                 )}
-                {qrCodeDataUrl ? (
-                  <img src={qrCodeDataUrl} alt="QRPh Payout code" className="w-[260px] h-[260px] mx-auto block rounded-2xl" />
-                ) : (
-                  <div className="w-[260px] h-[260px] flex items-center justify-center text-slate-500 font-mono text-sm font-bold">
-                    Loading Secure QR Map...
-                  </div>
-                )}
-                
-                {/* PHILIPPINES QRPH ACCREDITED WATERMARKBAND */}
-                <div className="bg-sky-950 text-white py-3 px-6 mt-4 rounded-xl text-xs uppercase tracking-widest font-black flex items-center justify-center gap-2">
-                  <span className="text-red-500 font-black">QR</span>
-                  <span className="text-yellow-400 font-black">PH</span>
-                  <span className="text-white/60">ACCREDITED SYSTEM VIA BSP</span>
+                <div className="w-[260px] h-[260px] flex items-center justify-center bg-slate-100 rounded-2xl">
+                  <img 
+                    src={selectedProvider === 'GCash' ? '/images/banks/gcash-qr.png' : '/images/banks/maya-qr.png'} 
+                    alt={`${selectedProvider} QR Code`}
+                    className="w-[240px] h-[240px] object-contain"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.src = 'data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><rect width="200" height="200" rx="20" fill="%23ccc"/><text x="100" y="120" font-family="Arial" font-size="40" text-anchor="middle" fill="%23333">No QR Set</text></svg>';
+                    }}
+                  />
                 </div>
               </div>
 
               <div className="space-y-4">
                 <p className={`text-base md:text-lg ${cTextNormal} leading-relaxed font-bold`}>
-                  {t('scanToReceivePayout')}
+                  Scan this {selectedProvider} QR code and send exactly <span className="text-emerald-500 font-black">₱{totalPayout.toFixed(2)}</span> to the account below.
                 </p>
                 <div className={`${cCardInset} p-4 rounded-2xl font-mono text-xs md:text-sm shadow-inner`}>
-                  <span className="block font-black text-sky-500 dark:text-sky-400 uppercase tracking-widest mb-1">{t('referenceNumber')}:</span>
+                  <span className="block font-black text-sky-500 dark:text-sky-400 uppercase tracking-widest mb-1">Reference Number:</span>
                   <span className="font-bold">{payoutReference || "REF-81204128"}</span>
                 </div>
               </div>
 
-              {/* DEMO BYPASS INSTANT CREDIT SIMULATOR */}
               <div className="flex flex-col gap-4 pt-2 max-w-xl mx-auto w-full">
                 <button 
                   onClick={confirmQRPhPayoutReceived}
                   className="w-full px-6 py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-2xl text-base animate-pulse shadow-md"
                 >
-                  Verify Payout Received (Simulate BSP API)
+                  I've Sent the Payment (Operator Verify)
                 </button>
 
                 <button 
                   onClick={() => setCurrentState('QRPH_SELECT_PROVIDER')}
-                  className={`w-full px-6 py-4 ${isLight ? 'bg-slate-200 text-slate-705 hover:bg-slate-250 border-slate-350' : 'bg-slate-800 text-slate-300 hover:bg-slate-705 border-slate-705'} border rounded-2xl text-base font-black transition-all`}
+                  className={`w-full py-4 ${isLight ? 'bg-slate-200 text-slate-705 hover:bg-slate-250 border-slate-355' : 'bg-slate-800 text-slate-300 hover:bg-slate-705 border-slate-705'} border rounded-2xl text-base font-black transition-all`}
                 >
-                  Cancel QR
+                  Back
                 </button>
               </div>
             </div>
