@@ -818,9 +818,30 @@ export default function App() {
                 triggerNotification('Cash payout failed. Please try again.');
               }
 
+              const newTransactionId = "TXN-" + Math.floor(100000 + Math.random() * 900000);
+              
+              try {
+                await fetch("/api/receipt/create", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    sessionId: 'cash-out-' + Date.now(),
+                    userId: activeUser?.id || null,
+                    materialsDeposited: 'Cash Withdrawal',
+                    totalWeightKg: 0,
+                    totalReward: deductAmount,
+                    payoutMethod: 'cash',
+                    payoutStatus: 'COMPLETED',
+                    transactionId: newTransactionId
+                  })
+                });
+              } catch (e) {
+                console.warn("Receipt creation failed:", e);
+              }
+
               setReceiptData(prevReceipt => ({
                 ...prevReceipt,
-                transactionId: prevReceipt.transactionId || "TXN-" + Math.floor(100000 + Math.random() * 900000),
+                transactionId: newTransactionId,
                 date: new Date().toISOString().replace('T', ' ').substring(0, 16),
                 method: 'Coins Retrieval Dispenser',
                 reward: deductAmount
