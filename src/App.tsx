@@ -2115,26 +2115,14 @@ export default function App() {
                    <span>Redeem via QRPh</span>
                  </button>
 
-                 <button 
-                   onClick={() => {
-                     setIntendedDispenserProgress(0);
-                     setCurrentState('DISPENSING_CASH');
-                     speakText("dispensingProgress");
-                   }}
-                   className="w-80 h-80 md:w-96 md:h-96 bg-emerald-600 hover:bg-emerald-500 font-black text-white text-2xl rounded-3xl flex flex-col items-center justify-center gap-6 shadow-lg active:scale-95 transition-all"
-                 >
-                   <Coins className="w-14 h-14" /> 
-                   <span>Cash Out Coins</span>
-                 </button>
-
-                 <button 
-                   onClick={() => setCurrentState('MAIN_MENU')}
-                   className={`w-80 h-80 md:w-96 md:h-96 ${isLight ? 'bg-slate-200 text-slate-705 hover:bg-slate-250 border-slate-355' : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border-slate-705'} border text-2xl font-black rounded-3xl flex flex-col items-center justify-center gap-6 transition-all active:scale-95`}
-                 >
-                   <Home className="w-14 h-14" />
-                   <span>Return Main Menu</span>
-                 </button>
-               </div>
+                  <button 
+                    onClick={() => setCurrentState('MAIN_MENU')}
+                    className={`w-80 h-80 md:w-96 md:h-96 ${isLight ? 'bg-slate-200 text-slate-705 hover:bg-slate-250 border-slate-355' : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border-slate-705'} border text-2xl font-black rounded-3xl flex flex-col items-center justify-center gap-6 transition-all active:scale-95`}
+                  >
+                    <Home className="w-14 h-14" />
+                    <span>Return Main Menu</span>
+                  </button>
+                </div>
 
             </div>
           )}

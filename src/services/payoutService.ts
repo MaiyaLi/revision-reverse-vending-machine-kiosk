@@ -229,7 +229,7 @@ export class PayoutService {
         id, "externalId", "sessionId", "userId", amount, channel, status, "createdAt", "updatedAt"
       ) VALUES ($1, $2, $3, $4, $5, 'CASH', 'COMPLETED', NOW(), NOW())
       RETURNING *`,
-      [uuidv4(), externalId, params.sessionId, params.userId || '', params.amount]
+      [uuidv4(), externalId, params.sessionId, params.userId, params.amount]
     );
 
     if (params.userId) {
