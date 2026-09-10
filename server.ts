@@ -319,6 +319,35 @@ app.post("/api/payout/wallet", async (req, res) => {
   }
 });
 
+app.post("/api/wallet/credit", async (req, res) => {
+  try {
+    const { userId, amount, details } = req.body;
+
+    if (!userId || !amount || amount <= 0) {
+      return res.status(400).json({ error: "Invalid credit request" });
+    }
+
+    const user = await userService.getUserById(userId);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const updatedUser = await userService.updateWalletBalance(
+      user.id,
+      amount,
+      'DEPOSIT'
+    );
+
+    res.json({
+      success: true,
+      amountCredited: amount,
+      updatedUser
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Create disbursement (for QRPH/bank payout method)
 app.post("/api/payout/disburse", async (req, res) => {
   try {

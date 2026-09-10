@@ -611,36 +611,82 @@ export default function App() {
           if (resData.updatedUser) {
             setActiveUser(resData.updatedUser);
           }
+          const payoutAmount = resData.amountCredited || totalPayout;
+          const wholePesos = Math.floor(payoutAmount);
+          const centavos = Math.round((payoutAmount - wholePesos) * 100) / 100;
+
+          if (payoutSelected === 'cash' && centavos > 0 && activeUser) {
+            try {
+              await fetch("/api/wallet/credit", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  userId: activeUser.id,
+                  amount: centavos,
+                  details: `Centavos retained from cash payout ₱${payoutAmount.toFixed(2)}`
+                })
+              });
+            } catch (e) {
+              console.warn("Failed to credit centavos to wallet:", e);
+            }
+          }
+
           setReceiptData({
             transactionId: resData.transactionId,
             date: new Date().toISOString().replace('T', ' ').substring(0, 16),
             materials: `${itemsGrouped.plastic} Plastics, ${itemsGrouped.aluminum} Cans, ${itemsGrouped.glass} Glass`,
             weight: totalWeightStr,
-            reward: resData.amountCredited || totalPayout,
+            reward: payoutAmount,
             method: payoutSelected === 'wallet' ? 'Eco-Wallet' : payoutSelected === 'qrph' ? 'QRPh Instant' : 'Cash Dispensation',
             co2: totalCO2Str
           });
+
+          if (payoutSelected === 'cash') {
+            setCashOutAmount(wholePesos);
+            setIntendedDispenserProgress(0);
+            setCurrentState('DISPENSING_CASH');
+            speakText("dispensingProgress");
+          } else if (payoutSelected === 'wallet') {
+            setCurrentState('FINAL_RECEIPT_CLIENT');
+            speakText("receiptTitle");
+          } else {
+            setCurrentState('QRPH_SELECT_PROVIDER');
+            speakText("selectBank");
+          }
         }
       } catch (err) {
         console.warn("Using smart local receipt fallback.");
+        const payoutAmount = totalPayout;
+        const wholePesos = Math.floor(payoutAmount);
+        const centavos = Math.round((payoutAmount - wholePesos) * 100) / 100;
+
+        if (centavos > 0 && activeUser) {
+          try {
+            await fetch("/api/wallet/credit", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                userId: activeUser.id,
+                amount: centavos,
+                details: `Centavos retained from cash payout ₱${payoutAmount.toFixed(2)}`
+              })
+            });
+          } catch (e) {
+            console.warn("Failed to credit centavos to wallet:", e);
+          }
+        }
+
         setReceiptData({
           transactionId: "TXN-" + Math.floor(100000 + Math.random() * 900000),
           date: new Date().toISOString().replace('T', ' ').substring(0, 16),
           materials: `${intendedPlastic} Plastics, ${intendedAluminum} Cans, ${intendedGlass} Glass`,
           weight: totalWeightStr,
-          reward: totalPayout,
-          method: payoutSelected === 'wallet' ? 'Eco-Wallet' : payoutSelected === 'qrph' ? 'QRPh' : 'Cash Dispensation',
+          reward: payoutAmount,
+          method: 'Cash Dispensation',
           co2: totalCO2Str
         });
-      }
 
-      if (payoutSelected === 'wallet') {
-        setCurrentState('FINAL_RECEIPT_CLIENT');
-        speakText("receiptTitle");
-      } else if (payoutSelected === 'qrph') {
-        setCurrentState('QRPH_SELECT_PROVIDER');
-        speakText("selectBank");
-      } else {
+        setCashOutAmount(wholePesos);
         setIntendedDispenserProgress(0);
         setCurrentState('DISPENSING_CASH');
         speakText("dispensingProgress");
@@ -2116,15 +2162,11 @@ export default function App() {
                {/* REDEMPTION ACTION BUTTONS */}
                <div className="flex flex-row flex-wrap justify-center gap-8 max-w-7xl mx-auto w-full">
                  <button 
-                   onClick={() => {
-                     setCashOutAmount(0);
-                     setCashOutStep('INPUT');
-                     setCurrentState('CASH_OUT_COINS');
-                   }}
+                   onClick={() => setCurrentState('DEPOSIT_PLANNING')}
                    className="w-80 h-80 md:w-96 md:h-96 bg-amber-600 hover:bg-amber-500 font-black text-white text-2xl rounded-3xl flex flex-col items-center justify-center gap-6 shadow-lg active:scale-95 transition-all"
                  >
                    <Coins className="w-14 h-14" /> 
-                   <span>Cash Out Coins</span>
+                   <span>Deposit Coins</span>
                  </button>
 
                  <button 
