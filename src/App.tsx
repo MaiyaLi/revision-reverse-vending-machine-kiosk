@@ -2486,21 +2486,25 @@ export default function App() {
                   <span className="text-center px-2 text-lg sm:text-xl">{printStatus === 'PRINTING' ? 'Printing...' : printStatus === 'DONE' ? 'Thermal Printed!' : t('printReceipt')}</span>
                 </button>
 
-                <button 
-                  onClick={sendReceiptSMS}
-                  className={`w-full h-56 sm:h-64 rounded-3xl font-black text-xl sm:text-2xl flex flex-col items-center justify-center gap-4 border transition-all ${isLight ? 'bg-slate-100 hover:bg-slate-200 text-slate-850 border-slate-300' : 'bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-850'} active:scale-95 shadow-lg`}
-                >
-                  <Smartphone className="w-12 h-12 text-sky-500 dark:text-sky-400" />
-                  <span className="text-lg sm:text-xl">{t('sendToMobile')}</span>
-                </button>
+                {activeUser && (
+                  <button 
+                    onClick={sendReceiptSMS}
+                    className={`w-full h-56 sm:h-64 rounded-3xl font-black text-xl sm:text-2xl flex flex-col items-center justify-center gap-4 border transition-all ${isLight ? 'bg-slate-100 hover:bg-slate-200 text-slate-850 border-slate-300' : 'bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-850'} active:scale-95 shadow-lg`}
+                  >
+                    <Smartphone className="w-12 h-12 text-sky-500 dark:text-sky-400" />
+                    <span className="text-lg sm:text-xl">{t('sendToMobile')}</span>
+                  </button>
+                )}
 
-                <button 
-                  onClick={sendReceiptEmail}
-                  className={`w-full h-56 sm:h-64 rounded-3xl font-black text-xl sm:text-2xl flex flex-col items-center justify-center gap-4 border transition-all ${isLight ? 'bg-slate-100 hover:bg-slate-200 text-slate-850 border-slate-300' : 'bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-850'} active:scale-95 shadow-lg`}
-                >
-                  <Mail className="w-12 h-12 text-teal-500 dark:text-teal-400" />
-                  <span className="text-lg sm:text-xl">{t('sendToEmail')}</span>
-                </button>
+                {activeUser && (
+                  <button 
+                    onClick={sendReceiptEmail}
+                    className={`w-full h-56 sm:h-64 rounded-3xl font-black text-xl sm:text-2xl flex flex-col items-center justify-center gap-4 border transition-all ${isLight ? 'bg-slate-100 hover:bg-slate-200 text-slate-850 border-slate-300' : 'bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-850'} active:scale-95 shadow-lg`}
+                  >
+                    <Mail className="w-12 h-12 text-teal-500 dark:text-teal-400" />
+                    <span className="text-lg sm:text-xl">{t('sendToEmail')}</span>
+                  </button>
+                )}
               </div>
 
             </div>
