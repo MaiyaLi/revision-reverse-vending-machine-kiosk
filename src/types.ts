@@ -27,8 +27,7 @@ export type AppState =
   | 'PAYOUT_FAILED'
   | 'FINAL_RECEIPT_CLIENT'
   | 'LEARN_MORE'
-  | 'DETECTION_TEST'
-  | 'COIN_DEPOSIT';
+  | 'DETECTION_TEST';
 
 export interface UserProfile {
   id: string;
@@ -169,11 +168,6 @@ export interface TranslationSet {
   authTitle: string;
   authEnterCredentials: string;
   enterPinCode: string;
-  coinDepositTitle: string;
-  coinDepositBalance: string;
-  coinDepositAmount: string;
-  coinDepositMax: string;
-  coinDepositConfirm: string;
 }
 
 export const translations: Record<Language, TranslationSet> = {
@@ -247,12 +241,7 @@ export const translations: Record<Language, TranslationSet> = {
     finished: "Complete Session",
     authTitle: "Access Eco-Wallet",
     authEnterCredentials: "Enter Mobile Number or Member ID",
-    enterPinCode: "Enter 4-Digit Secure PIN",
-    coinDepositTitle: "Coin Deposit",
-    coinDepositBalance: "Wallet Balance",
-    coinDepositAmount: "Deposit Amount (₱)",
-    coinDepositMax: "Max",
-    coinDepositConfirm: "Confirm Deposit"
+    enterPinCode: "Enter 4-Digit Secure PIN"
   },
   fil: {
     idleTouchToBegin: "Pindutin upang Magsimula",
@@ -324,11 +313,6 @@ export const translations: Record<Language, TranslationSet> = {
     finished: "Tapusin ang Session",
     authTitle: "Eco-Wallet Portal",
     authEnterCredentials: "Ipasok ang Mobile o Member ID",
-    enterPinCode: "Ipasok ang 4-Digit PIN",
-    coinDepositTitle: "Pag-deposito ng Barya",
-    coinDepositBalance: "Balanse sa Wallet",
-    coinDepositAmount: "Halaga ng Deposito (₱)",
-    coinDepositMax: "Max",
-    coinDepositConfirm: "Kumpirmahin ang Deposito"
+    enterPinCode: "Ipasok ang 4-Digit PIN"
   }
 };
