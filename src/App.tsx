@@ -721,8 +721,15 @@ export default function App() {
 
   const bankLogos: Record<string, string> = {
     'GCash': '/images/banks/gcash.png?v=2',
-    'Maya': '/images/banks/maya.svg?v=2'
+    'Maya': '/images/banks/maya.svg?v=2',
+    'BPI': '/images/banks/bpi.svg?v=2',
+    'BDO': '/images/banks/bdo.svg?v=2',
+    'UnionBank': '/images/banks/unionbank.svg?v=2',
+    'Landbank': '/images/banks/landbank.svg?v=2'
   };
+
+  const availableProviders = ['GCash', 'Maya'];
+  const comingSoonProviders = ['BPI', 'BDO', 'UnionBank', 'Landbank'];
 
   const redeemUser = () => activeUser || {
     walletBalance: 0,
@@ -2300,7 +2307,7 @@ export default function App() {
               </div>
 
                <div className="grid grid-cols-2 gap-8 max-w-5xl mx-auto w-full justify-items-center">
-                 {['GCash', 'Maya'].map((provider) => (
+                 {availableProviders.map((provider) => (
                    <button 
                      key={provider}
                      onClick={() => setSelectedProvider(provider)}
@@ -2316,6 +2323,23 @@ export default function App() {
                        }}
                      />
                    </button>
+                 ))}
+                 {comingSoonProviders.map((provider) => (
+                   <div 
+                     key={provider}
+                     className={`w-80 h-80 md:w-96 md:h-96 rounded-3xl border text-center flex flex-col items-center justify-center gap-3 opacity-60 ${isLight ? 'bg-slate-100 border-slate-200 text-slate-400' : 'bg-slate-900 border-slate-800 text-slate-500'}`}
+                   >
+                     <img 
+                       src={bankLogos[provider]} 
+                       alt={`${provider} logo`}
+                       className="w-32 h-32 md:w-40 md:h-40 object-contain grayscale"
+                       onError={(e) => {
+                         const target = e.target as HTMLImageElement;
+                         target.src = 'data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><rect width="200" height="200" rx="20" fill="%23ccc"/><text x="100" y="120" font-family="Arial" font-size="40" text-anchor="middle" fill="%23666">Coming Soon</text></svg>';
+                       }}
+                     />
+                     <span className="text-xs font-black uppercase tracking-wider">Coming Soon</span>
+                   </div>
                  ))}
                </div>
 
