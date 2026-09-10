@@ -709,6 +709,8 @@ export default function App() {
   // --- GCash/Maya QR Payout ---
   const [selectedProvider, setSelectedProvider] = useState<'GCash' | 'Maya'>('GCash');
   const [payoutReference, setPayoutReference] = useState('');
+  const [userMobileNumber, setUserMobileNumber] = useState('');
+  const [qrPhoneStep, setQrPhoneStep] = useState<'INPUT' | 'CONFIRM'>('INPUT');
   const [receiptData, setReceiptData] = useState({
     transactionId: '',
     date: '',
@@ -743,6 +745,13 @@ export default function App() {
   const generateQRPhPayout = () => {
     const refNum = "REF-" + Math.floor(10000000 + Math.random() * 90000000);
     setPayoutReference(refNum);
+    
+    if (!activeUser?.phoneNumber && !userMobileNumber) {
+      setQrPhoneStep('INPUT');
+    } else {
+      setQrPhoneStep('CONFIRM');
+    }
+    
     setCurrentState('QRPH_DISPLAY');
   };
 
@@ -2368,68 +2377,94 @@ export default function App() {
           {/* ========================================================= */}
           {/* STATE 12: DISPLAY QRPH SEAMLESS CODE GENERATED */}
           {/* ========================================================= */}
-          {currentState === 'QRPH_DISPLAY' && (
-            <div className={`w-full max-w-3xl mx-auto ${cCard} p-10 rounded-3xl text-center space-y-8 my-auto py-6 shadow-2xl`}>
-              <div className="space-y-2 text-center">
-                 <h3 className={`text-3xl md:text-4xl font-black ${cTextHeading}`}>{selectedProvider} Payout</h3>
-                 <p className="text-sm md:text-base text-sky-500 dark:text-sky-300 font-black">Scan to send payment</p>
-              </div>
+           {currentState === 'QRPH_DISPLAY' && (
+             <div className={`w-full max-w-3xl mx-auto ${cCard} p-10 rounded-3xl text-center space-y-8 my-auto py-6 shadow-2xl`}>
+               <div className="space-y-2 text-center">
+                  <h3 className={`text-3xl md:text-4xl font-black ${cTextHeading}`}>{selectedProvider} Payout</h3>
+                  <p className="text-sm md:text-base text-sky-500 dark:text-sky-300 font-black">Operator sending payment to user</p>
+               </div>
 
-              {/* OUTWARD QR DIGITAL CANVAS */}
-              <div className={`bg-white p-6 rounded-[32px] inline-block shadow-inner mx-auto border-4 ${isLight ? 'border-sky-500' : 'border-emerald-500'}`}>
-                {selectedProvider && (
-                  <div className="flex justify-center mb-4">
-                     <img 
-                       src={bankLogos[selectedProvider]} 
-                       alt={`${selectedProvider} logo`}
-                       className="h-12 object-contain"
-                       onError={(e) => {
-                         const target = e.target as HTMLImageElement;
-                         target.src = 'data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><rect width="200" height="200" rx="20" fill="%23ccc"/><text x="100" y="120" font-family="Arial" font-size="80" text-anchor="middle" fill="%23333">?</text></svg>';
-                       }}
+               {qrPhoneStep === 'INPUT' && (
+                 <div className="space-y-6">
+                   <div className="space-y-2">
+                     <label className={`text-lg font-black ${cTextNormal} block`}>User's Mobile Number</label>
+                     <input
+                       type="tel"
+                       value={userMobileNumber}
+                       onChange={(e) => setUserMobileNumber(e.target.value)}
+                       className={`${cInput} w-full p-4 rounded-2xl text-2xl font-black text-center`}
+                       placeholder="09XXXXXXXXX"
                      />
+                   </div>
+                   <div className="flex gap-4">
+                     <button
+                       onClick={() => {
+                         if (!userMobileNumber || userMobileNumber.length < 10) {
+                           triggerNotification('Enter a valid mobile number');
+                           return;
+                         }
+                         setQrPhoneStep('CONFIRM');
+                       }}
+                       className="flex-1 py-4 bg-gradient-to-r from-sky-600 to-teal-500 text-white font-black rounded-2xl text-lg hover:brightness-110 shadow-lg active:scale-95 transition-all"
+                     >
+                       Continue
+                     </button>
+                     <button
+                       onClick={() => setCurrentState('QRPH_SELECT_PROVIDER')}
+                       className={`px-8 py-4 ${isLight ? 'bg-slate-200 text-slate-700 hover:bg-slate-300 border-slate-350' : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border-slate-700'} border rounded-2xl text-lg font-black transition-all active:scale-95`}
+                     >
+                       Back
+                     </button>
+                   </div>
+                 </div>
+               )}
+
+               {qrPhoneStep === 'CONFIRM' && (
+                 <>
+                  <div className={`${cCardInset} p-6 rounded-2xl space-y-4 text-left`}>
+                    <div className="flex justify-between">
+                      <span className={`${cTextMuted} font-black`}>Provider:</span>
+                      <span className="font-black">{selectedProvider}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className={`${cTextMuted} font-black`}>Send to:</span>
+                      <span className="font-black">{userMobileNumber || activeUser?.phoneNumber || 'Not provided'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className={`${cTextMuted} font-black`}>Amount:</span>
+                      <span className="font-black text-emerald-500">₱{totalPayout.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className={`${cTextMuted} font-black`}>Reference:</span>
+                      <span className="font-black">{payoutReference}</span>
+                    </div>
                   </div>
-                )}
-                <div className="w-[260px] h-[260px] flex items-center justify-center bg-slate-100 rounded-2xl">
-                  <img 
-                    src={selectedProvider === 'GCash' ? '/images/banks/gcash-qr.png' : '/images/banks/maya-qr.png'} 
-                    alt={`${selectedProvider} QR Code`}
-                    className="w-[240px] h-[240px] object-contain"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.src = 'data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><rect width="200" height="200" rx="20" fill="%23ccc"/><text x="100" y="120" font-family="Arial" font-size="40" text-anchor="middle" fill="%23333">No QR Set</text></svg>';
-                    }}
-                  />
-                </div>
-              </div>
 
-              <div className="space-y-4">
-                <p className={`text-base md:text-lg ${cTextNormal} leading-relaxed font-bold`}>
-                  Scan this {selectedProvider} QR code and send exactly <span className="text-emerald-500 font-black">₱{totalPayout.toFixed(2)}</span> to the account below.
-                </p>
-                <div className={`${cCardInset} p-4 rounded-2xl font-mono text-xs md:text-sm shadow-inner`}>
-                  <span className="block font-black text-sky-500 dark:text-sky-400 uppercase tracking-widest mb-1">Reference Number:</span>
-                  <span className="font-bold">{payoutReference || "REF-81204128"}</span>
-                </div>
-              </div>
+                  <div className="space-y-4">
+                    <p className={`text-base md:text-lg ${cTextNormal} leading-relaxed font-bold`}>
+                      Send exactly <span className="text-emerald-500 font-black">₱{totalPayout.toFixed(2)}</span> to <span className="font-black">{userMobileNumber || activeUser?.phoneNumber || 'user'}</span> via {selectedProvider}.
+                    </p>
+                  </div>
 
-              <div className="flex flex-col gap-4 pt-2 max-w-xl mx-auto w-full">
-                <button 
-                  onClick={confirmQRPhPayoutReceived}
-                  className="w-full px-6 py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-2xl text-base animate-pulse shadow-md"
-                >
-                  I've Sent the Payment (Operator Verify)
-                </button>
+                  <div className={`flex flex-col gap-4 pt-2 max-w-xl mx-auto w-full`}>
+                    <button 
+                      onClick={confirmQRPhPayoutReceived}
+                      className="w-full px-6 py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-2xl text-base animate-pulse shadow-md"
+                    >
+                      Payment Sent (Operator Confirm)
+                    </button>
 
-                <button 
-                  onClick={() => setCurrentState('QRPH_SELECT_PROVIDER')}
-                  className={`w-full py-4 ${isLight ? 'bg-slate-200 text-slate-705 hover:bg-slate-250 border-slate-355' : 'bg-slate-800 text-slate-300 hover:bg-slate-705 border-slate-705'} border rounded-2xl text-base font-black transition-all`}
-                >
-                  Back
-                </button>
-              </div>
-            </div>
-          )}
+                    <button 
+                      onClick={() => setCurrentState('QRPH_SELECT_PROVIDER')}
+                      className={`w-full py-4 ${isLight ? 'bg-slate-200 text-slate-705 hover:bg-slate-250 border-slate-355' : 'bg-slate-800 text-slate-300 hover:bg-slate-705 border-slate-705'} border rounded-2xl text-base font-black transition-all`}
+                    >
+                      Back
+                    </button>
+                  </div>
+                </>
+               )}
+             </div>
+           )}
 
           {/* ========================================================= */}
           {/* STATE 13: DISPENSING PHYSICAL COINS (HW INVENTORIES LEVEL) */}
