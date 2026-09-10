@@ -2161,24 +2161,16 @@ export default function App() {
 
                {/* REDEMPTION ACTION BUTTONS */}
                <div className="flex flex-row flex-wrap justify-center gap-8 max-w-7xl mx-auto w-full">
-                 <button 
-                   onClick={() => setCurrentState('DEPOSIT_PLANNING')}
-                   className="w-80 h-80 md:w-96 md:h-96 bg-amber-600 hover:bg-amber-500 font-black text-white text-2xl rounded-3xl flex flex-col items-center justify-center gap-6 shadow-lg active:scale-95 transition-all"
-                 >
-                   <Coins className="w-14 h-14" /> 
-                   <span>Deposit Coins</span>
-                 </button>
-
-                 <button 
-                   onClick={() => {
-                     setCurrentState('QRPH_SELECT_PROVIDER');
-                     speakText("selectBank");
-                   }}
-                   className="w-80 h-80 md:w-96 md:h-96 bg-sky-600 hover:bg-sky-500 font-black text-white text-2xl rounded-3xl flex flex-col items-center justify-center gap-6 shadow-lg active:scale-95 transition-all"
-                 >
-                   <Smartphone className="w-14 h-14" /> 
-                   <span>Redeem via QRPh</span>
-                 </button>
+                  <button 
+                    onClick={() => {
+                      setCurrentState('QRPH_SELECT_PROVIDER');
+                      speakText("selectBank");
+                    }}
+                    className="w-80 h-80 md:w-96 md:h-96 bg-sky-600 hover:bg-sky-500 font-black text-white text-2xl rounded-3xl flex flex-col items-center justify-center gap-6 shadow-lg active:scale-95 transition-all"
+                  >
+                    <Smartphone className="w-14 h-14" /> 
+                    <span>Redeem via QRPh</span>
+                  </button>
 
                   <button 
                     onClick={() => setCurrentState('MAIN_MENU')}
