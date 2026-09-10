@@ -752,6 +752,16 @@ export default function App() {
       setQrPhoneStep('CONFIRM');
     }
     
+    setReceiptData({
+      transactionId: "TXN-" + Math.floor(100000 + Math.random() * 900000),
+      date: new Date().toISOString().replace('T', ' ').substring(0, 16),
+      materials: 'QRPh Payout',
+      weight: '0.00',
+      reward: totalPayout,
+      method: `${selectedProvider} Pending`,
+      co2: '0.000'
+    });
+    
     setCurrentState('QRPH_DISPLAY');
   };
 
@@ -2447,6 +2457,13 @@ export default function App() {
                   </div>
 
                   <div className={`flex flex-col gap-4 pt-2 max-w-xl mx-auto w-full`}>
+                    <button 
+                      onClick={triggerPrintReceipt}
+                      className={`w-full px-6 py-4 ${isLight ? 'bg-slate-100 text-slate-850 border-slate-300' : 'bg-slate-900 border-slate-700 text-slate-300'} border rounded-2xl text-base font-black transition-all`}
+                    >
+                      Print Receipt
+                    </button>
+
                     <button 
                       onClick={confirmQRPhPayoutReceived}
                       className="w-full px-6 py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-2xl text-base animate-pulse shadow-md"
