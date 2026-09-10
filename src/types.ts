@@ -27,7 +27,8 @@ export type AppState =
   | 'PAYOUT_FAILED'
   | 'FINAL_RECEIPT_CLIENT'
   | 'LEARN_MORE'
-  | 'DETECTION_TEST';
+  | 'DETECTION_TEST'
+  | 'CASH_OUT_COINS';
 
 export interface UserProfile {
   id: string;

@@ -348,6 +348,37 @@ app.post("/api/wallet/credit", async (req, res) => {
   }
 });
 
+app.post("/api/redemption/coin-deposit", async (req, res) => {
+  try {
+    const { userId, amount } = req.body;
+
+    if (!userId || !amount || amount <= 0) {
+      return res.status(400).json({ error: "Invalid deposit amount" });
+    }
+
+    const user = await userService.getUserById(userId);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const updatedUser = await userService.updateWalletBalance(
+      user.id,
+      amount,
+      'DEPOSIT'
+    );
+
+    res.json({
+      success: true,
+      transactionId: `TXN-${Math.floor(100000 + Math.random() * 900000)}`,
+      timestamp: new Date().toISOString(),
+      amountDeposited: amount,
+      updatedUser
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Create disbursement (for QRPH/bank payout method)
 app.post("/api/payout/disburse", async (req, res) => {
   try {
