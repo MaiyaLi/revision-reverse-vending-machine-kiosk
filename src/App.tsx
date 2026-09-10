@@ -741,6 +741,8 @@ export default function App() {
 
   // --- Coin Dispenser mechanism simulation ---
   const [intendedDispenserProgress, setIntendedDispenserProgress] = useState(0);
+  const [cashOutAmount, setCashOutAmount] = useState(0);
+  const [cashOutStep, setCashOutStep] = useState<'INPUT' | 'DISPENSING' | 'RECEIPT'>('INPUT');
   
   useEffect(() => {
     if (currentState === 'DISPENSING_CASH') {
@@ -749,18 +751,25 @@ export default function App() {
           if (prev >= 100) {
             clearInterval(interval);
             setTimeout(async () => {
-              const deductAmount = totalPayout;
+              const deductAmount = cashOutAmount > 0 ? cashOutAmount : totalPayout;
               try {
-                await fetch("/api/payout/cash", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({
-                    userId: activeUser?.id || null,
-                    amount: deductAmount
-                  })
-                });
+                if (activeUser) {
+                  const res = await fetch("/api/redemption/withdraw", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      userId: activeUser.id,
+                      amount: deductAmount
+                    })
+                  });
+                  if (!res.ok) {
+                    const err = await res.json();
+                    triggerNotification(err.error || 'Cash payout failed');
+                  }
+                }
               } catch (e) {
                 console.warn("Cash payout recording failed:", e);
+                triggerNotification('Cash payout failed. Please try again.');
               }
 
               setReceiptData(prevReceipt => ({
@@ -771,6 +780,7 @@ export default function App() {
                 reward: deductAmount
               }));
 
+              setCashOutStep('RECEIPT');
               setCurrentState('FINAL_RECEIPT_CLIENT');
               speakText("receiptTitle");
             }, 500);
@@ -951,6 +961,7 @@ export default function App() {
   };
 
   const [notificationMsg, setNotificationMsg] = useState('');
+  const [notificationType, setNotificationType] = useState<'error' | 'success'>('success');
   const triggerNotification = (text: string) => {
     setNotificationMsg(text);
     setTimeout(() => setNotificationMsg(''), 4000);
@@ -2023,10 +2034,10 @@ export default function App() {
                      <div className="bg-amber-500/10 p-5 rounded-2xl flex-shrink-0">
                        <Coins className="w-14 h-14 text-amber-500 dark:text-amber-400" />
                      </div>
-                     <div className="space-y-1">
-                       <span className={`text-2xl font-black block ${isLight ? 'text-amber-950' : 'text-white'}`}>{t('redeemViaCash')}</span>
-                       <span className={`text-sm ${isLight ? 'text-slate-600' : 'text-slate-300'} font-bold block`}>Dispense Coins</span>
-                     </div>
+                      <div className="space-y-1">
+                        <span className={`text-2xl font-black block ${isLight ? 'text-amber-950' : 'text-white'}`}>Cash Out Coins</span>
+                        <span className={`text-sm ${isLight ? 'text-slate-600' : 'text-slate-300'} font-bold block`}>Dispense Coins</span>
+                      </div>
                    </button>
 
                  </div>
@@ -2106,6 +2117,18 @@ export default function App() {
                <div className="flex flex-row flex-wrap justify-center gap-8 max-w-7xl mx-auto w-full">
                  <button 
                    onClick={() => {
+                     setCashOutAmount(0);
+                     setCashOutStep('INPUT');
+                     setCurrentState('CASH_OUT_COINS');
+                   }}
+                   className="w-80 h-80 md:w-96 md:h-96 bg-amber-600 hover:bg-amber-500 font-black text-white text-2xl rounded-3xl flex flex-col items-center justify-center gap-6 shadow-lg active:scale-95 transition-all"
+                 >
+                   <Coins className="w-14 h-14" /> 
+                   <span>Cash Out Coins</span>
+                 </button>
+
+                 <button 
+                   onClick={() => {
                      setCurrentState('QRPH_SELECT_PROVIDER');
                      speakText("selectBank");
                    }}
@@ -2124,12 +2147,95 @@ export default function App() {
                   </button>
                 </div>
 
-            </div>
-          )}
+             </div>
+           )}
 
-          {/* ========================================================= */}
-          {/* STATE 11: PRIVACY DIRECT QRPH REDEMPTION LIST */}
-          {/* ========================================================= */}
+           {/* ========================================================= */}
+           {/* STATE 11: CASH OUT COINS */}
+           {/* ========================================================= */}
+           {currentState === 'CASH_OUT_COINS' && activeUser && (
+             <div className="w-full max-w-3xl mx-auto space-y-8 my-auto py-4 animate-fade-in">
+               <div className={`${cCard} p-8 md:p-10 rounded-3xl space-y-6 border shadow-2xl`}>
+                 <div className="text-center space-y-2">
+                   <h3 className={`text-4xl md:text-5xl font-black ${cTextTitle} uppercase tracking-widest`}>Cash Out Coins</h3>
+                   <p className={`text-base ${cTextSubtitle}`}>Withdraw physical coins from your wallet</p>
+                 </div>
+
+                 <div className={`${cCardInset} p-6 rounded-2xl text-center`}>
+                   <span className={`text-sm ${cTextMuted} font-black uppercase tracking-wider block`}>Wallet Balance</span>
+                   <p className="text-5xl font-black text-emerald-500 font-mono mt-2">₱{(activeUser.walletBalance || 0).toFixed(2)}</p>
+                 </div>
+
+                 {cashOutStep === 'INPUT' && (
+                   <div className="space-y-6">
+                     <div className="space-y-2">
+                       <label className={`text-lg font-black ${cTextNormal} block`}>Withdrawal Amount (₱)</label>
+                       <div className="flex items-center gap-4">
+                         <input
+                           type="number"
+                           min="0"
+                           max={activeUser.walletBalance || 0}
+                           step="1"
+                           value={cashOutAmount || ''}
+                           onChange={(e) => {
+                             const val = parseFloat(e.target.value);
+                             if (isNaN(val) || val < 0) {
+                               setCashOutAmount(0);
+                             } else if (val > (activeUser.walletBalance || 0)) {
+                               setCashOutAmount(activeUser.walletBalance || 0);
+                             } else {
+                               setCashOutAmount(val);
+                             }
+                           }}
+                           className={`${cInput} w-full p-4 rounded-2xl text-2xl font-black text-center`}
+                           placeholder="0"
+                         />
+                         <button
+                           onClick={() => setCashOutAmount(activeUser.walletBalance || 0)}
+                           className={`px-6 py-4 rounded-2xl font-black text-lg ${isLight ? 'bg-slate-200 text-slate-800 hover:bg-slate-300' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'} border active:scale-95 transition-all`}
+                         >
+                           MAX
+                         </button>
+                       </div>
+                       <p className={`text-xs ${cTextMuted} font-bold`}>Maximum: ₱{(activeUser.walletBalance || 0).toFixed(2)}</p>
+                     </div>
+
+                     <div className="flex gap-4">
+                       <button
+                         onClick={async () => {
+                           if (cashOutAmount <= 0) {
+                             triggerNotification(lang === 'en' ? 'Enter a valid amount' : 'Ilagay ang valid na halaga');
+                             return;
+                           }
+                           if (cashOutAmount > (activeUser.walletBalance || 0)) {
+                             triggerNotification(lang === 'en' ? 'Amount exceeds balance' : 'Lampas sa balanse');
+                             return;
+                           }
+                           setCashOutStep('DISPENSING');
+                           setIntendedDispenserProgress(0);
+                           setCurrentState('DISPENSING_CASH');
+                           speakText("dispensingProgress");
+                         }}
+                         className="flex-1 py-4 bg-gradient-to-r from-amber-600 to-amber-500 text-white font-black rounded-2xl text-lg hover:brightness-110 shadow-lg active:scale-95 transition-all"
+                       >
+                         Dispense Coins
+                       </button>
+                       <button
+                         onClick={() => setCurrentState('REDEEM_BALANCE_SCREEN')}
+                         className={`px-8 py-4 ${isLight ? 'bg-slate-200 text-slate-700 hover:bg-slate-300 border-slate-350' : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border-slate-700'} border rounded-2xl text-lg font-black transition-all active:scale-95`}
+                       >
+                         {t('back')}
+                       </button>
+                     </div>
+                   </div>
+                 )}
+               </div>
+             </div>
+           )}
+
+           {/* ========================================================= */}
+           {/* STATE 11: PRIVACY DIRECT QRPH REDEMPTION LIST */}
+           {/* ========================================================= */}
           {currentState === 'QRPH_SELECT_PROVIDER' && (
             <div className={`w-full max-w-4xl mx-auto ${cCard} p-10 rounded-3xl space-y-8 my-auto py-6 shadow-2xl`}>
               <div className="text-center space-y-2">
