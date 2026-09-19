@@ -123,7 +123,7 @@ tsconfig.json                          (TypeScript config)
 │  │ payoutService    │  │ receiptService               │
 │  │ - createDisburs()│  │ - createReceipt()            │
 │  │ - checkStatus()  │  │ - printReceipt()             │
-│  │ - handleWebhook()│  │ - sendViaSMS()               │
+│  │ - handleWebhook()│  │ - sendViaEmail()              │
 │  └──────────────────┘  └──────────────┘              │
 │                                                       │
 │  ┌────────────────────────────┐                      │
@@ -156,10 +156,10 @@ tsconfig.json                          (TypeScript config)
 │  Automatic Backup Ready              │
 └──────────────────────────────────────┘
          ↓
-    External APIs:
-    ├─ Xendit (Payments)
-    ├─ Gemini (Vision)
-    └─ Thermal Printer
+External APIs:
+     ├─ Operator Payouts (Payments)
+     ├─ Gemini (Vision)
+     └─ Thermal Printer
 ```
 
 ---
@@ -171,7 +171,7 @@ tsconfig.json                          (TypeScript config)
 | `database.ts` | DB connection & pooling | ✅ Complete |
 | `userService.ts` | User CRUD & auth | ✅ Complete |
 | `depositService.ts` | Session & item tracking | ✅ Complete |
-| `payoutService.ts` | Xendit integration | ✅ Complete |
+| `payoutService.ts` | Operator payout integration | ✅ Complete |
 | `receiptService.ts` | Receipt generation | ✅ Complete |
 | `001_init_schema.sql` | DB table creation | ✅ Complete |
 | `server.ts` | API endpoints | ✅ Complete |
@@ -201,7 +201,7 @@ npm run dev
 # ✅ Database connected successfully
 # ✅ ReVision Kiosk Server running on port 3000
 # 📊 Transaction system: ENABLED (PostgreSQL)
-# 💳 Xendit integration: CONFIGURED
+# 💳 Operator integration: CONFIGURED
 ```
 
 ---
@@ -211,7 +211,7 @@ npm run dev
 ✅ **Data Persistence:** Replaced in-memory state with PostgreSQL  
 ✅ **Security:** Implemented bcrypt PIN hashing & input validation  
 ✅ **Transactions:** Created atomic transaction support with rollback  
-✅ **Payments:** Integrated Xendit with webhook callbacks  
+✅ **Payments:** Integrated operator payouts with webhook callbacks  
 ✅ **Audit Trail:** Added compliance logging for all operations  
 ✅ **Error Handling:** Comprehensive error handling & user feedback  
 ✅ **API:** 16 production-ready endpoints  
@@ -294,8 +294,8 @@ To understand the system:
 **Problem:** PIN validation error  
 → Solution: PINs are hashed. Check bcrypt installation
 
-**Problem:** Xendit not working  
-→ Solution: Set `XENDIT_SECRET_KEY` in .env
+**Problem:** Operator payout not working  
+→ Solution: Set `OPERATOR_PAYOUT_KEY` in .env
 
 **Problem:** Transaction not saved  
 → Solution: Verify database schema: `psql -U postgres -d revision_rvm -c "\dt"`
@@ -312,7 +312,7 @@ To understand the system:
 │ Database Schema:       ✅ COMPLETE  │
 │ API Endpoints:         ✅ COMPLETE  │
 │ Security:              ✅ COMPLETE  │
-│ Xendit Integration:    ✅ COMPLETE  │
+│ Operator Integration:    ✅ COMPLETE  │
 │ Documentation:         ✅ COMPLETE  │
 │                                     │
 │ Frontend Integration:  ⏳ READY     │

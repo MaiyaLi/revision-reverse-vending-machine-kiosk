@@ -43,7 +43,7 @@ Health Check: http://localhost:3000/api/health
 - Database persistence architecture
 - User authentication (bcrypt PIN hashing)
 - Transaction processing (complete lifecycle)
-- Payment gateway integration (Xendit)
+- Payment gateway integration (Operator-assisted)
 - Receipt management
 - Audit logging
 - Error handling (24+ handlers)
@@ -108,7 +108,6 @@ POST /api/redemption/withdraw
 POST /api/receipt/create
 GET  /api/receipt/:id
 POST /api/receipt/print/:id
-POST /api/receipt/sms/:id
 POST /api/receipt/email/:id
 ```
 

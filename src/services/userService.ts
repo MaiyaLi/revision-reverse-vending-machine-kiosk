@@ -198,7 +198,8 @@ export class UserService {
   async updateWalletBalance(
     userId: string,
     amount: number,
-    type: 'DEPOSIT' | 'REDEMPTION' | 'REFUND'
+    type: 'DEPOSIT' | 'REDEMPTION' | 'REFUND',
+    options?: { details?: string; payoutId?: string }
   ): Promise<WalletUpdateResult> {
     try {
       return await db.transaction(async (client) => {
@@ -228,6 +229,22 @@ export class UserService {
           : parseFloat(result.rows[0].totalLifetimeEarnings);
 
         await client.query(updateQuery, [userId, newBalance, newEarnings]);
+
+        await client.query(
+          `INSERT INTO transaction_history (
+            id, "userId", "payoutId", type, amount, "balanceBefore", "balanceAfter", details, "ecoPointsGained", "createdAt", "updatedAt"
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 0, NOW(), NOW())`,
+          [
+            uuidv4(),
+            userId,
+            options?.payoutId || null,
+            type,
+            amount,
+            previousBalance,
+            newBalance,
+            options?.details || null
+          ]
+        );
 
         return {
           previousBalance,
@@ -503,8 +520,10 @@ export class UserService {
   private validatePhoneNumber(phoneNumber: string): void {
     const cleanPhone = phoneNumber.replace(/\D/g, '');
 
-    if (cleanPhone.length < 10 || cleanPhone.length > 12) {
-      throw new Error('Invalid phone number format');
+    const isValidPhilippineNumber = /^(?:09\d{9}|639\d{9})$/.test(cleanPhone);
+
+    if (!isValidPhilippineNumber) {
+      throw new Error('Invalid Philippine phone number format. Use 09XXXXXXXXX or +639XXXXXXXXX');
     }
   }
 

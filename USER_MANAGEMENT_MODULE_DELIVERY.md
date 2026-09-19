@@ -49,7 +49,7 @@ A **complete, production-ready User Management & Database Module** for the ReVis
    - Status tracking
 
 ✅ PayoutTransaction Model
-   - Xendit payment integration
+   - Operator payment integration
    - Multiple channels (GCASH, MAYA, QRPH, CASH, WALLET)
    - Account details for transfers
    - Failure tracking

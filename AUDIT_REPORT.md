@@ -15,7 +15,7 @@ This is a **fully mocked prototype** with excellent UI/UX but **multiple critica
 - ✅ **Frontend UI/UX:** Polished, accessible, multi-language support
 - ✅ **State Management:** Well-structured state machine flow
 - ❌ **Hardware Integration:** Completely stubbed (no real serial/hardware communication)
-- ❌ **Payment Processing:** Mocked Xendit integration with no webhook handlers
+- ❌ **Payment Processing:** Mocked payment integration with no webhook handlers
 - ❌ **Computer Vision:** Relies on dummy Gemini API calls with fallback mock logic
 - ❌ **Error Handling:** Missing exception handling for hardware failures, timeouts, network issues
 - ❌ **Transaction Logging:** No persistent transaction database beyond in-memory state
@@ -406,15 +406,15 @@ const stopWebcam = () => {
 
 ## 💳 SECTION 3: PAYMENT GATEWAY & TRANSACTION FLOW
 
-### 3.1 Xendit Integration - Critical Gaps
+### 3.1 Payment Gateway Integration - Critical Gaps
 
 **File:** `server.ts` (lines 9-13, 160-228, 574-694)
 
-#### Issue: Xendit API calls lack comprehensive error handling and retry logic
+#### Issue: Payment API calls lack comprehensive error handling and retry logic
 
 ```typescript
 // Lines 161-195 - FRAGILE DISBURSEMENT CALL
-async function createXenditDisbursement(params: {
+async function createDisbursement(params: {
   externalId: string;
   amount: number;
   bankCode: string;
@@ -422,15 +422,15 @@ async function createXenditDisbursement(params: {
   accountHolderName: string;
   description: string;
 }) {
-  if (!XENDIT_SECRET_KEY) {
-    throw new Error("Xendit API key not configured");
+  if (!PAYOUT_API_KEY) {
+    throw new Error("Payment API key not configured");
   }
 
-  const response = await fetch(`${XENDIT_BASE_URL}/disbursements`, {
+  const response = await fetch(`${PAYOUT_BASE_URL}/disbursements`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "Authorization": `Basic ${Buffer.from(XENDIT_SECRET_KEY + ":").toString("base64")}`
+      "Authorization": `Basic ${Buffer.from(PAYOUT_API_KEY + ":").toString("base64")}`
     },
     body: JSON.stringify({
       external_id: params.externalId,
@@ -444,7 +444,7 @@ async function createXenditDisbursement(params: {
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.message || "Xendit disbursement failed");  // Generic error
+    throw new Error(error.message || "Disbursement failed");  // Generic error
   }
 
   return await response.json();
@@ -465,12 +465,12 @@ app.post("/api/payout/webhook", (req, res) => {
   const webhookToken = req.headers['x-callback-token'];
 
   // Token verification is naive - should use HMAC signature
-  if (XENDIT_WEBHOOK_TOKEN && webhookToken !== XENDIT_WEBHOOK_TOKEN) {
+  if (OPERATOR_WEBHOOK_TOKEN && webhookToken !== OPERATOR_WEBHOOK_TOKEN) {
     return res.status(401).json({ error: "Invalid webhook token" });
   }
 
   const event = req.body;
-  console.log("Xendit webhook received:", event);
+  console.log("Operator webhook received:", event);
 
   if (event.external_id && event.status) {
     const payout = payoutsDb[event.external_id];
@@ -573,9 +573,9 @@ app.get("/api/payout/status/:externalId", async (req, res) => {
     });
   }
 
-  // Poll Xendit for latest status
+  // Poll Payment Gateway for latest status
   try {
-    const xenditStatus = await getXenditDisbursementStatus(externalId);
+    const payoutStatus = await getDisbursementStatus(externalId);
     // Updates in-memory cache
   } catch (error: any) {
     console.error("Status check error:", error);
@@ -971,7 +971,7 @@ useEffect(() => {
 
 // What if user was in the middle of:
 // - QR code generation API call?
-// - Xendit disbursement request?
+// - Disbursement request?
 // - Coin dispense motor running?
 ```
 
@@ -1006,9 +1006,8 @@ useEffect(() => {
 1. No PDF generation
 2. No thermal printer integration
 3. No email receipt API
-4. No SMS receipt service
-5. Receipt lost if user navigates away
-6. No transaction database backup
+4. Receipt lost if user navigates away
+5. No transaction database backup
 
 ---
 
@@ -1036,7 +1035,7 @@ useEffect(() => {
   - Transaction history persistence
   - Audit trail logging
 
-#### 3. **Xendit Webhook & Reconciliation** [BLOCKER #3]
+#### 3. **Payment Webhook & Reconciliation** [BLOCKER #3]
 - **Impact:** Payouts not verified, money disappears
 - **Effort:** 20-30 hours
 - **Files to Modify:** `server.ts` (lines 746-779)
@@ -1143,12 +1142,6 @@ useEffect(() => {
 - Print queue management
 - Error recovery for printer jams
 
-#### 17. **SMS Gateway Setup** [INTEGRATION #10]
-- Twilio/SendGrid integration
-- Receipt template formatting
-- Delivery confirmation
-- Failed send retry logic
-
 #### 18. **Email Service** [INTEGRATION #11]
 - PDF generation library (pdfkit)
 - Email template HTML
@@ -1199,7 +1192,7 @@ useEffect(() => {
 - Implement receipt retry queue
 - Show manual receipt number to customer
 - Store receipt in cloud backup
-- Allow SMS/email as alternative
+- Allow email as alternative
 
 #### 26. **Network Timeout on Payout** [EDGE CASE #7]
 - Implement retry with exponential backoff
@@ -1569,9 +1562,9 @@ Create `.env` with these additions:
 # GEMINI AI Vision
 GEMINI_API_KEY=your_actual_key_here
 
-# Xendit E-Wallet Payouts
-XENDIT_SECRET_KEY=xnd_live_YOUR_LIVE_KEY
-XENDIT_WEBHOOK_TOKEN=your_secure_random_token
+# Payment E-Wallet Payouts (Operator-assisted)
+OPERATOR_PAYOUT_KEY=your_operator_key
+OPERATOR_WEBHOOK_TOKEN=your_secure_random_token
 
 # Database
 DATABASE_URL=postgresql://user:password@localhost:5432/revision_rvm
@@ -1581,12 +1574,6 @@ DATABASE_POOL_SIZE=20
 HARDWARE_PORT=/dev/ttyUSB0  # Linux: /dev/ttyUSB0, macOS: /dev/tty.usbserial*, Windows: COM3
 HARDWARE_BAUD_RATE=115200
 HARDWARE_TIMEOUT_MS=5000
-
-# SMS Gateway (Twilio)
-TWILIO_ACCOUNT_SID=AC...
-TWILIO_AUTH_TOKEN=...
-TWILIO_FROM_NUMBER=+1...
-
 # Email Service (SendGrid)
 SENDGRID_API_KEY=SG...
 
@@ -1613,9 +1600,9 @@ PORT=3000
 - [ ] Database schema finalized & tested
 - [ ] Hardware firmware uploaded to ESP32
 - [ ] Serial port communication tested
-- [ ] Xendit sandbox testing completed
+- [ ] Payment sandbox testing completed
 - [ ] QRPh integration verified
-- [ ] SMS/Email templates tested
+- [ ] Email templates tested
 - [ ] Thermal printer integration verified
 - [ ] Error modals designed & implemented
 - [ ] Offline mode fallback implemented
@@ -1640,7 +1627,7 @@ PORT=3000
 **Estimated Timeline:**
 - Week 1-2: Database + Hardware drivers
 - Week 3: Core hardware integration
-- Week 4: Payment processing + Xendit
+- Week 4: Payment processing + integration
 - Week 5: Edge case handling + error recovery
 - Week 6: Testing + deployment prep
 

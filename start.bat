@@ -29,9 +29,9 @@ if not exist ".env" (
         echo # Database Configuration
         echo DATABASE_URL=postgresql://postgres:password@localhost:5432/revision_rvm
         echo.
-        echo # Xendit Configuration
-        echo XENDIT_SECRET_KEY=xnd_development_key
-        echo XENDIT_WEBHOOK_TOKEN=webhook_token_secret
+        echo # Payout Configuration (Operator-assisted)
+        echo OPERATOR_PAYOUT_KEY=your_operator_key
+        echo OPERATOR_WEBHOOK_TOKEN=your_webhook_token
         echo.
         echo # Gemini AI Configuration
         echo GEMINI_API_KEY=your_gemini_api_key

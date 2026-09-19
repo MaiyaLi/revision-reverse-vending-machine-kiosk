@@ -13,8 +13,8 @@
 **Fixed Issues:**
 - ✅ Database persistence (PostgreSQL architecture)
 - ✅ User authentication (bcrypt PIN hashing)
-- ✅ Transaction processing (Xendit integration)
-- ✅ Payment gateway (webhook support)
+- ✅ Transaction processing (Operator-assisted payouts ready)
+- ✅ Payment gateway (webhook support via operator)
 - ✅ Receipt management (storage & tracking)
 - ✅ Audit logging (complete trail)
 - ✅ Error handling (comprehensive)
@@ -92,7 +92,7 @@ API Endpoints: 30 (All Active)
 - ✅ Production architecture
 - ✅ PostgreSQL persistence (optional demo)
 - ✅ Secure authentication (bcrypt)
-- ✅ Real payment integration
+- ✅ Real payment integration (operator-assisted)
 - ✅ Database-backed storage
 - ✅ Comprehensive error handling
 
@@ -131,7 +131,7 @@ API Endpoints: 30 (All Active)
 - POST /api/receipt/create
 - GET /api/receipt/:id
 - POST /api/receipt/print/:id
-- POST /api/receipt/sms/:id
+- POST /api/receipt/email/:id
 
 ### Health Check (1)
 - GET /api/health

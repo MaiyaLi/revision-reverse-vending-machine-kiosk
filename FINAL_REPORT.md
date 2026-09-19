@@ -11,7 +11,7 @@
 
 The ReVision kiosk has been transformed from a prototype with stubbed logic into a **production-grade transaction system** with persistent data, secure authentication, real payment processing, and full audit compliance.
 
-**What you have:** A complete backend that handles deposits, payouts, receipts, and user management with PostgreSQL persistence and Xendit integration.
+**What you have:** A complete backend that handles deposits, payouts, receipts, and user management with PostgreSQL persistence and manual operator-assisted payouts.
 
 **What's left:** Frontend integration to call the new API endpoints, then you're live.
 
@@ -54,7 +54,7 @@ The ReVision kiosk has been transformed from a prototype with stubbed logic into
    → Atomic user balance updates
 
 ✅ src/services/payoutService.ts (250 lines)
-   → Xendit GCash/Maya disbursement
+   → Manual GCash/Maya disbursement
    → QRPh payout link generation
    → Webhook callback handler
    → Phone validation & amount limits
@@ -62,7 +62,7 @@ The ReVision kiosk has been transformed from a prototype with stubbed logic into
 ✅ src/services/receiptService.ts (90 lines)
    → Receipt generation with transaction IDs
    → Print count & timestamp tracking
-   → SMS/Email delivery logging
+   → Email delivery logging
    → Receipt retrieval by transaction ID
 ```
 
@@ -97,7 +97,7 @@ The ReVision kiosk has been transformed from a prototype with stubbed logic into
 
 ✅ .env (Updated)
    → DATABASE_URL configuration
-   → Xendit keys placeholder
+   → Payout keys placeholder
    → NODE_ENV & PORT settings
 ```
 
@@ -163,7 +163,7 @@ GET /api/payout/status/:externalId
   → Output: status (PENDING/COMPLETED/FAILED)
 
 POST /api/payout/webhook
-  → Input: Xendit webhook payload
+  → Input: Operator webhook payload
   → Output: { success: true }
 ```
 
@@ -174,7 +174,7 @@ POST /api/redemption/withdraw
   → Output: newBalance, deductedAmount
 ```
 
-### Receipts (4)
+### Receipts (3)
 ```
 POST /api/receipt/create
   → Input: transactionId, sessionId, userId
@@ -185,9 +185,6 @@ GET /api/receipt/:transactionId
 
 POST /api/receipt/print/:transactionId
   → Output: { printed: true, count: N }
-
-POST /api/receipt/sms/:transactionId
-  → Output: { sent: true, deliveredAt: timestamp }
 
 POST /api/receipt/email/:transactionId
   → Output: { sent: true, deliveredAt: timestamp }
@@ -207,7 +204,7 @@ POST /api/receipt/email/:transactionId
 - Zero string concatenation
 - Database-level prepared statements
 
-✅ **Xendit Webhook Verification**
+✅ **Operator Webhook Verification**
 - Token validation on every callback
 - Timestamp checking
 - Event type validation
@@ -269,7 +266,7 @@ deposited_items
 
 payout_transactions
 ├─ external_id (VARCHAR, UNIQUE)
-├─ xendit_id
+├─ operator_id
 ├─ session_id (FK)
 ├─ user_id (FK)
 ├─ amount
@@ -294,7 +291,6 @@ receipts
 ├─ printed_count
 ├─ printed_at
 ├─ email_sent_at
-└─ sms_sent_at
 
 audit_log
 ├─ event_type
@@ -330,7 +326,7 @@ bin_inventory
 7. idx_items_session_id
 8. idx_items_material
 9. idx_payouts_external_id (UNIQUE)
-10. idx_payouts_xendit_id (UNIQUE)
+10. idx_payouts_operator_id (UNIQUE)
 11. idx_payouts_user_id
 12. idx_payouts_status
 13. idx_history_user_id
@@ -363,7 +359,7 @@ bin_inventory
 - Full audit trail
 
 ### ✅ Payment Processing
-- GCash/Maya disbursement via Xendit
+- GCash/Maya disbursement via operator
 - QRPh payout links
 - Cash dispense logging
 - Payout status tracking
@@ -373,7 +369,7 @@ bin_inventory
 - Transaction ID generation
 - Receipt storage in database
 - Print tracking (count & timestamp)
-- SMS/Email delivery logging
+- Email delivery logging
 - Receipt retrieval by transaction ID
 
 ### ✅ Security
@@ -425,10 +421,10 @@ bin_inventory
                        ↓
         ┌──────────────────────────┐
         │ Step 5: Process Payout   │
-        │ If Xendit:               │
+        │ If Operator:             │
         │ - Validate phone         │
-        │ - Call Xendit API        │
-        │ - Wait for webhook       │
+        │ - Create payout record   │
+        │ - Operator processes     │
         │ status: COMPLETED        │
         └──────────────┬───────────┘
                        ↓
@@ -436,7 +432,7 @@ bin_inventory
         │ Step 6: Generate Receipt │
         │ transaction_id: TXN-...  │
         │ Store in database        │
-        │ Print/Send via SMS/Email │
+        │ Print/Send via Email     │
         └──────────────┬───────────┘
                        ↓
         ┌──────────────────────────┐
@@ -465,8 +461,8 @@ psql -U postgres -d revision_rvm -f migrations/001_init_schema.sql
 ### 3. Configure .env
 ```bash
 DATABASE_URL="postgresql://postgres:password@localhost:5432/revision_rvm"
-XENDIT_SECRET_KEY="xnd_development_YOUR_KEY"
-XENDIT_WEBHOOK_TOKEN="your_webhook_token"
+OPERATOR_PAYOUT_KEY="your_operator_key"
+OPERATOR_WEBHOOK_TOKEN="your_webhook_token"
 NODE_ENV="development"
 PORT="3000"
 ```
@@ -507,7 +503,7 @@ After setup, verify:
 - [ ] Can register user via API
 - [ ] Can login with PIN
 - [ ] Transaction data persists after server restart
-- [ ] Xendit webhook token configured
+- [ ] Operator webhook token configured
 
 ---
 
@@ -537,7 +533,7 @@ After setup, verify:
 | **Data Storage** | In-memory (lost on restart) | ✅ PostgreSQL (permanent) |
 | **User PINs** | Plain text | ✅ bcrypt hashed |
 | **Transactions** | Simulated | ✅ Real transaction records |
-| **Payout Status** | Mocked | ✅ Xendit integrated + webhook |
+| **Payout Status** | Mocked | ✅ Operator integrated + webhook |
 | **Receipts** | Component state | ✅ Database stored + tracking |
 | **Validation** | Minimal | ✅ Comprehensive |
 | **Error Handling** | Silent failures | ✅ Detailed logging |
@@ -567,7 +563,7 @@ After setup, verify:
 
 ### Phase 4: Deployment (1-2 days)
 - Production database setup
-- Xendit live keys
+- Operator payout keys
 - SSL/TLS certificates
 - Monitoring & alerts
 
@@ -671,7 +667,7 @@ revision-reverse-vending-machine-kiosk/
 
 🏆 **Zero Data Loss** - PostgreSQL persistence  
 🔐 **Enterprise Security** - bcrypt + validation + webhooks  
-💰 **Real Payments** - Xendit integration  
+💰 **Real Payments** - Operator-assisted payout integration  
 📊 **Full Compliance** - Audit trail  
 ⚡ **Production Ready** - Connection pooling + timeouts  
 🔄 **Atomic Transactions** - ACID guarantees  

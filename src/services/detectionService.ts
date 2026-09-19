@@ -2,9 +2,18 @@ import { spawn } from "child_process";
 import fs from "fs";
 import path from "path";
 import dotenv from "dotenv";
+import { db } from './database';
 import { localDetectionService } from "./localDetectionService";
 
 dotenv.config();
+
+function uuidv4(): string {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
 
 export interface BoundingBox {
   x: number;
@@ -38,6 +47,9 @@ export class DetectionService {
 
   constructor() {
     console.log("🧠 Using YOLO local detection (Ultralytics)");
+    this.loadHistoryFromDb().catch((err) => {
+      console.warn("⚠️  Failed to load detection history from DB:", err);
+    });
   }
 
   getLastImage(): string | null {
@@ -46,6 +58,72 @@ export class DetectionService {
 
   getHistory(): DetectionResult[] {
     return this.detectionHistory;
+  }
+
+  async getHistoryFromDb(limit: number = 20): Promise<DetectionResult[]> {
+    if (!db.isConnected()) {
+      return this.detectionHistory.slice(0, limit);
+    }
+    try {
+      const rows = await db.query(
+        `SELECT * FROM detection_history
+         WHERE "timestamp" IS NOT NULL
+         ORDER BY "timestamp" DESC
+         LIMIT $1`,
+        [limit]
+      );
+      return rows.map((r: any) => ({
+        detectedMaterial: r.detectedMaterial,
+        itemName: r.itemName || '',
+        confidence: parseFloat(r.confidence || 0),
+        estimatedWeightGrams: parseInt(r.estimatedWeightGrams || 0),
+        timestamp: r.timestamp instanceof Date ? r.timestamp.toISOString() : r.timestamp,
+        imageBase64: r.imageBase64,
+        reasoning: 'Loaded from database',
+      }));
+    } catch (error) {
+      console.warn("⚠️  Failed to load detection history from DB:", (error as Error).message);
+      return this.detectionHistory.slice(0, limit);
+    }
+  }
+
+  async loadHistoryFromDb(): Promise<void> {
+    if (!db.isConnected()) return;
+    try {
+      const rows = await db.query(
+        `SELECT * FROM detection_history
+         ORDER BY "timestamp" DESC
+         LIMIT 50`
+      );
+      this.detectionHistory = rows.map((r: any) => ({
+        detectedMaterial: r.detectedMaterial,
+        itemName: r.itemName || '',
+        confidence: parseFloat(r.confidence || 0),
+        estimatedWeightGrams: parseInt(r.estimatedWeightGrams || 0),
+        timestamp: r.timestamp instanceof Date ? r.timestamp.toISOString() : r.timestamp,
+        imageBase64: r.imageBase64,
+        reasoning: 'Loaded from database',
+      }));
+      console.log(`📊 Loaded ${this.detectionHistory.length} detection(s) from database`);
+    } catch (error) {
+      console.warn("⚠️  Failed to load detection history from DB:", (error as Error).message);
+    }
+  }
+
+  async saveDetectionResult(item: DetectionResult): Promise<void> {
+    if (!db.isConnected()) return;
+    try {
+      await db.query(
+        `INSERT INTO detection_history (
+          id, "detectedMaterial", "itemName", "confidence", "estimatedWeightGrams",
+          "imageBase64", "timestamp", "createdAt"
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())`,
+        [uuidv4(), item.detectedMaterial, item.itemName || null, item.confidence,
+         item.estimatedWeightGrams, item.imageBase64, item.timestamp]
+      );
+    } catch (error) {
+      console.warn("⚠️  Failed to save detection result to DB:", (error as Error).message);
+    }
   }
 
   async captureImage(): Promise<string | null> {
@@ -113,9 +191,10 @@ export class DetectionService {
       if (items.length > 0) {
         for (const item of items) {
           this.detectionHistory.unshift(item);
+          void this.saveDetectionResult(item);
         }
       } else {
-        this.detectionHistory.unshift({
+        const noItemResult: DetectionResult = {
           detectedMaterial: "other",
           itemName: "No items detected",
           confidence: 0,
@@ -123,7 +202,9 @@ export class DetectionService {
           timestamp: new Date().toISOString(),
           imageBase64: image,
           reasoning: "YOLO returned 0 detections for this frame"
-        });
+        };
+        this.detectionHistory.unshift(noItemResult);
+        void this.saveDetectionResult(noItemResult);
       }
       if (this.detectionHistory.length > 50) {
         this.detectionHistory = this.detectionHistory.slice(0, 50);

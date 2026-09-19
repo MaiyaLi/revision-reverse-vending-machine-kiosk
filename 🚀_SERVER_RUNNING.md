@@ -43,7 +43,7 @@ POST   http://localhost:3000/api/redemption/withdraw
 POST   http://localhost:3000/api/receipt/create
 GET    http://localhost:3000/api/receipt/:id
 POST   http://localhost:3000/api/receipt/print/:id
-POST   http://localhost:3000/api/receipt/sms/:id
+POST   http://localhost:3000/api/receipt/email/:id
 ```
 
 ### User Management (14 endpoints)
@@ -96,7 +96,7 @@ curl http://localhost:3000/api/user/REV-10024
 ✅ **Transaction Management System**
    - 5 backend services
    - 16 API endpoints
-   - Payment processing (Xendit ready)
+   - Payment processing (Operator ready)
    - Receipt management
    - Complete audit trail
 
@@ -144,7 +144,7 @@ npm run dev
 ```
 ✅ ReVision Reverse Vending Machine Kiosk Server running on port 3000
 📊 Transaction system: ENABLED
-💳 Xendit integration: CONFIGURED
+💳 Operator integration: CONFIGURED
 ⚠️  Database not available - running in demo mode
 ```
 

@@ -2,12 +2,17 @@ import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 import dotenv from "dotenv";
+import https from "https";
+import fs from "fs";
+import cookieParser from "cookie-parser";
+import csurf from "csurf";
 
 // Import database services
 import { db } from "./src/services/database";
 import { userService } from "./src/services/userService";
 import { depositService } from "./src/services/depositService";
 import { payoutService } from "./src/services/payoutService";
+import { operatorService } from "./src/services/operatorService";
 import { receiptService } from "./src/services/receiptService";
 import { detectionService } from "./src/services/detectionService";
 import { printReceipt } from "./src/services/printerService";
@@ -19,10 +24,21 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const HTTPS_PORT = process.env.HTTPS_PORT || 3443;
+const enableHttps = process.env.ENABLE_HTTPS === "true";
+const sslKeyPath = process.env.SSL_KEY_PATH || "certs/key.pem";
+const sslCertPath = process.env.SSL_CERT_PATH || "certs/cert.pem";
+const defaultOrigins = [`http://localhost:${PORT}`];
+if (process.env.APP_URL) defaultOrigins.push(process.env.APP_URL);
+if (enableHttps) defaultOrigins.push(`https://localhost:${HTTPS_PORT}`);
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || defaultOrigins.join(",")).split(",").map((o) => o.trim());
 
-// CORS for mobile app / remote access
+// CORS for mobile app / remote access — whitelist specific origins
 app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "*");
+  const origin = req.header("Origin");
+  if (origin && allowedOrigins.includes(origin)) {
+    res.header("Access-Control-Allow-Origin", origin);
+  }
   res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
   res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
   if (req.method === "OPTIONS") {
@@ -34,6 +50,128 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: '10mb' }));
 
 // ============================================
+// CSRF PROTECTION
+// ============================================
+
+interface RateLimitEntry {
+  count: number;
+  resetTime: number;
+}
+
+const rateLimitStore: Map<string, RateLimitEntry> = new Map();
+
+function rateLimit(windowMs: number, max: number, message: string) {
+  const limitKey = `${windowMs}:${max}`;
+
+  const checkInMemory = (key: string, now: number) => {
+    const entry = rateLimitStore.get(key);
+    if (entry && entry.resetTime < now) {
+      rateLimitStore.delete(key);
+    }
+    const current = rateLimitStore.get(key);
+    if (current && current.count >= max) {
+      const retryAfter = Math.ceil((current.resetTime - now) / 1000);
+      return { blocked: true, retryAfter, entry: current };
+    }
+    if (current) {
+      current.count++;
+    } else {
+      rateLimitStore.set(key, { count: 1, resetTime: now + windowMs });
+    }
+    return { blocked: false };
+  };
+
+  return async (req: any, res: any, next: any) => {
+    const key = req.ip || req.socket?.remoteAddress || 'unknown';
+    const storeKey = `${limitKey}:${key}`;
+    const now = Date.now();
+
+    if (db.isConnected()) {
+      try {
+        const resetTime = new Date(now + windowMs);
+
+        await db.query(
+          `INSERT INTO rate_limits ("key", "count", "resetTime")
+           VALUES ($1, 1, $2)
+           ON CONFLICT ("key") DO UPDATE
+           SET "count" = rate_limits."count" + 1,
+               "resetTime" = CASE
+                 WHEN rate_limits."resetTime" < NOW() THEN $2
+                 ELSE rate_limits."resetTime"
+               END`,
+          [storeKey, resetTime]
+        );
+
+        const row = await db.queryOne(
+          `SELECT "count", "resetTime" FROM rate_limits WHERE "key" = $1`,
+          [storeKey]
+        );
+
+        if (row && new Date(row.resetTime).getTime() > now && row.count > max) {
+          const retryAfter = Math.ceil((new Date(row.resetTime).getTime() - now) / 1000);
+          res.setHeader('Retry-After', retryAfter);
+          return res.status(429).json({ success: false, error: message });
+        }
+
+        next();
+        return;
+      } catch (error) {
+        console.warn('Rate limit DB error, falling back to in-memory:', (error as Error).message);
+      }
+    }
+
+    const result = checkInMemory(storeKey, now);
+    if (result.blocked) {
+      res.setHeader('Retry-After', result.retryAfter);
+      return res.status(429).json({ success: false, error: message });
+    }
+    next();
+  };
+}
+
+const csrfSecret = process.env.CSRF_SECRET || "revision-rvm-csrf-secret";
+
+app.use(cookieParser(csrfSecret));
+app.use(csurf({
+  cookie: {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    maxAge: 3600000,
+  },
+}));
+
+// Endpoint for clients to obtain a CSRF token
+app.get("/api/csrf-token", (req: any, res: any) => {
+  res.json({ csrfToken: req.csrfToken() });
+});
+
+// ============================================
+// RATE LIMITING
+// ============================================
+
+// General rate limit: 100 requests per 15 minutes
+app.use(rateLimit(15 * 60 * 1000, 100, 'Too many requests. Please try again later.'));
+
+// Stricter rate limit for auth and wallet endpoints: 10 requests per minute
+const authRateLimit = rateLimit(60 * 1000, 10, 'Too many authentication attempts. Please try again later.');
+
+app.use('/api/auth', authRateLimit);
+app.use('/api/payout/wallet', authRateLimit);
+app.use('/api/wallet/credit', authRateLimit);
+app.use('/api/redemption', authRateLimit);
+app.use('/api/payout/disburse', authRateLimit);
+
+// Stricter PIN brute-force protection: 5 attempts per 30 seconds
+app.use('/api/auth/login', rateLimit(30 * 1000, 5, 'Too many login attempts. Please try again later.'));
+
+// ============================================
+// USER ROUTES
+// ============================================
+
+app.use("/api/user", userRoutes);
+
+// ============================================
 // HEALTH CHECK
 // ============================================
 
@@ -41,7 +179,7 @@ app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
-    database: 'connected'
+    database: db.isConnected() ? 'connected' : 'disconnected'
   });
 });
 
@@ -54,7 +192,7 @@ app.post("/api/auth/register", async (req, res) => {
     const { fullName, mobileNumber, pin, emailAddress, age, barangay, profilePhoto } = req.body;
     
     if (!fullName) {
-      return res.status(400).json({ error: "Full name is required" });
+      return res.status(400).json({ success: false, error: "Full name is required" });
     }
 
     const memberId = `REV-${Date.now().toString(36).toUpperCase()}`;
@@ -70,7 +208,7 @@ app.post("/api/auth/register", async (req, res) => {
     });
     res.status(201).json({ success: true, user });
   } catch (error: any) {
-    res.status(400).json({ error: error.message });
+    res.status(400).json({ success: false, error: error.message });
   }
 });
 
@@ -78,22 +216,20 @@ app.post("/api/auth/login", async (req, res) => {
   try {
     const { credential, pin } = req.body;
     if (!credential || !pin) {
-      return res.status(400).json({ error: "Mobile/ID and PIN are required" });
+      return res.status(400).json({ success: false, error: "Mobile/ID and PIN are required" });
     }
 
     const user = await userService.loginUser(credential, pin);
 
     if (!user) {
-      return res.status(401).json({ error: "Invalid PIN or credentials" });
+      return res.status(401).json({ success: false, error: "Invalid PIN or credentials" });
     }
 
     res.json({ success: true, user });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
-
-app.use("/api/user", userRoutes);
 
 // ============================================
 // DEPOSIT SESSION ENDPOINTS
@@ -105,7 +241,7 @@ app.post("/api/deposit/session/start", async (req, res) => {
     const sessionRefId = await depositService.createSession(userId || null);
     res.json({ success: true, sessionRefId });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
@@ -115,7 +251,7 @@ app.post("/api/deposit/item/add", async (req, res) => {
     await depositService.addItem(sessionRefId, item);
     res.json({ success: true });
   } catch (error: any) {
-    res.status(400).json({ error: error.message });
+    res.status(400).json({ success: false, error: error.message });
   }
 });
 
@@ -127,7 +263,7 @@ app.post("/api/deposit/complete", async (req, res) => {
 
     const transactionId = `TXN-${Math.floor(100000 + Math.random() * 900000)}`;
 
-    // Persist the receipt record so email/SMS/print endpoints can find it later
+    // Persist the receipt record so email/print endpoints can find it later
     try {
       await receiptService.createReceipt({
         sessionId: session.id,
@@ -152,7 +288,7 @@ app.post("/api/deposit/complete", async (req, res) => {
       updatedUser: userId ? await userService.getUserById(userId) : null
     });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
@@ -160,113 +296,47 @@ app.get("/api/deposit/session/:sessionRefId", async (req, res) => {
   try {
     const session = await depositService.getSession(req.params.sessionRefId);
     if (!session) {
-      return res.status(404).json({ error: "Session not found" });
+      return res.status(404).json({ success: false, error: "Session not found" });
     }
     res.json(session);
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
 // ============================================
-// PAYOUT ENDPOINTS
+// REDEMPTION ENDPOINTS
 // ============================================
-
-app.post("/api/payout/direct", async (req, res) => {
-  try {
-    const result = await payoutService.createDisbursement(req.body);
-    res.json({
-      success: true,
-      externalId: result.external_id,
-      status: result.status,
-      xenditId: result.xendit_id
-    });
-  } catch (error: any) {
-    res.status(400).json({ error: error.message });
-  }
-});
-
-app.post("/api/payout/link", async (req, res) => {
-  try {
-    const result = await payoutService.createPayoutLink(req.body);
-    res.json({
-      success: true,
-      payoutUrl: result.payout_url,
-      externalId: result.external_id
-    });
-  } catch (error: any) {
-    res.status(400).json({ error: error.message });
-  }
-});
-
-app.post("/api/payout/cash", async (req, res) => {
-  try {
-    const result = await payoutService.createCashDispense(req.body);
-    res.json({
-      success: true,
-      externalId: result.external_id,
-      status: 'COMPLETED'
-    });
-  } catch (error: any) {
-    res.status(400).json({ error: error.message });
-  }
-});
-
-app.get("/api/payout/status/:externalId", async (req, res) => {
-  try {
-    const result = await payoutService.checkPayoutStatus(req.params.externalId);
-    res.json({
-      externalId: result.external_id,
-      status: result.status,
-      failureReason: result.failure_reason
-    });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.post("/api/payout/webhook", async (req, res) => {
-  try {
-    const token = req.headers['x-callback-token'];
-    if (token !== process.env.XENDIT_WEBHOOK_TOKEN) {
-      return res.status(401).json({ error: "Invalid webhook token" });
-    }
-
-    await payoutService.handleWebhook(req.body);
-    res.json({ received: true });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
-  }
-});
 
 app.post("/api/redemption/withdraw", async (req, res) => {
   try {
     const { memberId, userId, payoutMethod, amount, provider } = req.body;
 
     if (!amount || amount <= 0) {
-      return res.status(400).json({ error: "Invalid redemption amount" });
+      return res.status(400).json({ success: false, error: "Invalid redemption amount" });
     }
 
     // Accept either memberId or userId
     const identifier = memberId || userId;
     if (!identifier) {
-      return res.status(400).json({ error: "memberId or userId is required" });
+      return res.status(400).json({ success: false, error: "memberId or userId is required" });
     }
 
     const user = await userService.findUserByCredential(identifier);
     if (!user) {
-      return res.status(404).json({ error: "User not found" });
+      return res.status(404).json({ success: false, error: "User not found" });
     }
 
-    if (parseFloat(user.wallet_balance) < amount) {
-      return res.status(400).json({ error: "Insufficient wallet balance" });
+    if (parseFloat(user.walletBalance) < amount) {
+      return res.status(400).json({ success: false, error: "Insufficient wallet balance" });
     }
 
     // Update wallet balance
     const updatedUser = await userService.updateWalletBalance(
       user.id,
       -amount,
-      'REDEMPTION'
+      'REDEMPTION',
+      { details: `Withdrawal - ${payoutMethod || 'wallet'}` }
     );
 
     res.json({
@@ -278,7 +348,7 @@ app.post("/api/redemption/withdraw", async (req, res) => {
       hardwareStatus: { status: 'Normal' }
     });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
@@ -292,18 +362,19 @@ app.post("/api/payout/wallet", async (req, res) => {
     const { userId, amount, sessionId } = req.body;
 
     if (!userId || !amount || amount <= 0) {
-      return res.status(400).json({ error: "Invalid payout request" });
+      return res.status(400).json({ success: false, error: "Invalid payout request" });
     }
 
     const user = await userService.getUserById(userId);
     if (!user) {
-      return res.status(404).json({ error: "User not found" });
+      return res.status(404).json({ success: false, error: "User not found" });
     }
 
     const updatedUser = await userService.updateWalletBalance(
       user.id,
       amount,
-      'DEPOSIT'
+      'DEPOSIT',
+      { details: `Wallet payout${sessionId ? ` for session ${sessionId}` : ''}` }
     );
 
     res.json({
@@ -315,7 +386,7 @@ app.post("/api/payout/wallet", async (req, res) => {
       payoutMethod: 'wallet'
     });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
@@ -324,18 +395,19 @@ app.post("/api/wallet/credit", async (req, res) => {
     const { userId, amount, details } = req.body;
 
     if (!userId || !amount || amount <= 0) {
-      return res.status(400).json({ error: "Invalid credit request" });
+      return res.status(400).json({ success: false, error: "Invalid credit request" });
     }
 
     const user = await userService.getUserById(userId);
     if (!user) {
-      return res.status(404).json({ error: "User not found" });
+      return res.status(404).json({ success: false, error: "User not found" });
     }
 
     const updatedUser = await userService.updateWalletBalance(
       user.id,
       amount,
-      'DEPOSIT'
+      'DEPOSIT',
+      { details: `Wallet credit${details ? `: ${details}` : ''}` }
     );
 
     res.json({
@@ -344,7 +416,7 @@ app.post("/api/wallet/credit", async (req, res) => {
       updatedUser
     });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
@@ -353,18 +425,19 @@ app.post("/api/redemption/coin-deposit", async (req, res) => {
     const { userId, amount } = req.body;
 
     if (!userId || !amount || amount <= 0) {
-      return res.status(400).json({ error: "Invalid deposit amount" });
+      return res.status(400).json({ success: false, error: "Invalid deposit amount" });
     }
 
     const user = await userService.getUserById(userId);
     if (!user) {
-      return res.status(404).json({ error: "User not found" });
+      return res.status(404).json({ success: false, error: "User not found" });
     }
 
     const updatedUser = await userService.updateWalletBalance(
       user.id,
       amount,
-      'DEPOSIT'
+      'DEPOSIT',
+      { details: 'Coin deposit' }
     );
 
     res.json({
@@ -375,7 +448,7 @@ app.post("/api/redemption/coin-deposit", async (req, res) => {
       updatedUser
     });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
@@ -385,28 +458,39 @@ app.post("/api/payout/disburse", async (req, res) => {
     const { userId, amount, sessionId, channel, accountNumber, accountName } = req.body;
 
     if (!amount || amount <= 0) {
-      return res.status(400).json({ error: "Invalid disbursement amount" });
+      return res.status(400).json({ success: false, error: "Invalid disbursement amount" });
     }
 
-    const disbursement = await payoutService.createDisbursement({
-      sessionId: sessionId || '',
+    if (userId) {
+      const user = await userService.getUserById(userId);
+      if (!user) {
+        return res.status(404).json({ success: false, error: "User not found" });
+      }
+
+      if (user.walletBalance < amount) {
+        return res.status(400).json({ success: false, error: "Insufficient wallet balance" });
+      }
+    }
+
+    const disbursement = await operatorService.requestPayout({
+      sessionId: sessionId || null,
       userId: userId || null,
       amount,
       channel: channel || 'GCASH',
-      accountNumber: accountNumber || '',
-      accountName: accountName || 'User'
+      recipientPhone: accountNumber || '',
+      recipientName: accountName || 'User'
     });
 
     res.json({
       success: true,
-      transactionId: disbursement.externalId,
+      transactionId: disbursement.referenceId,
       timestamp: new Date().toISOString(),
       amountDisbursed: amount,
       status: disbursement.status,
-      payoutMethod: 'qrph'
+      payoutMethod: 'operator-qrph'
     });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
@@ -416,7 +500,7 @@ app.post("/api/payout/cash", async (req, res) => {
     const { userId, amount, sessionId } = req.body;
 
     if (!amount || amount <= 0) {
-      return res.status(400).json({ error: "Invalid cash amount" });
+      return res.status(400).json({ success: false, error: "Invalid cash amount" });
     }
 
     const cashout = await payoutService.createCashDispense({
@@ -433,20 +517,16 @@ app.post("/api/payout/cash", async (req, res) => {
       payoutMethod: 'cash'
     });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
-
-// ============================================
-// RECEIPT ENDPOINTS
-// ============================================
 
 app.post("/api/receipt/create", async (req, res) => {
   try {
     const receipt = await receiptService.createReceipt(req.body);
     res.json({ success: true, receipt });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
@@ -454,11 +534,11 @@ app.get("/api/receipt/:transactionId", async (req, res) => {
   try {
     const receipt = await receiptService.getReceipt(req.params.transactionId);
     if (!receipt) {
-      return res.status(404).json({ error: "Receipt not found" });
+      return res.status(404).json({ success: false, error: "Receipt not found" });
     }
     res.json(receipt);
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
@@ -488,7 +568,7 @@ app.post("/api/receipt/print/:transactionId", async (req, res) => {
     const result = await receiptService.printReceipt(req.params.transactionId);
     res.json({ success: true, printed: true });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
@@ -508,7 +588,7 @@ app.post("/api/printer/test", async (req, res) => {
     const printed = await receiptService.printReceiptData(testReceipt);
     res.json({ success: true, printed, message: printed ? "Test receipt sent to printer" : "Printer not available" });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
@@ -518,17 +598,7 @@ app.post("/api/printer/raw-test", async (req, res) => {
     const result = await receiptService.testPrinterCommands();
     res.json({ success: true, result });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.post("/api/receipt/sms/:transactionId", async (req, res) => {
-  try {
-    const { phoneNumber } = req.body;
-    await receiptService.sendViaSMS(req.params.transactionId, phoneNumber);
-    res.json({ success: true });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
@@ -538,7 +608,7 @@ app.post("/api/receipt/email/:transactionId", async (req, res) => {
     await receiptService.sendViaEmail(req.params.transactionId, emailAddress);
     res.json({ success: true });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
@@ -547,11 +617,11 @@ app.post("/api/receipt/email/:transactionId", async (req, res) => {
 // ============================================
 
 // Start rpicam-vid as a persistent MJPEG stream
-let mjpegStream: ReturnType<typeof setInterval> | null = null;
+let mjpegStreamProc: any = null;
 let mjpegStreamPath: string | null = null;
 
 function startMjpegStream() {
-  if (mjpegStream) return;
+  if (mjpegStreamProc) return;
   const { spawn } = require("child_process");
   const streamPath = "/tmp/rvm-mjpeg-stream.mjpeg";
   const proc = spawn("rpicam-vid", [
@@ -564,9 +634,25 @@ function startMjpegStream() {
   ], {
     stdio: ["ignore", "ignore", "ignore"]
   });
-  proc.on("error", () => {});
-  mjpegStream = setInterval(() => {}, 1000);
+
+  proc.on("error", (err: Error) => {
+    console.error("MJPEG stream process error:", err.message);
+  });
+
+  proc.on("close", () => {
+    mjpegStreamProc = null;
+  });
+
+  mjpegStreamProc = proc;
   mjpegStreamPath = streamPath;
+}
+
+function stopMjpegStream() {
+  if (mjpegStreamProc) {
+    mjpegStreamProc.kill();
+    mjpegStreamProc = null;
+  }
+  mjpegStreamPath = null;
 }
 
 // Serve a continuous MJPEG stream from rpicam-vid
@@ -577,6 +663,16 @@ app.get("/api/camera/stream", (req, res) => {
 
   const { spawn } = require("child_process");
   let proc: any;
+  let cleanedUp = false;
+  let timeout: ReturnType<typeof setTimeout> | null = null;
+
+  const cleanup = () => {
+    if (cleanedUp) return;
+    cleanedUp = true;
+    if (timeout) clearTimeout(timeout);
+    if (proc) proc.kill();
+    res.end();
+  };
 
   try {
     proc = spawn("rpicam-vid", [
@@ -585,46 +681,46 @@ app.get("/api/camera/stream", (req, res) => {
       "--width", "640",
       "--height", "480",
       "--framerate", "15",
-      "-o", "-"  // Output to stdout
+      "-o", "-"
     ], {
       stdio: ["ignore", "pipe", "pipe"]
     });
   } catch (err) {
-    res.status(500).json({ error: "Camera unavailable" });
+    res.status(500).json({ success: false, error: "Camera unavailable" });
     return;
+  }
+
+  if (proc) {
+    proc.on("error", cleanup);
   }
 
   const boundary = "frame";
   let buffer = Buffer.alloc(0);
 
-  const cleanup = () => {
-    if (proc) proc.kill();
-    res.end();
-  };
-
   req.on("close", cleanup);
-  req.on("aborted", cleanup);
+  req.on("abandoned", cleanup);
 
   proc.stdout.on("data", (data: Buffer) => {
-    buffer = Buffer.concat([buffer, data]);
     // MJPEG frames are independent, just flush everything
+    buffer = Buffer.concat([buffer, data]);
     try {
       res.write(`--${boundary}\r\nContent-Type: image/jpeg\r\n\r\n`);
       res.write(data);
       res.write("\r\n");
     } catch (e) {
       // Client disconnected
+      cleanup();
     }
   });
 
-  proc.stderr.on("data", (data: Buffer) => {
+  proc.stderr.on("data", () => {
     // Silently discard stderr
   });
 
   proc.on("close", cleanup);
 
   // Set a timeout to prevent hanging
-  setTimeout(cleanup, 30000);
+  timeout = setTimeout(cleanup, 30000);
 });
 
 // Serve single JPEG snapshot (fallback for browsers that don't support MJPEG)
@@ -669,7 +765,7 @@ app.get("/api/camera/image", async (req, res) => {
       try { require("fs").unlinkSync(tmpFile); } catch {}
     });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
@@ -708,7 +804,7 @@ app.post("/api/detect-waste", async (req, res) => {
       co2ReductionKg: materialType === "plastic" ? 0.04 : materialType === "aluminum" ? 0.09 : materialType === "glass" ? 0.06 : 0
     });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
@@ -716,26 +812,11 @@ app.post("/api/detect-waste", async (req, res) => {
 // CONTINUOUS DETECTION / TEST VIEW ENDPOINTS
 // ============================================
 
-// Get latest detection result from background detection
-app.get("/api/detection/latest", (req, res) => {
-  const history = detectionService.getHistory();
-  if (history.length === 0) {
-    res.status(404).json({ error: "No detections yet" });
-  } else {
-    res.json(history[0]);
-  }
-});
-
-// Get detection history (last 20)
-app.get("/api/detection/history", (req, res) => {
-  res.json(detectionService.getHistory().slice(0, 20));
-});
-
 // Get last captured image (for test view)
 app.get("/api/detection/image", (req, res) => {
   const img = detectionService.getLastImage();
   if (!img) {
-    res.status(404).json({ error: "No image available" });
+    res.status(404).json({ success: false, error: "No image available" });
   } else {
     res.json({ imageBase64: img });
   }
@@ -748,29 +829,35 @@ app.post("/api/detection/run", async (req, res) => {
     const result = await detectionService.detectMultipleItems();
     res.json(result);
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
 // Get latest multi-detection result
-app.get("/api/detection/latest", (req, res) => {
+app.get("/api/detection/latest", async (req, res) => {
   try {
     const latest = detectionService.getHistory()[0];
     if (!latest) {
-      return res.status(404).json({ error: "No detections yet" });
+      const dbLatest = (await detectionService.getHistoryFromDb(1))[0];
+      if (!dbLatest) {
+        return res.status(404).json({ success: false, error: "No detections yet" });
+      }
+      return res.json(dbLatest);
     }
     res.json(latest);
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// Get all detection history
-app.get("/api/detection/history", (req, res) => {
+// Get all detection history (from database if available, falls back to in-memory)
+app.get("/api/detection/history", async (req, res) => {
   try {
-    res.json(detectionService.getHistory());
+    const limit = parseInt(req.query.limit as string) || 20;
+    const history = await detectionService.getHistoryFromDb(limit);
+    res.json(history);
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
@@ -781,7 +868,7 @@ app.post("/api/detection/background/start", (req, res) => {
     detectionService.startBackgroundDetection(interval);
     res.json({ success: true, message: `Background detection started (interval: ${interval}ms)` });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
@@ -791,7 +878,7 @@ app.post("/api/detection/background/stop", (req, res) => {
     detectionService.stopBackgroundDetection();
     res.json({ success: true, message: "Background detection stopped" });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
@@ -857,19 +944,77 @@ async function startServer() {
       });
     }
 
-    app.listen(Number(PORT), "0.0.0.0", () => {
-      console.log(`✅ ReVision Reverse Vending Machine Kiosk Server running on port ${PORT}`);
-      console.log(`📊 Transaction system: ENABLED (PostgreSQL)`);
-      console.log(`💳 Xendit integration: ${process.env.XENDIT_SECRET_KEY ? 'CONFIGURED' : 'NOT CONFIGURED'}`);
-      
-      // Start background detection service automatically
-      detectionService.startBackgroundDetection(15000);
-      console.log(`🔍 Background camera detection started (interval: 15000ms)`);
-    });
+    const startListening = (listenApp: typeof app, port: number, protocol: string) => {
+      listenApp.listen(Number(port), "0.0.0.0", () => {
+        console.log(`✅ ReVision Reverse Vending Machine Kiosk Server running on port ${port} (${protocol})`);
+        if (protocol === 'HTTP') {
+          console.log('⚠️  WARNING: Running in HTTP mode. Set ENABLE_HTTPS=true for TLS encryption.');
+        }
+        console.log(`📊 Transaction system: ENABLED (PostgreSQL)`);
+
+        // Start background detection service automatically
+        detectionService.startBackgroundDetection(15000);
+        console.log(`🔍 Background camera detection started (interval: 15000ms)`);
+      });
+    };
+
+    if (enableHttps) {
+      let key: Buffer | undefined;
+      let cert: Buffer | undefined;
+      try {
+        key = fs.readFileSync(sslKeyPath);
+        cert = fs.readFileSync(sslCertPath);
+      } catch {
+        console.warn(`⚠️  SSL cert/key not found at ${sslCertPath}/${sslKeyPath}`);
+        console.log('🔧 Generating self-signed certificate for development...');
+        try {
+          const { execSync } = await import("child_process");
+          const certDir = path.dirname(sslCertPath);
+          if (!fs.existsSync(certDir)) {
+            fs.mkdirSync(certDir, { recursive: true });
+          }
+          execSync(
+            `openssl req -x509 -newkey rsa:2048 -nodes -keyout "${sslKeyPath}" -out "${sslCertPath}" -days 365 -subj "/CN=localhost"`,
+            { stdio: "ignore", timeout: 30000 }
+          );
+          key = fs.readFileSync(sslKeyPath);
+          cert = fs.readFileSync(sslCertPath);
+          console.log(`✅ Self-signed certificate generated at ${sslCertPath}`);
+        } catch (certError) {
+          console.error('❌ Failed to generate self-signed certificate:', (certError as Error).message);
+          console.error('   Falling back to HTTP. Install openssl or provide SSL_KEY_PATH/SSL_CERT_PATH.');
+          startListening(app, Number(PORT), 'HTTP');
+          return;
+        }
+      }
+
+      if (key && cert) {
+        https.createServer({ key, cert }, app).listen(Number(HTTPS_PORT), "0.0.0.0", () => {
+          console.log(`✅ ReVision Reverse Vending Machine Kiosk Server running on port ${HTTPS_PORT} (HTTPS/TLS)`);
+          console.log(`📊 Transaction system: ENABLED (PostgreSQL)`);
+
+          // Start background detection service automatically
+          detectionService.startBackgroundDetection(15000);
+          console.log(`🔍 Background camera detection started (interval: 15000ms)`);
+        });
+      } else {
+        startListening(app, Number(PORT), 'HTTP');
+      }
+    } else {
+      startListening(app, Number(PORT), 'HTTP');
+    }
   } catch (error) {
     console.error("❌ Failed to start server:", error);
     process.exit(1);
   }
 }
+
+// CSRF error handler — must be after all routes
+app.use((err: any, req: any, res: any, next: any) => {
+  if (err.code === "EBADCSRFTOKEN") {
+    return res.status(403).json({ success: false, error: "Invalid CSRF token" });
+  }
+  next(err);
+});
 
 startServer();

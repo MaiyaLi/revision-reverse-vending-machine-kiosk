@@ -8,8 +8,8 @@ IoT-Enabled Reverse Vending Machine Kiosk Application with Automated Material So
 - **User Accounts**: Persistent user accounts with wallet balance, eco-points, and transaction history
 - **Admin Dashboard**: Admin endpoints to view all users and global statistics
 - **Mobile App Ready**: REST API designed for future mobile app integration
-- **Receipt Generation**: SMS, Email, and Print receipt support
-- **Payout Integration**: GCash, Maya, QRPh, and Cash dispenser support via Xendit
+- **Receipt Generation**: Email and Print receipt support
+- **Payout Integration**: GCash, Maya, QRPh, and Cash dispenser support via operator-assisted payouts
 
 ## Quick Start
 
@@ -66,8 +66,8 @@ npm run start
 |----------|-------------|----------|
 | `GEMINI_API_KEY` | Google Gemini AI API key for bottle classification | Yes |
 | `DATABASE_URL` | PostgreSQL connection string | Yes |
-| `XENDIT_SECRET_KEY` | Xendit API key for payouts | No |
-| `XENDIT_WEBHOOK_TOKEN` | Webhook verification token | No |
+| `OPERATOR_PAYOUT_KEY` | Operator payout key for disbursements | No |
+| `OPERATOR_WEBHOOK_TOKEN` | Webhook verification token | No |
 | `PORT` | Server port (default: 3000) | No |
 | `NODE_ENV` | Environment (development/production) | No |
 
@@ -117,7 +117,6 @@ npm run start
 - `POST /api/receipt/create` - Create receipt
 - `GET /api/receipt/:transactionId` - Get receipt
 - `POST /api/receipt/print/:transactionId` - Print receipt
-- `POST /api/receipt/sms/:transactionId` - Send SMS receipt
 - `POST /api/receipt/email/:transactionId` - Send email receipt
 
 ### Health
@@ -146,4 +145,4 @@ See [DEPLOY_PI.md](./DEPLOY_PI.md) for Raspberry Pi 5 deployment instructions.
 - **Backend**: Express, Node.js
 - **Database**: PostgreSQL with Prisma ORM
 - **AI**: Google Gemini 2.0 Flash
-- **Payments**: Xendit API
+- **Payments**: Operator-assisted payouts

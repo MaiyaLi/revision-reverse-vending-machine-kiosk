@@ -82,7 +82,7 @@ CREATE TABLE deposited_items (
 CREATE TABLE payout_transactions (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   external_id VARCHAR(100) UNIQUE NOT NULL,
-  xendit_id VARCHAR(100),
+  operator_id VARCHAR(100),
   session_id UUID NOT NULL REFERENCES deposit_sessions(id),
   user_id UUID NOT NULL REFERENCES users(id),
   amount DECIMAL(10, 2) NOT NULL,
@@ -132,7 +132,6 @@ CREATE TABLE receipts (
   printed_at TIMESTAMP,
   printed_count INT DEFAULT 0,
   email_sent_at TIMESTAMP,
-  sms_sent_at TIMESTAMP,
   created_at TIMESTAMP DEFAULT NOW(),
   INDEX idx_transaction_id (transaction_id),
   INDEX idx_session_id (session_id)
@@ -575,7 +574,7 @@ export const depositService = new DepositService();
 
 ---
 
-## 5. PAYOUT SERVICE WITH XENDIT INTEGRATION
+## 5. PAYOUT SERVICE WITH OPERATOR INTEGRATION
 
 Create: `src/services/payoutService.ts`
 
@@ -583,8 +582,8 @@ Create: `src/services/payoutService.ts`
 import { db } from './database';
 import fetch from 'node-fetch';
 
-const XENDIT_BASE_URL = 'https://api.xendit.co';
-const XENDIT_SECRET_KEY = process.env.XENDIT_SECRET_KEY;
+const PAYOUT_BASE_URL = 'https://api.operator-payout.com';
+const OPERATOR_API_KEY = process.env.OPERATOR_PAYOUT_KEY;
 
 export class PayoutService {
   async createDisbursement(params: {
@@ -595,8 +594,8 @@ export class PayoutService {
     accountNumber: string;
     accountName: string;
   }): Promise<any> {
-    if (!XENDIT_SECRET_KEY) {
-      throw new Error('Xendit API key not configured');
+    if (!OPERATOR_API_KEY) {
+      throw new Error('Operator API key not configured');
     }
 
     const externalId = `RVM-PAY-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -606,7 +605,7 @@ export class PayoutService {
     this.validateAccountName(params.accountName);
 
     try {
-      // Create transaction record FIRST (before calling Xendit)
+      // Create transaction record FIRST (before calling Operator)
       const payoutTx = await db.queryOne(
         `INSERT INTO payout_transactions (
           external_id, session_id, user_id, amount, channel, 
@@ -624,8 +623,8 @@ export class PayoutService {
         ]
       );
 
-      // Call Xendit API
-      const xenditResponse = await this.callXenditAPI(
+      // Call Operator API
+      const operatorResponse = await this.callOperatorAPI(
         '/disbursements',
         'POST',
         {
@@ -638,16 +637,16 @@ export class PayoutService {
         }
       );
 
-      // Update with Xendit response
+      // Update with Operator response
       const updated = await db.queryOne(
         `UPDATE payout_transactions 
-         SET xendit_id = $2, status = $3
+         SET operator_id = $2, status = $3
          WHERE external_id = $1
          RETURNING *`,
         [
           externalId,
-          xenditResponse.id,
-          xenditResponse.status === 'COMPLETED' ? 'COMPLETED' : 'PENDING'
+          operatorResponse.id,
+          operatorResponse.status === 'COMPLETED' ? 'COMPLETED' : 'PENDING'
         ]
       );
 
@@ -670,8 +669,8 @@ export class PayoutService {
     userId: string | null;
     amount: number;
   }): Promise<any> {
-    if (!XENDIT_SECRET_KEY) {
-      throw new Error('Xendit API key not configured');
+    if (!OPERATOR_API_KEY) {
+      throw new Error('Operator API key not configured');
     }
 
     const externalId = `RVM-LINK-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -685,7 +684,7 @@ export class PayoutService {
         [externalId, params.sessionId, params.userId, params.amount]
       );
 
-      const xenditResponse = await this.callXenditAPI(
+      const operatorResponse = await this.callOperatorAPI(
         '/v2/payouts',
         'POST',
         {
@@ -697,12 +696,12 @@ export class PayoutService {
         { 'Idempotency-key': externalId }
       );
 
-      const updated = await db.queryOne(
+const updated = await db.queryOne(
         `UPDATE payout_transactions 
-         SET xendit_id = $2, payout_url = $3
+         SET operator_id = $2, payout_url = $3
          WHERE external_id = $1
          RETURNING *`,
-        [externalId, xenditResponse.id, xenditResponse.payout_url]
+        [externalId, operatorResponse.id, operatorResponse.payout_url]
       );
 
       return updated;
@@ -733,14 +732,14 @@ export class PayoutService {
       return payout;
     }
 
-    // Check with Xendit
+    // Check with Operator
     try {
-      const xenditStatus = await this.callXenditAPI(
+      const operatorStatus = await this.callOperatorAPI(
         `/disbursements?external_id=${externalId}`,
         'GET'
       );
 
-      const disbursement = Array.isArray(xenditStatus) ? xenditStatus[0] : xenditStatus;
+      const disbursement = Array.isArray(operatorStatus) ? operatorStatus[0] : operatorStatus;
 
       if (disbursement.status === 'COMPLETED') {
         await db.query(
@@ -763,7 +762,7 @@ export class PayoutService {
         [externalId]
       );
     } catch (error) {
-      console.error('Failed to check Xendit status:', error);
+      console.error('Failed to check Operator status:', error);
       return payout; // Return cached status on error
     }
   }
@@ -820,15 +819,15 @@ export class PayoutService {
     }
   }
 
-  private async callXenditAPI(
+  private async callOperatorAPI(
     endpoint: string,
     method: string = 'GET',
     body?: any,
     additionalHeaders?: Record<string, string>
   ): Promise<any> {
-    const authHeader = `Basic ${Buffer.from(XENDIT_SECRET_KEY + ':').toString('base64')}`;
+    const authHeader = `Basic ${Buffer.from(OPERATOR_API_KEY + ':').toString('base64')}`;
 
-    const response = await fetch(`${XENDIT_BASE_URL}${endpoint}`, {
+    const response = await fetch(`${PAYOUT_BASE_URL}${endpoint}`, {
       method,
       headers: {
         'Content-Type': 'application/json',
@@ -840,7 +839,7 @@ export class PayoutService {
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(`Xendit error: ${error.message || 'Unknown error'}`);
+      throw new Error(`Operator error: ${error.message || 'Unknown error'}`);
     }
 
     return await response.json();
@@ -903,23 +902,6 @@ export class ReceiptService {
 
     // TODO: Integrate with thermal printer driver
     console.log('Receipt queued for printing:', receiptId);
-
-    return receipt;
-  }
-
-  async sendViaSMS(receiptId: string, phoneNumber: string): Promise<any> {
-    const receipt = await db.queryOne(
-      `SELECT * FROM receipts WHERE transaction_id = $1`,
-      [receiptId]
-    );
-
-    // TODO: Integrate with Twilio SMS service
-    console.log('SMS receipt queued:', receiptId, phoneNumber);
-
-    await db.query(
-      `UPDATE receipts SET sms_sent_at = NOW() WHERE transaction_id = $1`,
-      [receiptId]
-    );
 
     return receipt;
   }
@@ -1076,7 +1058,7 @@ app.get('/api/payout/status/:externalId', async (req, res) => {
 app.post('/api/payout/webhook', async (req, res) => {
   try {
     const token = req.headers['x-callback-token'];
-    if (token !== process.env.XENDIT_WEBHOOK_TOKEN) {
+    if (token !== process.env.OPERATOR_WEBHOOK_TOKEN) {
       return res.status(401).json({ error: 'Invalid token' });
     }
 
@@ -1136,9 +1118,9 @@ startServer();
 # Database
 DATABASE_URL=postgresql://user:password@localhost:5432/revision_rvm
 
-# Xendit
-XENDIT_SECRET_KEY=xnd_live_YOUR_KEY
-XENDIT_WEBHOOK_TOKEN=your_webhook_token_here
+# Operator Payout
+OPERATOR_PAYOUT_KEY=your_operator_key
+OPERATOR_WEBHOOK_TOKEN=your_webhook_token_here
 
 # Node
 NODE_ENV=production
@@ -1180,9 +1162,9 @@ OPTION A: Cash Dispense
     [Dispenser motor runs] → Physical coins dispensed
         ↓
 OPTION B: QRPh/Bank Transfer
-    [POST /api/payout/link] → Creates Xendit payout link
-    [User scans QR code] → Xendit processes payment
-    [Webhook from Xendit] → Confirms payment, updates DB
+    [POST /api/payout/link] → Creates Operator payout link
+    [User scans QR code] → Operator processes payment
+    [Webhook from Operator] → Confirms payment, updates DB
         ↓
 [POST /api/receipt/create] → Generates receipt
         ↓
@@ -1194,7 +1176,7 @@ All data persisted in PostgreSQL database
 
 This complete implementation ensures:
 ✅ All transactions are persisted to database
-✅ Xendit webhooks are properly handled
+✅ Operator webhooks are properly handled
 ✅ User balances are correctly updated
 ✅ Receipts are auditable
 ✅ Payout status can be tracked

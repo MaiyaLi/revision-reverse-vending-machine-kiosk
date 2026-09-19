@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ReVision RVM — Operator Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: 'Segoe UI', system-ui, sans-serif; }
+    .pulse-ring { animation: pulseRing 2s infinite; }
+    @keyframes pulseRing {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.5); }
+      50% { box-shadow: 0 0 0 12px rgba(245, 158, 11, 0); }
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <div id="root"></div>
+  <script type="module">
+    const API = location.origin;
+
+    const app = document.getElementById('root');
+
+    function fmt(n) { return '\u20b1' + Number(n).toFixed(2); }
+
+    function timeAgo(iso) {
+      if (!iso) return '';
+      const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+      if (s < 60) return s + 's ago';
+      if (s < 3600) return Math.floor(s/60) + 'm ago';
+      return Math.floor(s/3600) + 'h ago';
+    }
+
+    async function fetchPending() {
+      try {
+        const r = await fetch(API + '/api/operator/payouts/pending');
+        if (!r.ok) return [];
+        const d = await r.json();
+        return d.requests || [];
+      } catch { return []; }
+    }
+
+    async function approve(ref, note) {
+      const r = await fetch(API + '/api/operator/payouts/' + encodeURIComponent(ref) + '/confirm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ note })
+      });
+      return r.ok;
+    }
+
+    async function reject(ref, note) {
+      const r = await fetch(API + '/api/operator/payouts/' + encodeURIComponent(ref) + '/reject', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ note })
+      });
+      return r.ok;
+    }
+
+    function render(requests) {
+      const count = requests.length;
+      app.innerHTML = `
+        <div class="max-w-3xl mx-auto p-6">
+          <div class="flex items-center justify-between mb-6">
+            <div>
+              <h1 class="text-3xl font-black text-amber-500">ReVision RVM Operator</h1>
+              <p class="text-slate-400 text-sm">Remote payout approval dashboard</p>
+            </div>
+            <div class="text-right">
+              <div class="text-amber-500 font-black text-2xl">${count}</div>
+              <div class="text-slate-500 text-xs uppercase tracking-wider">Pending</div>
+            </div>
+          </div>
+
+          ${count === 0 ? `
+            <div class="text-center py-20 text-slate-600">
+              <div class="text-6xl mb-4">✅</div>
+              <p class="text-xl font-bold">No pending payouts</p>
+              <p class="text-sm">All requests have been processed.</p>
+            </div>
+          ` : requests.map(r => `
+            <div class="bg-slate-900 border border-amber-500/40 rounded-2xl p-6 mb-4 pulse-ring">
+              <div class="flex items-start justify-between mb-4">
+                <div>
+                  <div class="text-xs text-slate-500 uppercase tracking-wider">Reference</div>
+                  <div class="font-mono font-black text-lg">${r.referenceId}</div>
+                </div>
+                <span class="bg-amber-500/20 text-amber-500 px-3 py-1 rounded-full text-xs font-black">PENDING</span>
+              </div>
+
+              <div class="grid grid-cols-2 gap-3 text-sm mb-4">
+                <div>
+                  <span class="text-slate-500">Amount:</span>
+                  <span class="ml-2 font-black text-emerald-400">${fmt(r.amount)}</span>
+                </div>
+                <div>
+                  <span class="text-slate-500">Channel:</span>
+                  <span class="ml-2 font-black">${r.channel}</span>
+                </div>
+                <div>
+                  <span class="text-slate-500">Send to:</span>
+                  <span class="ml-2 font-black">${r.recipientPhone}</span>
+                </div>
+                <div>
+                  <span class="text-slate-500">Recipient:</span>
+                  <span class="ml-2 font-black">${r.recipientName}</span>
+                </div>
+              </div>
+
+              <input id="note-${r.referenceId}" type="text" placeholder="Operator note (optional)"
+                class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-sm mb-4" />
+
+              <div class="flex gap-3">
+                <button onclick="doApprove('${r.referenceId}')"
+                  class="flex-1 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-xl transition">
+                  Approve & Send
+                </button>
+                <button onclick="doReject('${r.referenceId}')"
+                  class="flex-1 py-3 bg-red-600 hover:bg-red-500 text-white font-black rounded-xl transition">
+                  Reject
+                </button>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+
+    window.doApprove = async function(ref) {
+      const note = document.getElementById('note-' + ref)?.value || '';
+      const ok = await approve(ref, note);
+      if (ok) render(await fetchPending());
+    };
+    window.doReject = async function(ref) {
+      const note = document.getElementById('note-' + ref)?.value || '';
+      const ok = await reject(ref, note);
+      if (ok) render(await fetchPending());
+    };
+
+    // Poll every 5 seconds
+    render(await fetchPending());
+    setInterval(async () => render(await fetchPending()), 5000);
+  </script>
+</body>
+</html>

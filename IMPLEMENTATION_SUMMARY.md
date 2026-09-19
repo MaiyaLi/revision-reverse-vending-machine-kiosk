@@ -15,7 +15,7 @@
 | `src/services/database.ts` | PostgreSQL connection pool & transaction management | ✅ |
 | `src/services/userService.ts` | User registration, login, wallet management | ✅ |
 | `src/services/depositService.ts` | Deposit session lifecycle & item tracking | ✅ |
-| `src/services/payoutService.ts` | Xendit integration & payout processing | ✅ |
+| `src/services/payoutService.ts` | Operator payout integration & payout processing | ✅ |
 | `src/services/receiptService.ts` | Receipt generation & delivery tracking | ✅ |
 | `server.ts` | Updated with all new endpoints | ✅ |
 | `migrations/001_init_schema.sql` | Complete database schema (9 tables) | ✅ |
@@ -30,7 +30,7 @@
 1. **users** - User profiles with PIN hashing (bcrypt)
 2. **deposit_sessions** - Recycling session tracking
 3. **deposited_items** - Item-by-item audit trail
-4. **payout_transactions** - Xendit integration records
+4. **payout_transactions** - Operator payout integration records
 5. **transaction_history** - Financial transaction log
 6. **receipts** - Receipt generation & delivery tracking
 7. **audit_log** - Compliance audit trail
@@ -58,16 +58,15 @@
 - `POST /api/payout/link` → QRPh payout link
 - `POST /api/payout/cash` → Cash dispense logging
 - `GET /api/payout/status/:id` → Check payout status
-- `POST /api/payout/webhook` → Xendit callback handler
+- `POST /api/payout/webhook` → Operator callback handler
 
 ### **Wallet Redemption (1)**
 - `POST /api/redemption/withdraw` → Deduct wallet balance
 
-### **Receipts (4)**
+### **Receipts (3)**
 - `POST /api/receipt/create` → Generate receipt
 - `GET /api/receipt/:id` → Retrieve receipt
 - `POST /api/receipt/print/:id` → Log print action
-- `POST /api/receipt/sms/:id` → Log SMS delivery
 - `POST /api/receipt/email/:id` → Log email delivery
 
 ---
@@ -78,12 +77,11 @@
 ✅ All transactions stored permanently in PostgreSQL  
 ✅ No data loss on server restart  
 ✅ Transaction history audit trail  
-✅ Receipt storage with print/email/SMS tracking  
+✅ Receipt storage with print/email tracking
 
 ### **Security**
 ✅ PIN hashing with bcrypt (10 salt rounds)  
 ✅ Parameterized SQL queries (SQL injection prevention)  
-✅ Xendit webhook token verification  
 ✅ Input validation (phone, amounts, names)  
 ✅ Connection pooling with timeout protection  
 
@@ -93,7 +91,7 @@
 ✅ Account holder name (3-100 chars, no special chars)  
 ✅ Duplicate request prevention (60-second window)  
 
-### **Xendit Integration**
+### **Operator Payout Integration**
 ✅ Disbursement creation with validation  
 ✅ Payout link generation (QRPh support)  
 ✅ Status polling with caching  
@@ -142,7 +140,7 @@ OPTION A: Save to Wallet
   - Wallet balance increases ✅
   
 OPTION B: GCash Transfer
-  - Xendit API called
+  - Operator API called
   - Phone number validated
   - Payment processed
   - Webhook confirms completion
@@ -154,7 +152,7 @@ OPTION C: Cash Dispense
   - Transaction logged ✅
         ↓
 Receipt Printed/Sent
-  - Thermal printer or SMS/Email
+  - Thermal printer or Email
   - Delivery logged in database
         ↓
 SESSION COMPLETE ✅
@@ -186,8 +184,8 @@ psql -U postgres -d revision_rvm -f migrations/001_init_schema.sql
 ### **3. Configure .env**
 ```bash
 DATABASE_URL="postgresql://postgres:password@localhost:5432/revision_rvm"
-XENDIT_SECRET_KEY="xnd_development_YOUR_KEY"
-XENDIT_WEBHOOK_TOKEN="random_token_here"
+OPERATOR_PAYOUT_KEY="your_operator_key"
+OPERATOR_WEBHOOK_TOKEN="random_token_here"
 ```
 
 ### **4. Start Server**
@@ -217,8 +215,8 @@ curl -X POST http://localhost:3000/api/auth/login \
 | **Data Storage** | In-memory (lost on restart) | PostgreSQL (permanent) |
 | **User PINs** | Plain text | Bcrypt hashed |
 | **Transactions** | Simulated only | Real transaction records |
-| **Payout Status** | Mocked | Xendit integrated + webhook support |
-| **Receipts** | Component state only | Database stored + print/email/SMS tracking |
+| **Payout Status** | Mocked | Operator integrated + webhook support |
+| **Receipts** | Component state only | Database stored + print/email tracking |
 | **Audit Trail** | None | Full transaction history + audit log |
 | **Validation** | Minimal | Phone format, amount limits, duplicate prevention |
 | **Error Handling** | Silent failures | Detailed error messages + logging |
@@ -231,7 +229,7 @@ curl -X POST http://localhost:3000/api/auth/login \
 - ✅ Database schema optimized with 15 indexes
 - ✅ Connection pooling configured (20 max connections)
 - ✅ Transaction support with automatic rollback
-- ✅ Xendit webhook handler implemented
+- ✅ Operator webhook handler implemented
 - ✅ Input validation for all user inputs
 - ✅ PIN hashing with bcrypt
 - ✅ SQL injection prevention (parameterized queries)
@@ -251,7 +249,7 @@ curl -X POST http://localhost:3000/api/auth/login \
 
 1. **Lost Data on Restart** ❌ → ✅ PostgreSQL persistence
 2. **No Transaction History** ❌ → ✅ transaction_history table
-3. **Xendit Webhooks Not Handled** ❌ → ✅ Webhook endpoint implemented
+3. **Operator Webhooks Not Handled** ❌ → ✅ Webhook endpoint implemented
 4. **User Balance Not Updated** ❌ → ✅ Atomic wallet updates
 5. **No Receipt Storage** ❌ → ✅ Receipts table with tracking
 6. **Plain Text PINs** ❌ → ✅ bcrypt hashing
@@ -408,7 +406,7 @@ curl -X POST http://localhost:3000/api/auth/register \
 
 **Deployment (1-2 days):**
 - [ ] Production database setup
-- [ ] Xendit live keys configuration
+- [ ] Operator payout keys configuration
 - [ ] SSL/TLS certificates
 - [ ] Monitoring & alerts
 
@@ -422,8 +420,8 @@ curl -X POST http://localhost:3000/api/auth/register \
 **Issue:** `PIN validation failed`  
 **Fix:** PINs are hashed on storage, check bcrypt is installed
 
-**Issue:** `Xendit webhook not received`  
-**Fix:** Verify webhook token in .env matches Xendit dashboard
+**Issue:** `Operator webhook not received`  
+**Fix:** Verify webhook token in .env matches operator dashboard
 
 **Issue:** `Transaction not found in database`  
 **Fix:** Check migrations were applied: `psql -U postgres -d revision_rvm -c "\dt"`
@@ -436,7 +434,7 @@ curl -X POST http://localhost:3000/api/auth/register \
 **Database:** ✅ SCHEMA CREATED (9 TABLES)  
 **API:** ✅ 16 ENDPOINTS OPERATIONAL  
 **Security:** ✅ PIN HASHING + VALIDATION  
-**Xendit:** ✅ INTEGRATED + WEBHOOK SUPPORT  
+**Operator:** ✅ INTEGRATED + WEBHOOK SUPPORT  
 **Audit Trail:** ✅ COMPLETE COMPLIANCE LOGGING  
 **Documentation:** ✅ COMPREHENSIVE SETUP GUIDE  
 

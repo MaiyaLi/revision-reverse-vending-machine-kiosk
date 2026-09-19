@@ -3,6 +3,7 @@ import { Pool, PoolClient } from 'pg';
 export class DatabaseService {
   private pool: Pool;
   private connectionString: string;
+  private connected: boolean = false;
 
   constructor() {
     this.connectionString = process.env.DATABASE_URL || 'postgresql://localhost/revision_rvm';
@@ -23,11 +24,17 @@ export class DatabaseService {
       const client = await this.pool.connect();
       await client.query('SELECT NOW()');
       client.release();
+      this.connected = true;
       console.log('✅ Database connected successfully');
     } catch (error) {
+      this.connected = false;
       console.error('❌ Database connection failed:', error);
       throw error;
     }
+  }
+
+  isConnected(): boolean {
+    return this.connected;
   }
 
   async query(text: string, params?: any[]): Promise<any[]> {

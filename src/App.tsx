@@ -1051,27 +1051,6 @@ export default function App() {
     setTimeout(() => setNotificationMsg(''), 4000);
   };
 
-  const sendReceiptSMS = async () => {
-    if (!receiptData.transactionId || !activeUser?.phoneNumber) {
-      triggerNotification(lang === 'en' ? 'No phone number on file' : 'Walang phone number sa record');
-      return;
-    }
-    try {
-      const res = await fetch(`/api/receipt/sms/${receiptData.transactionId}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phoneNumber: activeUser.phoneNumber })
-      });
-      if (res.ok) {
-        triggerNotification(t('receiptSent'));
-      } else {
-        triggerNotification('Failed to send SMS');
-      }
-    } catch (err) {
-      triggerNotification('Failed to send SMS');
-    }
-  };
-
   const sendReceiptEmail = async () => {
     if (!receiptData.transactionId || !activeUser?.email) {
       triggerNotification(lang === 'en' ? 'No email on file' : 'Walang email sa record');
@@ -1611,27 +1590,6 @@ export default function App() {
                     onFocus={() => handleInputFocus('PIN Code', loginPin, 'password', 4, 'e.g. 1234', (val) => setLoginPin(val))}
                     className={`w-full ${cInput} rounded-2xl px-6 py-4 text-center text-2xl tracking-[0.2em] font-black font-mono`}
                   />
-                </div>
-
-                {/* FAST DEMO LOGIN HINTS */}
-                <div className={`${cCardInset} p-5 rounded-2xl space-y-2 shadow-inner`}>
-                  <span className="text-xs text-teal-400 font-black uppercase block tracking-wider">⚡ Master Demo Accounts:</span>
-                  <div className="flex flex-col gap-2 text-xs md:text-sm font-mono font-bold">
-                    <button 
-                      type="button" 
-                      onClick={() => { setLoginCredential("09171234567"); setLoginPin("1234"); }}
-                      className="text-left text-sky-400 hover:underline font-black"
-                    >
-                      &bull; Juan Dela Cruz: 09171234567 (PIN: 1234)
-                    </button>
-                    <button 
-                      type="button" 
-                      onClick={() => { setLoginCredential("09187654321"); setLoginPin("4321"); }}
-                      className="text-left text-sky-400 hover:underline font-black"
-                    >
-                      &bull; Maria Clara: 09187654321 (PIN: 4321)
-                    </button>
-                  </div>
                 </div>
 
                 <div className="flex flex-col gap-4 pt-6 max-w-xl mx-auto w-full">
@@ -2616,16 +2574,6 @@ export default function App() {
 
                 {activeUser && (
                   <button 
-                    onClick={sendReceiptSMS}
-                    className={`w-full h-56 sm:h-64 rounded-3xl font-black text-xl sm:text-2xl flex flex-col items-center justify-center gap-4 border transition-all ${isLight ? 'bg-slate-100 hover:bg-slate-200 text-slate-850 border-slate-300' : 'bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-850'} active:scale-95 shadow-lg`}
-                  >
-                    <Smartphone className="w-12 h-12 text-sky-500 dark:text-sky-400" />
-                    <span className="text-lg sm:text-xl">{t('sendToMobile')}</span>
-                  </button>
-                )}
-
-                {activeUser && (
-                  <button 
                     onClick={sendReceiptEmail}
                     className={`w-full h-56 sm:h-64 rounded-3xl font-black text-xl sm:text-2xl flex flex-col items-center justify-center gap-4 border transition-all ${isLight ? 'bg-slate-100 hover:bg-slate-200 text-slate-850 border-slate-300' : 'bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-850'} active:scale-95 shadow-lg`}
                   >
@@ -2633,6 +2581,7 @@ export default function App() {
                     <span className="text-lg sm:text-xl">{t('sendToEmail')}</span>
                   </button>
                 )}
+
               </div>
 
             </div>

@@ -14,9 +14,9 @@ The ReVision reverse vending machine kiosk now has a **complete, production-grad
 - ✅ **5 fully functional backend services** (~700 lines of code)
 - ✅ **PostgreSQL database** with 9 tables and 15 indexes
 - ✅ **16 API endpoints** ready for frontend integration
-- ✅ **Enterprise-grade security** (bcrypt hashing, parameterized queries, webhook verification)
+- ✅ **Enterprise-grade security** (bcrypt hashing, parameterized queries)
 - ✅ **Complete transaction flow** from user registration to payout
-- ✅ **Xendit payment integration** with real transactions
+- ✅ **Operator-assisted payouts** with manual approval workflow
 - ✅ **Comprehensive error handling** and logging
 - ✅ **Full ACID compliance** with automatic rollback
 
@@ -29,7 +29,7 @@ The ReVision reverse vending machine kiosk now has a **complete, production-grad
 ✅ src/services/database.ts          Database connection pool with transactions
 ✅ src/services/userService.ts       User management with bcrypt PIN hashing
 ✅ src/services/depositService.ts    Deposit session lifecycle management
-✅ src/services/payoutService.ts     Xendit payment processing integration
+✅ src/services/payoutService.ts     Operator payment processing integration
 ✅ src/services/receiptService.ts    Receipt generation and delivery tracking
 ```
 
@@ -78,8 +78,8 @@ The ReVision reverse vending machine kiosk now has a **complete, production-grad
 - Session abandonment support
 
 ### ✅ Payment Processing
-- GCash disbursement via Xendit
-- Maya disbursement via Xendit
+- GCash disbursement via operator
+- Maya disbursement via operator
 - QRPh payout link generation
 - Cash dispense logging
 - Real-time status tracking
@@ -91,14 +91,12 @@ The ReVision reverse vending machine kiosk now has a **complete, production-grad
 - Receipt generation with unique IDs
 - Database storage (not in-memory)
 - Print tracking (count & timestamp)
-- SMS delivery logging
 - Email delivery logging
 - Receipt retrieval by transaction ID
 
 ### ✅ Security
 - PIN hashing (bcrypt, never plain text)
 - SQL injection prevention (parameterized queries)
-- Xendit webhook token verification
 - Input validation (phone, amounts, names)
 - Connection pooling with timeout protection
 - Automatic transaction rollback on errors
@@ -136,7 +134,7 @@ User Chooses Payout
        ↓
 OPTION A: Save to Wallet ✅
 OPTION B: GCash Transfer ✅
-  - Xendit API called
+  - Operator API called
   - Phone validated
   - Payment processed
   - Webhook confirms
@@ -145,7 +143,7 @@ OPTION C: Cash Dispense ✅
   - Transaction logged
        ↓
 Receipt Printed/Sent ✅
-  - Thermal printer or SMS/Email
+  - Thermal printer or Email
   - Delivery logged
        ↓
 ✅ COMPLETE - All data persisted in PostgreSQL
@@ -175,7 +173,7 @@ POST /api/payout/direct          ✅ GCash/Maya disbursement
 POST /api/payout/link            ✅ QRPh payout link
 POST /api/payout/cash            ✅ Cash dispense logging
 GET  /api/payout/status/:id      ✅ Check payout status
-POST /api/payout/webhook         ✅ Xendit callback handler
+POST /api/payout/webhook         ✅ Operator callback handler
 ```
 
 ### Wallet (1)
@@ -183,12 +181,11 @@ POST /api/payout/webhook         ✅ Xendit callback handler
 POST /api/redemption/withdraw    ✅ Deduct wallet balance
 ```
 
-### Receipts (5)
+### Receipts (4)
 ```
 POST /api/receipt/create         ✅ Generate receipt
 GET  /api/receipt/:id            ✅ Retrieve receipt
 POST /api/receipt/print/:id      ✅ Log print action
-POST /api/receipt/sms/:id        ✅ Log SMS delivery
 POST /api/receipt/email/:id      ✅ Log email delivery
 ```
 
@@ -201,7 +198,7 @@ POST /api/receipt/email/:id      ✅ Log email delivery
 ✅ users                    User profiles with wallet
 ✅ deposit_sessions         Recycling session tracking
 ✅ deposited_items          Item-by-item audit trail
-✅ payout_transactions      Xendit integration records
+✅ payout_transactions      Operator integration records
 ✅ transaction_history      Financial transaction log
 ✅ receipts                 Receipt generation & tracking
 ✅ audit_log               Compliance audit trail
@@ -235,7 +232,7 @@ POST /api/receipt/email/:id      ✅ Log email delivery
    - Zero string concatenation
    - Database-level prepared statements
 
-✅ **Xendit Webhook Verification**
+✅ **Operator Webhook Verification**
    - Token validation on every callback
    - Timestamp checking
    - Event type validation
@@ -294,7 +291,7 @@ POST /api/receipt/email/:id      ✅ Log email delivery
 - [x] Item logging with sensor data
 - [x] Session completion with atomic updates
 - [x] Wallet balance management
-- [x] Xendit GCash/Maya integration
+- [x] Operator GCash/Maya integration
 - [x] QRPh payout link generation
 - [x] Cash dispense logging
 - [x] Receipt generation & storage
@@ -360,8 +357,8 @@ psql -U postgres -d revision_rvm -f migrations/001_init_schema.sql
 ### 3. Configure .env
 ```bash
 DATABASE_URL="postgresql://postgres:password@localhost:5432/revision_rvm"
-XENDIT_SECRET_KEY="xnd_development_YOUR_KEY"
-XENDIT_WEBHOOK_TOKEN="your_webhook_token"
+OPERATOR_PAYOUT_KEY="your_operator_key"
+OPERATOR_WEBHOOK_TOKEN="your_webhook_token"
 ```
 
 ### 4. Start Server
@@ -399,7 +396,7 @@ curl http://localhost:3000/api/health
 
 ### Phase 4: Deployment (1-2 days)
 - Production database setup
-- Xendit live keys
+- Operator payout keys
 - SSL/TLS certificates
 - Monitoring & alerts
 
@@ -409,7 +406,7 @@ curl http://localhost:3000/api/health
 
 🏆 **Zero Data Loss** - PostgreSQL persistence replaces in-memory storage  
 🔐 **Enterprise Security** - bcrypt + validation + webhooks  
-💰 **Real Payments** - Xendit integration with callbacks  
+💰 **Real Payments** - Operator-assisted payout integration with callbacks  
 📊 **Full Compliance** - Complete audit trail  
 ⚡ **Production Ready** - Connection pooling + timeouts  
 🔄 **Atomic Transactions** - ACID guarantees  
@@ -475,7 +472,7 @@ curl http://localhost:3000/api/health
 ### All Requirements Met:
 ✅ Persistent data storage (PostgreSQL)  
 ✅ Secure user authentication (bcrypt)  
-✅ Real payment processing (Xendit)  
+✅ Real payment processing (Operator-assisted)  
 ✅ Complete transaction tracking  
 ✅ Professional error handling  
 ✅ Comprehensive documentation  

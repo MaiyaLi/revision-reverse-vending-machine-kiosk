@@ -96,9 +96,9 @@ nano .env
 USE_YOLO="true"
 DATABASE_URL="postgresql://revision_user:your_password@localhost:5432/revision_rvm"
 
-# Xendit (optional, for payout testing)
-XENDIT_SECRET_KEY=""
-XENDIT_WEBHOOK_TOKEN=""
+# Payout (optional, for operator-assisted testing)
+OPERATOR_PAYOUT_KEY=""
+OPERATOR_WEBHOOK_TOKEN=""
 
 # Server config
 NODE_ENV="production"

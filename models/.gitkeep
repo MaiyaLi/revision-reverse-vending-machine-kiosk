@@ -1,0 +1,3 @@
+# This directory stores ML model files (e.g. YOLOv8 weights).
+# Files are downloaded at deploy time per DEPLOY_PI.md.
+# This placeholder ensures the directory is tracked in git.

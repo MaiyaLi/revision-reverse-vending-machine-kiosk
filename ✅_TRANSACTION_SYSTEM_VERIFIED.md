@@ -34,8 +34,8 @@
 [✅] src/services/database.ts           - Connection pool, transactions, error handling
 [✅] src/services/userService.ts        - Registration, login, wallet, bcrypt hashing
 [✅] src/services/depositService.ts     - Sessions, items, completion, atomic updates
-[✅] src/services/payoutService.ts      - Xendit API, webhooks, validation, cash/transfer
-[✅] src/services/receiptService.ts     - Generation, storage, print/SMS/email tracking
+[✅] src/services/payoutService.ts      - Operator API, webhooks, validation, cash/transfer
+[✅] src/services/receiptService.ts     - Generation, storage, print/email tracking
 ```
 
 ### ✅ DATABASE SCHEMA (9/9 TABLES)
@@ -43,9 +43,9 @@
 [✅] users                       - Profiles, wallet, eco points, PIN hash
 [✅] deposit_sessions            - Session tracking, totals, status
 [✅] deposited_items             - Item logging, sensor data, classification
-[✅] payout_transactions         - Xendit records, status, failure tracking
+[✅] payout_transactions         - Operator records, status, failure tracking
 [✅] transaction_history         - Financial log, balance tracking
-[✅] receipts                    - Receipt storage, print/email/SMS tracking
+[✅] receipts                    - Receipt storage, print/email tracking
 [✅] audit_log                   - Compliance trail, JSONB events
 [✅] dispenser_inventory         - Coin levels, refill tracking
 [✅] bin_inventory              - Bin capacity, material tracking
@@ -69,8 +69,8 @@
 [✅] POST   /api/payout/cash             [✅] GET    /api/payout/status/:id
 [✅] POST   /api/payout/webhook          [✅] POST   /api/redemption/withdraw
 [✅] POST   /api/receipt/create          [✅] GET    /api/receipt/:id
-[✅] POST   /api/receipt/print/:id       [✅] POST   /api/receipt/sms/:id
-[✅] POST   /api/receipt/email/:id       [✅] GET    /api/health
+[✅] POST   /api/receipt/print/:id       [✅] POST   /api/receipt/email/:id
+[✅] GET    /api/health
 ```
 
 ### ✅ SECURITY FEATURES (6/6)
@@ -88,7 +88,7 @@
 [✅] Database connection errors         [✅] Invalid PIN/credentials
 [✅] Session not found                  [✅] Insufficient wallet balance
 [✅] Invalid phone format               [✅] Amount limit exceeded
-[✅] Xendit API errors                  [✅] Transaction rollback on failure
+[✅] Operator API errors                  [✅] Transaction rollback on failure
 [✅] Webhook verification failure       [✅] Missing required parameters
 [✅] Concurrent session handling        [✅] Race condition prevention
 ```
@@ -96,7 +96,7 @@
 ### ✅ DATA INTEGRITY (All Verified)
 ```
 [✅] Unique member_id                   [✅] Unique session_ref_id
-[✅] Unique qr_code_id                  [✅] Unique external_id (Xendit)
+[✅] Unique qr_code_id                  [✅] Unique external_id (Operator)
 [✅] Unique transaction_id              [✅] Foreign key relationships
 [✅] NOT NULL constraints               [✅] Decimal precision for amounts
 [✅] Timestamps on all records          [✅] Default values properly set
@@ -147,11 +147,11 @@
     │  └─ Log transaction
     ├─ Option B: GCash Transfer
     │  └─ Validate phone
-    │  └─ Call Xendit API
+    │  └─ Call Operator API
     │  └─ Record transaction
     │  └─ Wait for webhook
     ├─ Option C: QRPh Link
-    │  └─ Call Xendit API
+    │  └─ Call Operator API
     │  └─ Get payout URL
     │  └─ User scans & completes
     └─ Option D: Cash Dispense
@@ -164,7 +164,7 @@
     └─ Reflect in database
 
 [✅] Send Receipt
-    └─ Print/SMS/Email option
+    └─ Print/Email option
     └─ Track delivery
     └─ Update timestamps
 ```
@@ -181,7 +181,7 @@
 ✅ User adds 5 items → all stored
 ✅ Session completes → wallet credited
 ✅ Receipt generated → stored in database
-✅ Payout requested → Xendit called
+✅ Payout requested → Operator called
 ✅ Webhook arrives → status updated
 ✅ All data persists → verified in database
 ```
@@ -191,7 +191,7 @@
 ✅ Invalid PIN → Login fails with error
 ✅ Session not found → Returns 404
 ✅ Insufficient balance → Withdrawal fails
-✅ Invalid phone format → Xendit call rejected
+✅ Invalid phone format → Operator call rejected
 ✅ Amount exceeds limit → Validation error
 ✅ DB connection fails → Error logged & handled
 ✅ Webhook token invalid → Request rejected
@@ -361,10 +361,10 @@
 - ACID compliance
 
 ### ✅ Real-World Integration
-- Xendit payment processing
+- Operator payment processing
 - Multiple payout methods
 - Webhook callback handling
-- SMS/email tracking
+- Email tracking
 - AI waste classification
 
 ### ✅ Production Ready

@@ -7,9 +7,9 @@
 - ✅ Users table with secure PIN hashing
 - ✅ Deposit sessions tracking
 - ✅ Deposited items audit trail
-- ✅ Payout transactions with Xendit integration
+- ✅ Payout transactions with Operator integration
 - ✅ Transaction history for compliance
-- ✅ Receipts with print/email/SMS tracking
+- ✅ Receipts with print/email tracking
 - ✅ Audit logs for full transparency
 - ✅ Inventory tracking for bins & dispensers
 
@@ -40,10 +40,10 @@
 - ✅ Transaction history logging
 
 #### **PayoutService** (`src/services/payoutService.ts`)
-- ✅ Xendit disbursement creation
+- ✅ Operator disbursement creation
 - ✅ Payout link generation (QRPh)
 - ✅ Status polling with caching
-- ✅ Webhook handler for Xendit callbacks
+- ✅ Webhook handler for operator callbacks
 - ✅ Phone number validation (Philippine format)
 - ✅ Account name validation
 - ✅ Amount limit enforcement (₱100-₱50k GCash, ₱100-₱100k Maya)
@@ -52,7 +52,6 @@
 #### **ReceiptService** (`src/services/receiptService.ts`)
 - ✅ Receipt generation with transaction ID
 - ✅ Print tracking (count & timestamp)
-- ✅ SMS delivery logging
 - ✅ Email delivery logging
 - ✅ Receipt retrieval by transaction ID
 
@@ -75,14 +74,13 @@
 - `POST /api/payout/link` - Generate QRPh payout link
 - `POST /api/payout/cash` - Log cash dispense transaction
 - `GET /api/payout/status/:externalId` - Check payout status
-- `POST /api/payout/webhook` - Handle Xendit callbacks
+- `POST /api/payout/webhook` - Handle Operator callbacks
 - `POST /api/redemption/withdraw` - Deduct from wallet
 
 **Receipt Endpoints:**
 - `POST /api/receipt/create` - Create receipt record
 - `GET /api/receipt/:transactionId` - Retrieve receipt
 - `POST /api/receipt/print/:transactionId` - Log print action
-- `POST /api/receipt/sms/:transactionId` - Log SMS send
 - `POST /api/receipt/email/:transactionId` - Log email send
 
 ---
@@ -138,9 +136,9 @@ Edit `.env`:
 # Database (adjust user/password as needed)
 DATABASE_URL="postgresql://postgres:password@localhost:5432/revision_rvm"
 
-# Xendit (only if using real Xendit)
-XENDIT_SECRET_KEY="xnd_live_YOUR_KEY"
-XENDIT_WEBHOOK_TOKEN="random_secure_token_here"
+# Operator Payout (only if using real operator)
+OPERATOR_PAYOUT_KEY="your_operator_key"
+OPERATOR_WEBHOOK_TOKEN="random_secure_token_here"
 
 NODE_ENV="development"
 PORT="3000"
@@ -168,7 +166,7 @@ npm run dev
 ✅ Database connected successfully
 ✅ ReVision Reverse Vending Machine Kiosk Server running on port 3000
 📊 Transaction system: ENABLED (PostgreSQL)
-💳 Xendit integration: CONFIGURED
+💳 Operator integration: CONFIGURED
 ```
 
 ---
@@ -242,17 +240,17 @@ npm run dev
 
 ```
 1. [Frontend] User enters phone number: "09171234567"
-   
+    
 2. [Frontend] User clicks "Send to GCash"
    → POST /api/payout/direct {
-       sessionId,
-       userId,
-       amount: 8.50,
-       channel: "GCASH",
-       accountNumber: "09171234567",
-       accountName: "Juan Dela Cruz"
-     }
-   
+      sessionId,
+      userId,
+      amount: 8.50,
+      channel: "GCASH",
+      accountNumber: "09171234567",
+      accountName: "Juan Dela Cruz"
+    }
+  
 3. [Backend] Validation:
    ✅ Phone format validated
    ✅ Account name validated
@@ -268,11 +266,11 @@ npm run dev
      status: "PENDING"
    }
    
-5. [Xendit API] Call disbursement endpoint
-   → Xendit processes payment
+5. [Operator API] Call disbursement endpoint
+   → Operator processes payment
    
 6. [Database] Update payout_transactions:
-   ✅ xendit_id: "disb_xyz123..."
+   ✅ operator_id: "op_xyz123..."
    ✅ status: "COMPLETED"
    
 7. [Frontend] Show success modal with receipt
@@ -281,10 +279,10 @@ npm run dev
 
 ---
 
-### **Scenario: Xendit Webhook Callback**
+### **Scenario: Operator Webhook Callback**
 
 ```
-1. [Xendit] Payment processed → sends webhook
+1. [Operator] Payment processed → sends webhook
    POST /api/payout/webhook {
      event: "payment.completed",
      external_id: "RVM-PAY-1693100000000-xyz789",
@@ -342,7 +340,7 @@ SELECT * FROM receipts WHERE transaction_id = 'TXN-123456';
 
 ✅ **PIN Hashing:** bcrypt with 10 salt rounds (passwords never stored plain)  
 ✅ **SQL Injection Prevention:** Parameterized queries throughout  
-✅ **Xendit Webhook Verification:** Token check on all callbacks  
+✅ **Operator Webhook Verification:** Token check on all callbacks  
 ✅ **Transaction Integrity:** Database-level ACID guarantees  
 ✅ **Audit Trail:** Every financial action logged  
 ✅ **Input Validation:** Phone numbers, amounts, names validated  
@@ -422,9 +420,9 @@ net start postgresql-x64-13  # or your version
 - PIN must be exactly 4 digits
 - Check: PIN is case-sensitive
 
-### **Xendit Integration Not Working**
-- Check `.env` has valid `XENDIT_SECRET_KEY`
-- Use sandbox key for testing: `xnd_development_...`
+### **Operator Integration Not Working**
+- Check `.env` has valid `OPERATOR_PAYOUT_KEY`
+- Use sandbox key for testing: `op_development_...`
 - Verify webhook token is configured
 
 ### **Transaction Not Appearing in Database**
@@ -442,7 +440,7 @@ net start postgresql-x64-13  # or your version
 4. ⏭️ **Update Frontend** - Call new endpoints instead of in-memory state
 5. ⏭️ **Hardware Integration** - Connect serial port communication
 6. ⏭️ **Testing** - Unit & integration tests
-7. ⏭️ **Deployment** - Production database & Xendit live keys
+7. ⏭️ **Deployment** - Production database & Operator live keys
 
 ---
 

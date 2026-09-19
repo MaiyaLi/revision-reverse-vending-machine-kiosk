@@ -28,9 +28,9 @@ if [ ! -f ".env" ]; then
 # Database Configuration
 DATABASE_URL="postgresql://postgres:password@localhost:5432/revision_rvm"
 
-# Xendit Configuration
-XENDIT_SECRET_KEY="xnd_development_key"
-XENDIT_WEBHOOK_TOKEN="webhook_token_secret"
+# Payout Configuration (Operator-assisted)
+OPERATOR_PAYOUT_KEY="your_operator_key"
+OPERATOR_WEBHOOK_TOKEN="your_webhook_token"
 
 # Gemini AI Configuration
 GEMINI_API_KEY="your_gemini_api_key"
@@ -60,8 +60,8 @@ echo -e "${GREEN}✅ Database seeded${NC}"
 
 echo ""
 echo -e "${GREEN}========================================"
-echo "✅ All systems initialized successfully!"
-echo "=======================================${NC}"
+echo -e "✅ All systems initialized successfully!"
+echo -e "=======================================${NC}"
 echo ""
 echo -e "${YELLOW}Starting server on http://localhost:3000${NC}"
 echo ""

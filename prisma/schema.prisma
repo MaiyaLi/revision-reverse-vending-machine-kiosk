@@ -43,6 +43,7 @@ model User {
   // Relations
   deposits             DepositSession[]
   payouts              PayoutTransaction[]
+  operatorRequests     OperatorPayoutRequest[]
   transactions         TransactionHistory[]
   auditLogs            AuditLog[]
   receipts             Receipt[]
@@ -81,6 +82,7 @@ model DepositSession {
   // Relations
   items                DepositItem[]
   payouts              PayoutTransaction[]
+  operatorRequests     OperatorPayoutRequest[]
   receipts             Receipt[]
 
   createdAt            DateTime  @default(now())
@@ -125,9 +127,43 @@ model DepositItem {
   processedAt          DateTime  @default(now())
 
   @@unique([sessionId, itemNumber])
-  @@index([sessionId])
-  @@index([detectedMaterial])
-  @@map("deposited_items")
+   @@index([sessionId])
+   @@index([detectedMaterial])
+   @@map("deposited_items")
+}
+
+// ============================================
+// DETECTION HISTORY MODEL
+// ============================================
+
+model DetectionHistory {
+  id                   String    @id @default(uuid())
+  detectedMaterial     String    @db.VarChar(50)
+  itemName             String?   @db.VarChar(255)
+  confidence           Float?    @db.Real
+  estimatedWeightGrams Int?
+  co2ReductionKg       Float?    @db.Real
+  ecoPoints            Int?
+  payoutAmount         Float?    @db.Real
+  imageBase64          String?   @db.Text
+  status               ItemStatus @default(ACCEPTED)
+  timestamp            DateTime  @default(now()) @db.Timestamp(3)
+  createdAt            DateTime  @default(now()) @db.Timestamp(3)
+
+  @@index([timestamp])
+  @@map("detection_history")
+}
+
+// ============================================
+// RATE LIMIT MODEL
+// ============================================
+
+model RateLimit {
+  key        String   @id @db.Text
+  count      Int      @default(0)
+  resetTime  DateTime @db.Timestamp(3)
+
+  @@map("rate_limits")
 }
 
 // ============================================
@@ -165,9 +201,8 @@ model TransactionHistory {
 model PayoutTransaction {
   id                   String    @id @default(uuid())
   externalId           String    @unique @db.VarChar(100)
-  xenditId             String?   @db.VarChar(100)
-  userId               String
-  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId               String?
+  user                 User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
   sessionId            String?
   session              DepositSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
 
@@ -178,7 +213,6 @@ model PayoutTransaction {
   // Account Information (for transfers)
   accountNumber        String?   @db.VarChar(50)
   accountName          String?   @db.VarChar(255)
-  payoutUrl            String?   @db.Text
 
   // Status Tracking
   status               PayoutStatus @default(PENDING)
@@ -197,6 +231,37 @@ model PayoutTransaction {
   @@index([status])
   @@index([externalId])
   @@map("payout_transactions")
+}
+
+// ============================================
+// MANUAL OPERATOR PAYOUT REQUEST MODEL
+// ============================================
+
+model OperatorPayoutRequest {
+  id                   String    @id @default(uuid())
+  referenceId          String    @unique @db.VarChar(100)
+  userId               String?
+  user                 User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  sessionId            String?
+  session              DepositSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+
+  amount               Float     @db.Real
+  channel              PayoutChannel
+  recipientPhone       String    @db.VarChar(50)
+  recipientName        String    @db.VarChar(255)
+  status               OperatorPayoutStatus @default(PENDING)
+  operatorNote         String?   @db.Text
+  expiresAt            DateTime
+  resolvedAt           DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([sessionId])
+  @@index([status])
+  @@index([referenceId])
+  @@index([expiresAt])
+  @@map("operator_payout_requests")
 }
 
 // ============================================
@@ -222,7 +287,6 @@ model Receipt {
   printedAt            DateTime?
   printedCount         Int       @default(0)
   emailSentAt          DateTime?
-  smsSentAt            DateTime?
 
   createdAt            DateTime  @default(now())
 
@@ -344,4 +408,11 @@ enum PayoutStatus {
   FAILED
   CANCELLED
   REJECTED
+}
+
+enum OperatorPayoutStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  EXPIRED
 }

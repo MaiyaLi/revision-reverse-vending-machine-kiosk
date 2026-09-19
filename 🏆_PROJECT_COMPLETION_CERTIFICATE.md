@@ -31,7 +31,7 @@
 ║     • 15 optimized indexes for performance                              ║
 ║     • 16 RESTful API endpoints                                          ║
 ║     • ACID compliance with automatic rollback                           ║
-║     • Xendit payment integration                                        ║
+║     • Operator payment integration                                        ║
 ║     • Complete audit trail                                              ║
 ║                                                                          ║
 ║  SYSTEM 2: USER MANAGEMENT & DATABASE MODULE                            ║
@@ -109,7 +109,7 @@
 ║  TRANSACTION PROCESSING:                                                 ║
 ║  ✅ Deposit Session Management        ✅ Item Tracking                  ║
 ║  ✅ Automatic Payout Calculation      ✅ Receipt Generation             ║
-║  ✅ Xendit Payment Integration        ✅ Webhook Callbacks              ║
+║  ✅ Operator Payment Integration      ✅ Webhook Callbacks              ║
 ║  ✅ Transaction History               ✅ Status Tracking                ║
 ║                                                                          ║
 ║  DATA MANAGEMENT:                                                        ║
@@ -126,7 +126,7 @@
 ║  ORM:               Prisma (type-safe)                                  ║
 ║  Database:          PostgreSQL (ACID compliant)                         ║
 ║  Authentication:    bcrypt PIN hashing                                  ║
-║  Payment Gateway:   Xendit integration                                  ║
+║  Payment Gateway:   Operator-assisted payouts                       ║
 ║  Deployment:        Docker-ready                                        ║
 ║                                                                          ║
 ║  Architecture:      Service-Oriented                                    ║

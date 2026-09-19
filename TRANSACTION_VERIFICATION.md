@@ -14,7 +14,7 @@
 - ✅ 1 Express Server - **16 ENDPOINTS OPERATIONAL**
 - ✅ Environment Configuration - **READY**
 - ✅ Security Implementation - **BCRYPT + VALIDATION**
-- ✅ Xendit Integration - **COMPLETE**
+- ✅ Operator Payout Integration - **COMPLETE**
 - ✅ Error Handling - **COMPREHENSIVE**
 - ✅ Transaction Flow - **END-TO-END**
 
@@ -109,17 +109,17 @@
 **Verified Functions:**
 - ✅ `createDisbursement()` - GCash/Maya transfer
 - ✅ `createPayoutLink()` - QRPh payout link
-- ✅ `checkPayoutStatus()` - Poll Xendit status
+- ✅ `checkPayoutStatus()` - Poll operator status
 - ✅ `handleWebhook()` - Webhook callback handler
 - ✅ `createCashDispense()` - Cash dispense logging
 - ✅ `validatePhoneNumber()` - PH format validation
 - ✅ `validateAccountName()` - Name validation
 - ✅ `validateAmount()` - Amount limit enforcement
-- ✅ `callXenditAPI()` - API integration
+- ✅ `callOperatorAPI()` - API integration
 
-**Xendit Integration Verified:**
-- ✅ API endpoint: `https://api.xendit.co`
-- ✅ Authentication: Basic auth with API key
+**Operator Integration Verified:**
+- ✅ API endpoint: Operator-managed
+- ✅ Authentication: Operator-managed
 - ✅ External ID format: `RVM-PAY-{timestamp}-{random}`
 - ✅ Transaction recorded BEFORE API call
 - ✅ Transaction status updated on response
@@ -151,7 +151,6 @@
 - ✅ `createReceipt()` - Generate receipt
 - ✅ `getReceipt()` - Retrieve receipt
 - ✅ `printReceipt()` - Log print action
-- ✅ `sendViaSMS()` - SMS delivery tracking
 - ✅ `sendViaEmail()` - Email delivery tracking
 - ✅ `getUserReceipts()` - Fetch user receipts
 
@@ -166,7 +165,6 @@
 - ✅ Payout status tracking
 - ✅ Print count tracking
 - ✅ Email sent timestamp
-- ✅ SMS sent timestamp
 
 ---
 
@@ -185,21 +183,19 @@
 - ✅ `POST /api/deposit/complete` - Finalize session
 - ✅ `GET /api/deposit/session/:id` - Get session details
 
-#### Payouts (5)
+#### Payouts (4)
 - ✅ `POST /api/payout/direct` - GCash/Maya transfer
 - ✅ `POST /api/payout/link` - QRPh payout link
 - ✅ `POST /api/payout/cash` - Cash dispense
 - ✅ `GET /api/payout/status/:id` - Check status
-- ✅ `POST /api/payout/webhook` - Xendit callback
 
 #### Wallet (1)
 - ✅ `POST /api/redemption/withdraw` - Deduct balance
 
-#### Receipts (5)
+#### Receipts (4)
 - ✅ `POST /api/receipt/create` - Generate receipt
 - ✅ `GET /api/receipt/:id` - Get receipt
 - ✅ `POST /api/receipt/print/:id` - Log print
-- ✅ `POST /api/receipt/sms/:id` - Log SMS
 - ✅ `POST /api/receipt/email/:id` - Log email
 
 #### Utilities (2)
@@ -266,7 +262,7 @@
 4. **payout_transactions** ✅
    - UUID primary key
    - external_id (UNIQUE)
-   - xendit_id
+   - operator_id
    - Session foreign key
    - User foreign key
    - Amount
@@ -294,7 +290,7 @@
    - Materials list
    - Weight & reward
    - Payout method & status
-   - Print/email/SMS tracking
+   - Print/email tracking
    - 2 indexes
 
 7. **audit_log** ✅
@@ -358,8 +354,8 @@
 - ✅ GEMINI_API_KEY - Vision AI integration
 - ✅ APP_URL - Base URL configuration
 - ✅ DATABASE_URL - PostgreSQL connection string
-- ✅ XENDIT_SECRET_KEY - Payment API key
-- ✅ XENDIT_WEBHOOK_TOKEN - Webhook verification
+- ✅ OPERATOR_PAYOUT_KEY - Payment API key
+- ✅ OPERATOR_WEBHOOK_TOKEN - Webhook verification
 - ✅ NODE_ENV - Development mode
 - ✅ PORT - 3000
 
@@ -434,22 +430,22 @@
    → UPDATE users wallet_balance
    → Return: updated user
 
-   Option B: XENDIT TRANSFER
+   Option B: OPERATOR TRANSFER
    → POST /api/payout/direct
    → Input: userId, amount, channel, phone, name
    → Validate phone, name, amount
    → INSERT payout_transactions (PENDING)
-   → Call Xendit API
+   → Call Operator API
    → UPDATE payout_transactions (PENDING/FAILED)
    → Return: externalId, status
 
-   Option C: QRPH LINK
-   → POST /api/payout/link
-   → Input: userId, amount
-   → INSERT payout_transactions (PENDING)
-   → Call Xendit API
-   → UPDATE payout_transactions with payout_url
-   → Return: payoutUrl, externalId
+Option C: QRPH LINK
+    → POST /api/payout/link
+    → Input: userId, amount
+    → INSERT payout_transactions (PENDING)
+    → Call Operator API
+    → UPDATE payout_transactions with payout_url
+    → Return: payoutUrl, externalId
 
    Option D: CASH DISPENSE
    → POST /api/payout/cash
@@ -457,9 +453,9 @@
    → INSERT payout_transactions (COMPLETED)
    → Return: externalId
 
-9. HANDLE XENDIT WEBHOOK ✅
+9. HANDLE OPERATOR WEBHOOK ✅
    → POST /api/payout/webhook
-   → Input: Xendit event payload
+   → Input: Operator event payload
    → Verify x-callback-token
    → payoutService.handleWebhook()
    → UPDATE payout_transactions status
@@ -468,14 +464,12 @@
 10. TRACK PAYOUT STATUS ✅
     → GET /api/payout/status/:externalId
     → Query payout_transactions
-    → Check Xendit API if PENDING
+    → Check Operator API if PENDING
     → Return: status, failure reason
 
 11. SEND RECEIPT ✅
     → POST /api/receipt/print/:transactionId
     → UPDATE receipts printed_at, printed_count
-    → POST /api/receipt/sms/:transactionId
-    → UPDATE receipts sms_sent_at
     → POST /api/receipt/email/:transactionId
     → UPDATE receipts email_sent_at
 ```
@@ -544,7 +538,7 @@
 ### Payouts ✅
 - ✅ Unique external_id
 - ✅ Status tracked (PENDING/COMPLETED/FAILED)
-- ✅ Xendit ID linked
+- ✅ Operator ID linked
 - ✅ Channel recorded (GCASH/MAYA/CASH/PAYOUT_LINK)
 - ✅ Failure reason logged
 - ✅ Timestamps tracked
@@ -559,7 +553,7 @@
 - ✅ Unique transaction_id
 - ✅ Unique per session
 - ✅ Print count incremented
-- ✅ Timestamps tracked (printed_at, email_sent_at, sms_sent_at)
+- ✅ Timestamps tracked (printed_at, email_sent_at)
 
 ---
 
@@ -612,7 +606,7 @@
 ### Scenario 3: Payout Webhook ✅
 ```
 1. Create payout (PENDING)
-2. Xendit webhook arrives
+2. Operator webhook arrives
 3. Status updated to COMPLETED
 4. User balance reflected
 ```
@@ -701,7 +695,7 @@
 | API Endpoints (16) | ✅ COMPLETE | YES |
 | Security Layer | ✅ COMPLETE | YES |
 | Error Handling | ✅ COMPLETE | YES |
-| Xendit Integration | ✅ COMPLETE | YES |
+| Operator Integration | ✅ COMPLETE | YES |
 | Transaction Flow | ✅ COMPLETE | YES |
 | Data Persistence | ✅ COMPLETE | YES |
 | Documentation | ✅ COMPLETE | YES |
@@ -723,8 +717,8 @@ psql -U postgres -d revision_rvm -f migrations/001_init_schema.sql
 
 # 3. Configure .env
 ✅ DATABASE_URL set
-✅ XENDIT_SECRET_KEY configured
-✅ XENDIT_WEBHOOK_TOKEN set
+✅ OPERATOR_PAYOUT_KEY configured
+✅ OPERATOR_WEBHOOK_TOKEN set
 
 # 4. Install dependencies
 npm install pg bcrypt
@@ -777,7 +771,7 @@ psql -U postgres -d revision_rvm -c "\dt"
 ✅ Deploy to production  
 ✅ Integrate frontend  
 ✅ Handle real transactions  
-✅ Process payments via Xendit  
+✅ Process payments via operator  
 ✅ Generate receipts  
 ✅ Track audit trail  
 

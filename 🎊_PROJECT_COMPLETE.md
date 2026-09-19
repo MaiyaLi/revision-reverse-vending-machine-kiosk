@@ -32,7 +32,7 @@
 ✅ Deposit session management  
 ✅ Item tracking & logging  
 ✅ Automatic payout calculation  
-✅ Xendit payment integration  
+✅ Operator payment integration  
 ✅ Webhook callback support  
 ✅ Receipt generation & storage  
 ✅ Transaction history logging  
@@ -129,7 +129,7 @@
 ✅ POST   /api/receipt/create
 ✅ GET    /api/receipt/:id
 ✅ POST   /api/receipt/print/:id
-✅ POST   /api/receipt/sms/:id
+✅ POST   /api/receipt/email/:id
 ```
 
 ### Health Check (1 endpoint - VERIFIED WORKING)
@@ -256,7 +256,7 @@ curl http://localhost:3000/api/user/TEST-001
 - ✅ Database persistence architecture
 - ✅ User authentication system
 - ✅ Transaction processing
-- ✅ Payment gateway integration
+- ✅ Payment gateway integration (operator-assisted)
 - ✅ Receipt management
 - ✅ Audit logging
 - ✅ Error handling

@@ -32,7 +32,7 @@
 ✅ src/services/database.ts           1.8K  Database connection pool
 ✅ src/services/userService.ts        4.5K  User management & auth
 ✅ src/services/depositService.ts     5.8K  Deposit lifecycle
-✅ src/services/payoutService.ts      9.1K  Xendit integration
+✅ src/services/payoutService.ts      9.1K  Operator payout integration
 ✅ src/services/receiptService.ts     2.7K  Receipt management
 ```
 
@@ -77,7 +77,7 @@
 - Full audit trail
 
 ### ✅ Payment Processing
-- Xendit GCash/Maya integration
+- Operator GCash/Maya integration
 - QRPh payout links
 - Webhook callback handling
 - Status polling & caching
@@ -86,7 +86,7 @@
 ### ✅ Receipt Generation
 - Transaction ID tracking
 - Print count logging
-- SMS/Email delivery tracking
+- Email delivery tracking
 - Receipt storage & retrieval
 - Full audit history
 
@@ -118,8 +118,8 @@ psql -U postgres -d revision_rvm -f migrations/001_init_schema.sql
 ```bash
 # Edit .env:
 DATABASE_URL="postgresql://postgres:password@localhost:5432/revision_rvm"
-XENDIT_SECRET_KEY="xnd_development_YOUR_KEY"
-XENDIT_WEBHOOK_TOKEN="your_webhook_token"
+OPERATOR_PAYOUT_KEY="your_operator_key"
+OPERATOR_WEBHOOK_TOKEN="your_webhook_token"
 ```
 
 ### 4. Start Server
@@ -146,7 +146,7 @@ Service Layer (5 services)
 PostgreSQL (9 tables, 15 indexes)
       ↓
 External APIs:
-├─ Xendit (Payments)
+├─ Operator Payouts (Payments)
 ├─ Gemini (Vision)
 └─ Thermal Printer
 ```
@@ -191,7 +191,7 @@ POST /api/payout/direct          GCash/Maya
 POST /api/payout/link            QRPh
 POST /api/payout/cash            Cash dispense
 GET  /api/payout/status/:id      Check status
-POST /api/payout/webhook         Xendit callback
+POST /api/payout/webhook         Operator callback
 ```
 
 ### Wallet (1)
@@ -199,12 +199,11 @@ POST /api/payout/webhook         Xendit callback
 POST /api/redemption/withdraw    Deduct balance
 ```
 
-### Receipts (4)
+### Receipts (3)
 ```
 POST /api/receipt/create         Generate
 GET  /api/receipt/:id            Retrieve
 POST /api/receipt/print/:id      Log print
-POST /api/receipt/sms/:id        Log SMS
 POST /api/receipt/email/:id      Log email
 ```
 
@@ -214,7 +213,7 @@ POST /api/receipt/email/:id      Log email
 
 ✅ **Persistent Storage** - PostgreSQL with ACID compliance  
 ✅ **Secure Authentication** - bcrypt PIN hashing  
-✅ **Real Payments** - Xendit integration with webhooks  
+✅ **Real Payments** - Operator payout integration with webhooks  
 ✅ **Audit Trail** - Complete transaction history  
 ✅ **Error Handling** - Comprehensive logging  
 ✅ **Input Validation** - Phone, amounts, names  
@@ -247,7 +246,7 @@ POST /api/receipt/email/:id      Log email
 
 ✅ Bcrypt PIN Hashing  
 ✅ Parameterized SQL Queries  
-✅ Xendit Webhook Verification  
+✅ Operator Webhook Verification  
 ✅ Phone Format Validation  
 ✅ Amount Limit Enforcement  
 ✅ Connection Pooling  
@@ -324,7 +323,7 @@ curl -X POST http://localhost:3000/api/auth/register \
 
 ### Phase 4: Deployment (1-2 days)
 - Production database
-- Xendit live keys
+- Operator payout keys
 - SSL/TLS setup
 
 ---
@@ -335,8 +334,7 @@ curl -X POST http://localhost:3000/api/auth/register \
 |--------|-------|
 | In-memory storage (lost on restart) | PostgreSQL (permanent) |
 | Plain text PINs | bcrypt hashing |
-| Simulated transactions | Real transaction records |
-| Mocked Xendit | Xendit integrated |
+| Simulated transactions | Operator-assisted payouts |
 | Component state receipts | Database storage |
 | No validation | Comprehensive validation |
 | Silent failures | Error logging |
@@ -360,7 +358,7 @@ curl -X POST http://localhost:3000/api/auth/register \
 |-------|----------|
 | Database connection failed | Start PostgreSQL, verify DATABASE_URL |
 | PIN not working | Ensure bcrypt installed: `npm list bcrypt` |
-| Xendit not responding | Check XENDIT_SECRET_KEY in .env |
+| Operator payout not responding | Check OPERATOR_PAYOUT_KEY in .env |
 | API endpoint 404 | Restart server after changes |
 | Transaction not saved | Verify database schema created |
 

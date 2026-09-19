@@ -173,8 +173,8 @@ npx prisma migrate dev --name init
 ```bash
 # Edit .env with:
 DATABASE_URL="postgresql://..."
-XENDIT_SECRET_KEY="..."
-XENDIT_WEBHOOK_TOKEN="..."
+OPERATOR_PAYOUT_KEY="..."
+OPERATOR_WEBHOOK_TOKEN="..."
 ```
 
 ### Step 4: Integrate Routes (5 min)
@@ -203,7 +203,7 @@ curl http://localhost:3000/api/user/health/check
 - [x] Deposit session management
 - [x] Item tracking with sensors
 - [x] Automatic payout calculation
-- [x] Xendit payment integration
+- [x] Operator payment integration
 - [x] Webhook callbacks
 - [x] Receipt generation
 - [x] Transaction history
@@ -256,7 +256,7 @@ POST   /api/redemption/withdraw
 POST   /api/receipt/create
 GET    /api/receipt/:id
 POST   /api/receipt/print/:id
-POST   /api/receipt/sms/:id
+POST   /api/receipt/email/:id
 ```
 
 ### User Management (14 endpoints)

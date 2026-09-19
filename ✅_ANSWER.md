@@ -14,7 +14,7 @@
 ✅ Database service - Connection pooling, transactions, ACID  
 ✅ User service - Registration, login, bcrypt PIN hashing  
 ✅ Deposit service - Session management, atomic wallet updates  
-✅ Payout service - Xendit integration, webhooks, validation  
+✅ Payout service - Operator integration, webhooks, validation  
 ✅ Receipt service - Generation, storage, tracking  
 
 ### Database (9 Tables - 15 Indexes)
@@ -47,7 +47,7 @@
 ✅ Item logging → Stored with sensor data  
 ✅ Session complete → Wallet atomically updated  
 ✅ Receipt generation → Stored in database  
-✅ Xendit payout → Real API integration  
+✅ Operator payout → Real API integration  
 ✅ Webhook callback → Status updated  
 ✅ Data persistence → Survives server restart  
 

@@ -77,7 +77,7 @@ PORT="3000"
 
 # Optional
 GEMINI_API_KEY="your_key_here"
-XENDIT_SECRET_KEY="your_key_here"
+OPERATOR_PAYOUT_KEY="your_key_here"
 ```
 
 ### Step 3: Initialize Prisma
@@ -208,11 +208,11 @@ Financial transaction records.
 
 ### PayoutTransaction Model
 
-Payment disbursement records (Xendit integration).
+Payment disbursement records (Operator integration).
 
 **Key Fields:**
 - `externalId`: Unique ID for tracking
-- `xenditId`: Xendit payment ID
+- `operatorId`: Operator payment ID
 - `userId`: Recipient user
 - `amount`, `channel`: GCASH | MAYA | QRPH | CASH | WALLET
 - `status`: PENDING | PROCESSING | COMPLETED | FAILED

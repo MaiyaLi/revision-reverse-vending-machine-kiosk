@@ -162,7 +162,6 @@ export interface TranslationSet {
   payoutMethod: string;
   thanksSavingPlanet: string;
   printReceipt: string;
-  sendToMobile: string;
   sendToEmail: string;
   receiptSent: string;
   finished: string;
@@ -188,7 +187,7 @@ export const translations: Record<Language, TranslationSet> = {
     fullName: "Full Name",
     mobileNumber: "Mobile Number",
     optionalButNeeded: "Optional but needed",
-    mobileNumberHelp: "For login, SMS alerts, and financial withdrawals (GCash).",
+    mobileNumberHelp: "For login and financial withdrawals (GCash).",
     pin: "4-Digit Secure PIN",
     confirmPin: "Confirm 4-Digit PIN",
     emailAddress: "Email Address",
@@ -236,7 +235,6 @@ export const translations: Record<Language, TranslationSet> = {
     payoutMethod: "Payout Mode",
     thanksSavingPlanet: "Salamat! Thank you for recycling and saving the planet.",
     printReceipt: "Print Receipt Paper",
-    sendToMobile: "SMS Receipt",
     sendToEmail: "Email PDF Receipt",
     receiptSent: "Digital Receipt sent successfully!",
     finished: "Complete Session",
@@ -260,7 +258,7 @@ export const translations: Record<Language, TranslationSet> = {
     fullName: "Buong Pangalan",
     mobileNumber: "Numero ng Telepono",
     optionalButNeeded: "Opsyonal ngunit kailangan",
-    mobileNumberHelp: "Inirerekomenda para sa madaling pag-login, SMS alert, at pag-withdraw sa GCash.",
+    mobileNumberHelp: "Inirerekomenda para sa madaling pag-login at pag-withdraw sa GCash.",
     pin: "4-Digit PIN",
     confirmPin: "Kumpirmahin ang PIN",
     emailAddress: "Email Address",
@@ -308,7 +306,6 @@ export const translations: Record<Language, TranslationSet> = {
     payoutMethod: "Paraan ng Pagbayad",
     thanksSavingPlanet: "Salamat! Malaki ang iyong tulong sa kalikasan.",
     printReceipt: "I-print ang Resibo",
-    sendToMobile: "Ipadala sa SMS",
     sendToEmail: "Ipadala sa Email bilang PDF",
     receiptSent: "Matagumpay na ipinadala!",
     finished: "Tapusin ang Session",

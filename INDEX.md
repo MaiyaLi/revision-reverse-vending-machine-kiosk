@@ -183,7 +183,7 @@
 - **Key Methods:** `createSession()`, `getSession()`, `addItem()`, `completeSession()`, `abandonSession()`
 
 #### `src/services/payoutService.ts`
-- Xendit GCash/Maya disbursement
+- Operator GCash/Maya disbursement
 - QRPh payout links
 - Webhook callback handling
 - Status polling with caching
@@ -193,9 +193,10 @@
 #### `src/services/receiptService.ts`
 - Receipt generation
 - Print tracking
-- SMS/Email delivery logging
+- Print tracking (count & timestamp)
+- Email delivery logging
 - Receipt retrieval
-- **Key Methods:** `createReceipt()`, `getReceipt()`, `printReceipt()`, `sendViaSMS()`, `sendViaEmail()`, `getUserReceipts()`
+- **Key Methods:** `createReceipt()`, `getReceipt()`, `printReceipt()`, `sendViaEmail()`, `getUserReceipts()`
 
 ---
 
@@ -221,7 +222,6 @@
 
 #### `.env`
 - DATABASE_URL configuration
-- Xendit keys placeholder
 - NODE_ENV and PORT settings
 
 ---
@@ -310,11 +310,11 @@
 - [x] Deposit session tracking
 - [x] Item-by-item verification
 - [x] Automatic payout calculation
-- [x] Xendit GCash/Maya integration
+- [x] Operator GCash/Maya integration
 - [x] QRPh payout link generation
 - [x] Webhook callback handling
 - [x] Receipt generation & storage
-- [x] Print/SMS/Email tracking
+- [x] Print/Email tracking
 - [x] Transaction history logging
 - [x] Audit trail for compliance
 - [x] Input validation

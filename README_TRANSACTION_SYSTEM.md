@@ -15,7 +15,7 @@
 1. **database.ts** - PostgreSQL connection pool with transaction support
 2. **userService.ts** - Secure user management with bcrypt PIN hashing
 3. **depositService.ts** - Complete deposit session lifecycle
-4. **payoutService.ts** - Xendit integration with webhook support
+4. **payoutService.ts** - Operator payout integration with webhook support
 5. **receiptService.ts** - Receipt generation & delivery tracking
 
 ### ✅ Database (1 file)
@@ -107,7 +107,7 @@ curl http://localhost:3000/api/health
 
 🏆 **Zero Data Loss** - Everything persists to PostgreSQL  
 🔐 **Enterprise Security** - bcrypt, parameterized queries, webhook verification  
-💰 **Real Payments** - Xendit integration with callbacks  
+💰 **Real Payments** - Operator-assisted payout integration with callbacks  
 📊 **Full Compliance** - Complete audit trail  
 ⚡ **Production Ready** - Connection pooling, timeouts, error handling  
 🔄 **Atomic Transactions** - ACID guarantees with rollback  
@@ -185,7 +185,7 @@ curl http://localhost:3000/api/health
 
 ### Phase 4: Deployment (1-2 days)
 - Production database setup
-- Xendit live keys
+- Operator payout keys
 - SSL/TLS certificates
 
 ---
@@ -200,11 +200,11 @@ curl http://localhost:3000/api/health
 ✅ Wallet Balance Management  
 ✅ Eco Points Tracking  
 ✅ CO2 Reduction Logging  
-✅ Xendit Payment Integration  
+✅ Operator Payment Integration  
 ✅ QRPh Support  
 ✅ Receipt Generation  
 ✅ Print Tracking  
-✅ SMS/Email Tracking  
+✅ Email Tracking
 ✅ Transaction History  
 ✅ Audit Logging  
 ✅ Error Handling  
@@ -215,7 +215,7 @@ curl http://localhost:3000/api/health
 
 ✅ Bcrypt PIN Hashing (10 salt rounds)  
 ✅ SQL Injection Prevention (Parameterized queries)  
-✅ Xendit Webhook Verification (Token check)  
+✅ Operator Webhook Verification (Token check)  
 ✅ Input Validation (Phone, amounts, names)  
 ✅ Connection Pooling (20 max)  
 ✅ Timeout Protection (2 seconds)  
@@ -230,7 +230,7 @@ curl http://localhost:3000/api/health
 |-------|----------|
 | DB connection failed | Start PostgreSQL, check DATABASE_URL |
 | PIN not working | Verify bcrypt installed: `npm list bcrypt` |
-| Xendit not responding | Check XENDIT_SECRET_KEY in .env |
+| Operator payout not responding | Check OPERATOR_PAYOUT_KEY in .env |
 | Transaction not saved | Verify database schema created |
 | API endpoint 404 | Make sure server restarted after changes |
 
@@ -304,7 +304,7 @@ curl http://localhost:3000/api/health
 Your reverse vending machine kiosk now has:
 - ✅ **Persistent data storage** (PostgreSQL)
 - ✅ **Secure user authentication** (bcrypt)
-- ✅ **Real payment processing** (Xendit)
+- ✅ **Real payment processing** (Operator-assisted)
 - ✅ **Complete transaction tracking** (audit logs)
 - ✅ **Professional error handling** (comprehensive)
 - ✅ **Production-ready backend** (16 endpoints)

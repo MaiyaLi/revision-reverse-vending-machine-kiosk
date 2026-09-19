@@ -30,7 +30,7 @@
   - Transaction history
 
 - ✅ `src/services/payoutService.ts` - Payment processing (250 lines)
-  - Xendit disbursement creation
+  - Manual disbursement creation
   - QRPh payout link generation
   - Status polling with caching
   - Webhook handler for callbacks
@@ -41,7 +41,7 @@
 - ✅ `src/services/receiptService.ts` - Receipt management (90 lines)
   - Receipt generation
   - Print tracking
-  - SMS/Email delivery tracking
+  - Email delivery tracking
   - Receipt retrieval
 
 ### **Database (1 file)**
@@ -61,7 +61,7 @@
 
 - ✅ `.env` - Environment variables
   - DATABASE_URL configured
-  - Xendit keys placeholder
+  - Payout keys placeholder
   - Server port configuration
 
 ---
@@ -88,7 +88,7 @@ POST /api/payout/direct          (GCash/Maya)
 POST /api/payout/link            (QRPh)
 POST /api/payout/cash            (Cash dispense)
 GET /api/payout/status/:id       (Status check)
-POST /api/payout/webhook         (Xendit callback)
+POST /api/payout/webhook         (Operator callback)
 ```
 
 ### Wallet Management (1)
@@ -96,12 +96,11 @@ POST /api/payout/webhook         (Xendit callback)
 POST /api/redemption/withdraw
 ```
 
-### Receipts (4)
+### Receipts (3)
 ```
 POST /api/receipt/create
 GET /api/receipt/:transactionId
 POST /api/receipt/print/:id
-POST /api/receipt/sms/:id
 POST /api/receipt/email/:id
 ```
 
@@ -141,7 +140,7 @@ POST /api/receipt/email/:id
 
 4. payout_transactions
    - external_id (UNIQUE)
-   - xendit_id
+   - operator_id
    - session_id (FK)
    - user_id (FK)
    - amount
@@ -166,7 +165,6 @@ POST /api/receipt/email/:id
    - printed_count
    - printed_at
    - email_sent_at
-   - sms_sent_at
 
 7. audit_log
    - event_type
@@ -205,7 +203,7 @@ POST /api/receipt/email/:id
 - No string concatenation
 - Database level prepared statements
 
-✅ **Xendit Webhook Verification**
+✅ **Operator Webhook Verification**
 - Token validation on every callback
 - Timestamp checking
 - Event type validation
@@ -247,8 +245,8 @@ POST /api/receipt/email/:id
 - Full audit trail
 
 ### ✅ Payout Processing
-- GCash disbursement via Xendit
-- Maya disbursement via Xendit
+- GCash disbursement via operator
+- Maya disbursement via operator
 - QRPh payout links
 - Cash dispense logging
 - Payout status tracking
@@ -258,7 +256,6 @@ POST /api/receipt/email/:id
 - Transaction ID generation
 - Receipt storage in database
 - Print tracking (count & timestamp)
-- SMS delivery logging
 - Email delivery logging
 - Receipt retrieval by transaction ID
 
@@ -272,7 +269,7 @@ POST /api/receipt/email/:id
 ### ✅ Error Handling
 - Validation errors with clear messages
 - Database errors logged
-- Xendit API errors captured
+- Operator API errors captured
 - Timeout detection
 - Automatic rollback on failures
 
@@ -295,8 +292,8 @@ psql -U postgres -d revision_rvm -f migrations/001_init_schema.sql
 ### 3. Configure .env
 ```bash
 DATABASE_URL="postgresql://postgres:password@localhost:5432/revision_rvm"
-XENDIT_SECRET_KEY="xnd_development_YOUR_KEY"
-XENDIT_WEBHOOK_TOKEN="your_webhook_token"
+OPERATOR_PAYOUT_KEY="your_operator_key"
+OPERATOR_WEBHOOK_TOKEN="your_webhook_token"
 ```
 
 ### 4. Start Server
@@ -394,7 +391,7 @@ curl -X POST http://localhost:3000/api/deposit/complete \
 
 🔐 **Enterprise Security** - bcrypt hashing, parameterized queries, webhook verification
 
-💰 **Real Payment Processing** - Xendit integration with webhook callbacks
+💰 **Real Payment Processing** - Operator-assisted payout integration with webhook callbacks
 
 📊 **Full Audit Trail** - Every financial transaction logged for compliance
 
@@ -415,7 +412,7 @@ curl -X POST http://localhost:3000/api/deposit/complete \
 | **Data Storage** | In-memory (lost) | PostgreSQL (persistent) |
 | **User PINs** | Plain text | bcrypt hashed |
 | **Transactions** | Simulated | Real database records |
-| **Payout Status** | Mocked | Xendit integrated |
+| **Payout Status** | Mocked | Operator integrated |
 | **Receipts** | Component state | Database stored |
 | **Validation** | Minimal | Comprehensive |
 | **Error Handling** | Silent | Logged with details |
@@ -429,7 +426,7 @@ curl -X POST http://localhost:3000/api/deposit/complete \
 ✅ **Database Schema:** Complete  
 ✅ **API Endpoints:** Complete  
 ✅ **Security:** Complete  
-✅ **Xendit Integration:** Complete  
+✅ **Operator Integration:** Complete  
 ✅ **Error Handling:** Complete  
 ✅ **Documentation:** Complete  
 

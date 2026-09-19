@@ -1,7 +1,6 @@
 import { db } from './database';
 import { printReceipt, testPrinterCommands } from './printerService';
 import nodemailer from 'nodemailer';
-import twilio from 'twilio';
 
 export interface ReceiptData {
   items: Array<{
@@ -14,7 +13,6 @@ export interface ReceiptData {
   user?: {
     name: string;
     email?: string;
-    phone?: string;
   };
   timestamp: string;
   transactionId: string;
@@ -105,49 +103,6 @@ export class ReceiptService {
 
   async testPrinterCommands(): Promise<boolean> {
     return testPrinterCommands();
-  }
-
-  async sendViaSMS(transactionId: string, phoneNumber: string): Promise<any> {
-    const receipt = await db.queryOne(
-      `SELECT * FROM receipts WHERE "transactionId" = $1`,
-      [transactionId]
-    );
-
-    if (!receipt) {
-      throw new Error('Receipt not found');
-    }
-
-    // Format receipt details for SMS
-    const smsBody = `ReVision RVM Receipt\nTransaction: ${receipt.transactionId}\nDate: ${new Date(receipt.createdAt).toLocaleString()}\nMaterials: ${receipt.materialsDeposited}\nWeight: ${receipt.totalWeightKg} Kg\nReward: ₱${receipt.totalReward}\nMethod: ${receipt.payoutMethod}\n\nThank you for recycling!`;
-
-    // Send SMS via Twilio if configured
-    const twilioSid = process.env.TWILIO_ACCOUNT_SID;
-    const twilioToken = process.env.TWILIO_AUTH_TOKEN;
-    const twilioFrom = process.env.TWILIO_FROM_NUMBER;
-
-    if (twilioSid && twilioToken && twilioFrom) {
-      try {
-        const client = twilio(twilioSid, twilioToken);
-        await client.messages.create({
-          body: smsBody,
-          from: twilioFrom,
-          to: phoneNumber
-        });
-        console.log('SMS receipt sent:', transactionId, phoneNumber);
-      } catch (smsError) {
-        console.error('Twilio SMS error:', smsError);
-        // Continue to mark as sent even if SMS fails
-      }
-    } else {
-      console.log('SMS receipt queued (Twilio not configured):', transactionId, phoneNumber);
-    }
-
-    await db.query(
-      `UPDATE receipts SET "smsSentAt" = NOW() WHERE "transactionId" = $1`,
-      [transactionId]
-    );
-
-    return receipt;
   }
 
   async sendViaEmail(transactionId: string, emailAddress: string): Promise<any> {

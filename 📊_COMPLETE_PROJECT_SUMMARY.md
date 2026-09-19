@@ -31,14 +31,14 @@
    - Atomic wallet updates via transaction
 
 ✅ src/services/payoutService.ts (250 lines)
-   - Xendit GCash/Maya/QRPh integration
+   - Operator GCash/Maya/QRPh integration
    - Webhook callback handling
    - Phone number & amount validation
    - Payment status tracking
 
 ✅ src/services/receiptService.ts (90 lines)
    - Receipt generation with unique IDs
-   - Print/SMS/Email delivery tracking
+   - Print/Email delivery tracking
    - Receipt storage & retrieval
 ```
 
@@ -61,9 +61,9 @@
    - Vite dev middleware
 
 ✅ .env
-   - Database configuration
-   - Xendit API keys
-   - Server settings
+- Database configuration
+- Operator Payout API keys
+- Server settings
 ```
 
 #### Documentation (4 files)
@@ -95,7 +95,7 @@
      • DepositSession (session tracking)
      • DepositItem (item details)
      • Transaction (financial records)
-     • PayoutTransaction (Xendit integration)
+     • PayoutTransaction (Operator integration)
      • AuditLog (compliance trail)
    - 6 optimized indexes
    - Type-safe with Prisma ORM
@@ -209,10 +209,10 @@
                          │
          ┌───────────────┼───────────────┐
          ↓               ↓               ↓
-    ┌─────────┐    ┌──────────┐    ┌──────────┐
-    │ Xendit  │    │ Gemini   │    │Thermal   │
-    │ Payments│    │   AI     │    │ Printer  │
-    └─────────┘    └──────────┘    └──────────┘
+┌─────────┐    ┌──────────┐    ┌──────────┐
+     │Operator │    │ Gemini   │    │Thermal   │
+     │ Payments│    │   AI     │    │ Printer  │
+     └─────────┘    └──────────┘    └──────────┘
 ```
 
 ---
@@ -221,7 +221,7 @@
 
 ### Transaction System
 ✅ **Zero Data Loss** - PostgreSQL persistence  
-✅ **Real Payments** - Xendit integration verified  
+✅ **Real Payments** - Operator integration verified  
 ✅ **Atomic Operations** - ACID transactions  
 ✅ **Security** - bcrypt + validation + webhooks  
 ✅ **Audit Trail** - Complete compliance logging  
@@ -281,7 +281,7 @@ npm run dev
 - [x] Deposit session management
 - [x] Item-by-item tracking
 - [x] Automatic payout calculation
-- [x] Xendit payment integration
+- [x] Operator payment integration
 - [x] Webhook callback handling
 - [x] Receipt generation & storage
 - [x] Transaction history

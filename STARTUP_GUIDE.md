@@ -10,7 +10,7 @@
 ### Fixed Issues:
 ✅ Database persistence (PostgreSQL with Prisma)  
 ✅ User authentication (bcrypt PIN hashing)  
-✅ Transaction processing (Xendit integration ready)  
+✅ Transaction processing (Operator-assisted payouts ready)  
 ✅ Payment gateway (webhook support)  
 ✅ Receipt management (database storage)  
 ✅ Audit logging (complete trail)  
