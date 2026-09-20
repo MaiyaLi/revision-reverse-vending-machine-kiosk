@@ -274,7 +274,7 @@ export class DetectionService {
     }
 
     const visionOnly =
-      options.visionOnly ??
+      options.visionOnly === true ||
       (!options.inductiveReading && !(options.weightGrams && options.weightGrams > 0));
     const detectionOptions: DetectionOptions = { ...options, visionOnly };
     const frameDetections: FrameDetection[] = [];
