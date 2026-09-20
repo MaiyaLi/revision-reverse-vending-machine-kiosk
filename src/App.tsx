@@ -653,17 +653,12 @@ export default function App() {
     co2: '0.000'
   });
 
-  const bankLogos: Record<string, string> = {
+  const providerLogos: Record<string, string> = {
     'GCash': '/images/banks/gcash.png?v=2',
-    'Maya': '/images/banks/maya.svg?v=2',
-    'BPI': '/images/banks/bpi.svg?v=2',
-    'BDO': '/images/banks/bdo.svg?v=2',
-    'UnionBank': '/images/banks/unionbank.svg?v=2',
-    'Landbank': '/images/banks/landbank.svg?v=2'
+    'Maya': '/images/banks/maya.svg?v=2'
   };
 
   const availableProviders = ['GCash', 'Maya'];
-  const comingSoonProviders = ['BPI', 'BDO', 'UnionBank', 'Landbank'];
 
   const redeemUser = () => activeUser || {
     walletBalance: 0,
@@ -1879,7 +1874,7 @@ export default function App() {
                      </div>
                      <div className="space-y-1">
                        <span className={`text-2xl font-black block ${isLight ? 'text-emerald-950' : 'text-white'}`}>{t('redeemViaQRPh')}</span>
-                       <span className={`text-sm ${isLight ? 'text-slate-600' : 'text-slate-300'} font-bold block`}>GCash / Maya / Bank app</span>
+                        <span className={`text-sm ${isLight ? 'text-slate-600' : 'text-slate-300'} font-bold block`}>GCash / Maya</span>
                      </div>
                    </button>
 
@@ -2105,7 +2100,7 @@ export default function App() {
                      className={`w-80 h-80 md:w-96 md:h-96 rounded-3xl border text-center transition-all flex items-center justify-center ${selectedProvider === provider ? 'bg-sky-500/10 border-sky-500 text-sky-600 dark:text-white shadow-lg font-black scale-105' : isLight ? 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100' : 'bg-slate-950 text-slate-400 border-slate-850 hover:border-slate-750'}`}
                    >
                      <img 
-                       src={bankLogos[provider]} 
+                      src={providerLogos[provider]}
                        alt={`${provider} logo`}
                        className="w-48 h-48 md:w-56 md:h-56 object-contain"
                        onError={(e) => {
@@ -2115,23 +2110,7 @@ export default function App() {
                      />
                    </button>
                  ))}
-                 {comingSoonProviders.map((provider) => (
-                   <div 
-                     key={provider}
-                     className={`w-80 h-80 md:w-96 md:h-96 rounded-3xl border text-center flex flex-col items-center justify-center gap-3 opacity-60 ${isLight ? 'bg-slate-100 border-slate-200 text-slate-400' : 'bg-slate-900 border-slate-800 text-slate-500'}`}
-                   >
-                     <img 
-                       src={bankLogos[provider]} 
-                       alt={`${provider} logo`}
-                       className="w-32 h-32 md:w-40 md:h-40 object-contain grayscale"
-                       onError={(e) => {
-                         const target = e.target as HTMLImageElement;
-                         target.src = 'data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><rect width="200" height="200" rx="20" fill="%23ccc"/><text x="100" y="120" font-family="Arial" font-size="40" text-anchor="middle" fill="%23666">Coming Soon</text></svg>';
-                       }}
-                     />
-                     <span className="text-xs font-black uppercase tracking-wider">Coming Soon</span>
-                   </div>
-                 ))}
+
                </div>
 
               <div className={`flex flex-col gap-4 pt-6 border-t ${cBorder} max-w-xl mx-auto w-full`}>
