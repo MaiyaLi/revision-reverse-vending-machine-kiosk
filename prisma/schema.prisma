@@ -146,6 +146,9 @@ model DetectionHistory {
   ecoPoints            Int?
   payoutAmount         Float?    @db.Real
   imageBase64          String?   @db.Text
+  boundingBox          Json?
+  imageWidth           Int?
+  imageHeight          Int?
   status               ItemStatus @default(ACCEPTED)
   timestamp            DateTime  @default(now()) @db.Timestamp(3)
   createdAt            DateTime  @default(now()) @db.Timestamp(3)

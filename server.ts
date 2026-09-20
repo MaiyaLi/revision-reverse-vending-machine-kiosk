@@ -775,33 +775,40 @@ app.get("/api/camera/image", async (req, res) => {
 
 app.post("/api/detect-waste", async (req, res) => {
   try {
-    const { imageBase64, hardwareInductive, hardwareWeight } = req.body;
+    const { imageBase64, inductiveReading, weightGrams, visionOnly } = req.body;
 
-    let materialType = "plastic";
-    let itemName = "PET Beverage Bottle";
-    let confidence = 0.95;
-    let estimatedWeight = hardwareWeight || 22;
+    const detectionOptions: { inductiveReading?: boolean; weightGrams?: number; visionOnly?: boolean } = {};
+    if (typeof inductiveReading === "boolean") detectionOptions.inductiveReading = inductiveReading;
+    if (typeof weightGrams === "number" && weightGrams > 0) detectionOptions.weightGrams = weightGrams;
+    if (typeof visionOnly === "boolean") detectionOptions.visionOnly = visionOnly;
 
-    if (hardwareInductive) {
-      materialType = "aluminum";
-      itemName = "Aluminum Soda Can";
-      estimatedWeight = hardwareWeight || 15;
-    } else if (hardwareWeight > 100) {
-      materialType = "glass";
-      itemName = "Premium Glass Beverage Bottle";
-      estimatedWeight = hardwareWeight || 280;
+    const result = await detectionService.detectMultipleItems(imageBase64, detectionOptions);
+    const detected = (result.items && result.items[0]) || (result.rejectedItems && result.rejectedItems[0]);
+
+    if (!detected) {
+      return res.status(404).json({
+        success: false,
+        error: "No item detected in image",
+        timestamp: result.timestamp,
+      });
     }
+
+    const materialType = detected.detectedMaterial;
 
     res.json({
       success: true,
       detectedMaterial: materialType,
-      itemName: itemName,
-      confidence: confidence,
-      estimatedWeightGrams: estimatedWeight,
-      reasoning: "Detected via integrated sensor & AI classification",
-      payoutPhilippinePesos: materialType === "plastic" ? 1.0 : materialType === "aluminum" ? 2.5 : materialType === "glass" ? 1.5 : 0,
-      ecoPointsEarned: materialType === "plastic" ? 10 : materialType === "aluminum" ? 25 : materialType === "glass" ? 15 : 0,
-      co2ReductionKg: materialType === "plastic" ? 0.04 : materialType === "aluminum" ? 0.09 : materialType === "glass" ? 0.06 : 0
+      itemName: detected.itemName,
+      confidence: detected.confidence,
+      estimatedWeightGrams: detected.estimatedWeightGrams,
+      status: detected.status,
+      reasoning: detected.reasoning,
+      payoutPhilippinePesos: detected.status === "accepted" && materialType === "plastic" ? 1.0 : detected.status === "accepted" && materialType === "aluminum" ? 2.5 : detected.status === "accepted" && materialType === "glass" ? 1.5 : 0,
+      ecoPointsEarned: detected.status === "accepted" && materialType === "plastic" ? 10 : detected.status === "accepted" && materialType === "aluminum" ? 25 : detected.status === "accepted" && materialType === "glass" ? 15 : 0,
+      co2ReductionKg: detected.status === "accepted" && materialType === "plastic" ? 0.04 : detected.status === "accepted" && materialType === "aluminum" ? 0.09 : detected.status === "accepted" && materialType === "glass" ? 0.06 : 0,
+      boundingBox: detected.boundingBox,
+      imageWidth: detected.imageWidth,
+      imageHeight: detected.imageHeight
     });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
@@ -826,7 +833,14 @@ app.get("/api/detection/image", (req, res) => {
 // Run detection - returns all detected items
 app.post("/api/detection/run", async (req, res) => {
   try {
-    const result = await detectionService.detectMultipleItems();
+    const { imageBase64, inductiveReading, weightGrams, visionOnly } = req.body;
+
+    const detectionOptions: { inductiveReading?: boolean; weightGrams?: number; visionOnly?: boolean } = {};
+    if (typeof inductiveReading === "boolean") detectionOptions.inductiveReading = inductiveReading;
+    if (typeof weightGrams === "number" && weightGrams > 0) detectionOptions.weightGrams = weightGrams;
+    if (typeof visionOnly === "boolean") detectionOptions.visionOnly = visionOnly;
+
+    const result = await detectionService.detectMultipleItems(imageBase64, detectionOptions);
     res.json(result);
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });

@@ -21,6 +21,36 @@ if [ ! -d "node_modules" ]; then
     echo -e "${GREEN}✅ Dependencies installed${NC}"
 fi
 
+PYTHON_BIN="${PYTHON_BIN:-python3}"
+if ! command -v "$PYTHON_BIN" >/dev/null 2>&1; then
+    echo -e "${RED}❌ Python 3 is required for local YOLO detection${NC}"
+    exit 1
+fi
+
+if [ ! -x ".venv/bin/python" ]; then
+    echo -e "${YELLOW}🐍 Creating Python virtual environment...${NC}"
+    "$PYTHON_BIN" -m venv ".venv"
+fi
+
+echo -e "${YELLOW}🐍 Installing vision dependencies...${NC}"
+".venv/bin/python" -m pip install --upgrade pip
+".venv/bin/python" -m pip install -r requirements.txt
+
+mkdir -p models
+if [ ! -f "models/yolov8n.pt" ]; then
+    echo -e "${YELLOW}🐍 Downloading YOLOv8n model...${NC}"
+    ".venv/bin/python" -c "from ultralytics import YOLO; YOLO('models/yolov8n.pt')"
+    if [ -f "yolov8n.pt" ]; then
+        mv "yolov8n.pt" "models/yolov8n.pt"
+    fi
+fi
+
+if [ ! -f "models/yolov8n.pt" ]; then
+    echo -e "${RED}❌ Vision model setup failed${NC}"
+    exit 1
+fi
+echo -e "${GREEN}✅ Vision environment ready${NC}"
+
 # Check if .env exists
 if [ ! -f ".env" ]; then
     echo -e "${YELLOW}⚙️  Creating .env file...${NC}"

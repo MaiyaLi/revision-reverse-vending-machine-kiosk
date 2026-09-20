@@ -22,6 +22,39 @@ if not exist "node_modules\" (
     echo ✅ Dependencies installed
 )
 
+if not defined PYTHON_BIN set PYTHON_BIN=python
+where "%PYTHON_BIN%" >nul 2>nul
+if errorlevel 1 (
+    echo ❌ Python 3 is required for local YOLO detection
+    exit /b 1
+)
+
+if not exist ".venv\Scripts\python.exe" (
+    echo 🐍 Creating Python virtual environment...
+    "%PYTHON_BIN%" -m venv ".venv"
+)
+
+echo 🐍 Installing vision dependencies...
+call ".venv\Scripts\python.exe" -m pip install --upgrade pip
+call ".venv\Scripts\python.exe" -m pip install -r requirements.txt
+if errorlevel 1 (
+    echo ❌ Failed to install vision dependencies
+    exit /b 1
+)
+
+if not exist "models" mkdir "models"
+if not exist "models\yolov8n.pt" (
+    echo 🐍 Downloading YOLOv8n model...
+    call ".venv\Scripts\python.exe" -c "from ultralytics import YOLO; YOLO('models\yolov8n.pt')"
+    if exist "yolov8n.pt" move /Y "yolov8n.pt" "models\yolov8n.pt"
+)
+
+if not exist "models\yolov8n.pt" (
+    echo ❌ Vision model setup failed
+    exit /b 1
+)
+echo ✅ Vision environment ready
+
 REM Check if .env exists
 if not exist ".env" (
     echo ⚙️  Creating .env file...

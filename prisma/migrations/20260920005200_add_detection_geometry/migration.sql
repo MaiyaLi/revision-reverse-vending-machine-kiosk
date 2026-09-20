@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "detection_history" ADD COLUMN IF NOT EXISTS "boundingBox" JSONB,
+ADD COLUMN IF NOT EXISTS "imageWidth" INTEGER,
+ADD COLUMN IF NOT EXISTS "imageHeight" INTEGER;
