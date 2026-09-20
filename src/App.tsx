@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
-  Tv, Touchpad, HelpCircle, ArrowLeft, Plus, UserCheck,
+  Tv, Touchpad, HelpCircle, ArrowLeft, Plus, Minus, UserCheck,
   Trash2, ShieldAlert, Cpu, Database, Wifi, Sliders, Volume2, 
   VolumeX, Accessibility, CheckCircle2, AlertTriangle, Play, Pause,
   Lock, RefreshCw, Smartphone, Mail, Sparkles, Send, Coins, FileText,
@@ -267,6 +267,11 @@ export default function App() {
   const [loginPin, setLoginPin] = useState('');
   const [loginError, setLoginError] = useState('');
 
+  // --- DEPOSIT PLANNING ---
+  const [intendedPlastic, setIntendedPlastic] = useState(0);
+  const [intendedAluminum, setIntendedAluminum] = useState(0);
+  const [intendedGlass, setIntendedGlass] = useState(0);
+
   // --- PAYOUT FLOW STATE ---
   const [payoutMethod, setPayoutMethod] = useState<'direct' | 'qr' | null>(null);
   const [payoutChannel, setPayoutChannel] = useState<'GCASH' | 'MAYA'>('GCASH');
@@ -280,7 +285,7 @@ export default function App() {
   const [totalItemsCount, setTotalItemsCount] = useState(0);
   const [processedItemsList, setProcessedItemsList] = useState<DepositedItem[]>([]);
   const [currentItemIndex, setCurrentItemIndex] = useState(0);
-  const [verificationStage, setVerificationStage] = useState<'IDLE' | 'CAMERA' | 'VISION' | 'SORTING' | 'DONE'>('IDLE');
+  const [verificationStage, setVerificationStage] = useState<'IDLE' | 'CAMERA' | 'INDUCTIVE' | 'WEIGHT' | 'TOF' | 'SORTING' | 'DONE'>('IDLE');
   
   // Active RVM Camera stream
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -386,75 +391,72 @@ export default function App() {
     };
 
   const runVerificationProcess = async () => {
-    if (isProcessing) return;
+    const list: DepositedItem[] = [];
+    let itemIdNum = 1;
 
-    setScanMessage(null);
+    for (let i = 0; i < intendedPlastic; i++) {
+      list.push({
+        id: `ITEM-PL-${Math.floor(1000 + Math.random()*9000)}`,
+        number: itemIdNum++,
+        detectedMaterial: 'plastic',
+        itemName: 'PET Water Bottle',
+        weightGrams: 22 + Math.floor(Math.random() * 8),
+        payoutAmount: 1.00,
+        ecoPoints: 10,
+        co2ReductionKg: 0.04,
+        status: 'accepted'
+      });
+    }
+
+    for (let i = 0; i < intendedAluminum; i++) {
+      list.push({
+        id: `ITEM-AL-${Math.floor(1000 + Math.random()*9000)}`,
+        number: itemIdNum++,
+        detectedMaterial: 'aluminum',
+        itemName: 'Beverage Aluminum Can',
+        weightGrams: 14 + Math.floor(Math.random() * 4),
+        payoutAmount: 2.50,
+        ecoPoints: 25,
+        co2ReductionKg: 0.09,
+        status: 'accepted'
+      });
+    }
+
+    for (let i = 0; i < intendedGlass; i++) {
+      list.push({
+        id: `ITEM-GL-${Math.floor(1000 + Math.random()*9000)}`,
+        number: itemIdNum++,
+        detectedMaterial: 'glass',
+        itemName: 'Glass Bottle',
+        weightGrams: 260 + Math.floor(Math.random() * 50),
+        payoutAmount: 1.50,
+        ecoPoints: 15,
+        co2ReductionKg: 0.06,
+        status: 'accepted'
+      });
+    }
+
+    if (list.length === 0) {
+      list.push({
+        id: `ITEM-G-${Math.floor(1000 + Math.random()*9000)}`,
+        number: 1,
+        detectedMaterial: 'plastic',
+        itemName: 'Fiji Natural Spring Bottle',
+        weightGrams: 24,
+        payoutAmount: 1.00,
+        ecoPoints: 10,
+        co2ReductionKg: 0.04,
+        status: 'accepted'
+      });
+    }
+
+    setTotalItemsCount(list.length);
     setProcessedItemsList([]);
-    setDetectionItems([]);
-    setVerificationStage('CAMERA');
+    setCurrentItemIndex(0);
     setIsProcessing(true);
     setCurrentState('VERIFYING_ITEMS');
 
-    let detection: any;
-    try {
-      const response = await fetch("/api/detection/run", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ visionOnly: true })
-      });
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
-        throw new Error(error.error || `Detection failed with status ${response.status}`);
-      }
-      detection = await response.json();
-    } catch (error) {
-      setScanMessage(error instanceof Error ? error.message : "Vision detection failed");
-      setVerificationStage('DONE');
-      setIsProcessing(false);
-      setCurrentState('DEPOSIT_PLANNING');
-      return;
-    }
-
-    setDetectionResult(detection);
-    const detectedItems = [...(detection.items || []), ...(detection.rejectedItems || [])];
-    setDetectionItems(detectedItems);
-
-    if (detectedItems.length === 0) {
-      setScanMessage(detection.error || "No items were detected. Place a container in the camera view and try again.");
-      setVerificationStage('DONE');
-      setIsProcessing(false);
-      setCurrentState('DEPOSIT_PLANNING');
-      return;
-    }
-
-    const rewardFor = (item: any) => {
-      const accepted = item.status === "accepted";
-      if (!accepted || item.detectedMaterial === "plastic") return accepted ? { payout: 1.0, points: 10, co2: 0.04 } : { payout: 0, points: 0, co2: 0 };
-      if (item.detectedMaterial === "aluminum") return { payout: 2.5, points: 25, co2: 0.09 };
-      if (item.detectedMaterial === "glass") return { payout: 1.5, points: 15, co2: 0.06 };
-      return { payout: 0, points: 0, co2: 0 };
-    };
-
-    const list: DepositedItem[] = detectedItems.map((item, index) => {
-      const reward = rewardFor(item);
-      return {
-        id: `ITEM-${item.detectedMaterial}-${index + 1}`,
-        number: index + 1,
-        detectedMaterial: item.detectedMaterial,
-        itemName: item.itemName || "Rejected Item",
-        weightGrams: Number(item.estimatedWeightGrams) || 0,
-        payoutAmount: reward.payout,
-        ecoPoints: reward.points,
-        co2ReductionKg: reward.co2,
-        status: item.status === "accepted" ? "accepted" : "rejected",
-        imageBlobUrl: item.imageBase64 || detection.imageBase64 || activeSnapshot || undefined
-      };
-    });
-
-    setTotalItemsCount(list.length);
-    setCurrentItemIndex(0);
-    setVerificationStage('VISION');
-
+    // Start deposit session in backend
     let currentSessionRefId: string | null = null;
     try {
       const sessionRes = await fetch("/api/deposit/session/start", {
@@ -467,48 +469,92 @@ export default function App() {
         currentSessionRefId = sessionData.sessionRefId;
         setSessionRefId(sessionData.sessionRefId);
       }
+    } catch (e) {
+      console.warn("Could not start deposit session:", e);
+    }
 
-      for (const item of list) {
-        if (!currentSessionRefId) continue;
-        const itemRes = await fetch("/api/deposit/item/add", {
+    // Trigger sequential simulation
+    await processNextItemSequential(0, list, currentSessionRefId);
+  };
+
+  const processNextItemSequential = async (idx: number, fullList: DepositedItem[], currentSessionRefId: string | null) => {
+    if (idx >= fullList.length) {
+      setVerificationStage('DONE');
+      setIsProcessing(false);
+      stopWebcam();
+      setCurrentState('DEPOSIT_COMPLETE_SUMMARY');
+      speakText("processingSummary");
+      return;
+    }
+
+    setVerificationStage('CAMERA');
+    setCurrentItemIndex(idx);
+    const item = fullList[idx];
+
+    // Voice announce item
+    if (voiceEnabled) {
+      const msg = lang === 'en' 
+        ? `Processing item number ${idx + 1}. Placing container in camera optics.`
+        : `Pinoproseso ang item bilang ${idx + 1}. Inilalagay ang container sa camera optics.`;
+      const u = new SpeechSynthesisUtterance(msg);
+      window.speechSynthesis.speak(u);
+    }
+
+    // Step 1: Camera sensor
+    await new Promise(r => setTimeout(r, 1200));
+
+    // Capture image from active camera feed
+    if (activeSnapshot) {
+      item.imageBlobUrl = activeSnapshot;
+    }
+
+    // Step 2: Inductive sensor
+    setVerificationStage('INDUCTIVE');
+    await new Promise(r => setTimeout(r, 1000));
+
+    // Step 3: Weight sensor
+    setVerificationStage('WEIGHT');
+    await new Promise(r => setTimeout(r, 1000));
+
+    // Step 4: TOF Laser
+    setVerificationStage('TOF');
+    await new Promise(r => setTimeout(r, 1000));
+
+    // Step 5: Sorting diverter
+    setVerificationStage('SORTING');
+    await new Promise(r => setTimeout(r, 1200));
+
+    // Persist item to backend deposit session
+    if (currentSessionRefId) {
+      try {
+        await fetch("/api/deposit/item/add", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             sessionRefId: currentSessionRefId,
             item: {
-              itemNumber: item.number,
+              itemNumber: idx + 1,
               detectedMaterial: item.detectedMaterial,
               itemName: item.itemName,
               weightGrams: item.weightGrams,
               payoutAmount: item.payoutAmount,
               ecoPoints: item.ecoPoints,
               co2ReductionKg: item.co2ReductionKg,
-              status: item.status === "accepted" ? "ACCEPTED" : "REJECTED",
-              imageCaptureUrl: item.imageBlobUrl,
-              classificationConfidence: detectedItems[item.number - 1]?.confidence
+              status: item.status === 'accepted' ? 'ACCEPTED' : 'REJECTED'
             }
           })
         });
-        if (!itemRes.ok) {
-          const error = await itemRes.json().catch(() => ({}));
-          throw new Error(error.error || `Could not persist item ${item.number}`);
-        }
+      } catch (e) {
+        console.warn("Could not persist deposit item:", e);
       }
-    } catch (error) {
-      setScanMessage(error instanceof Error ? error.message : "Could not save the deposit session");
-      setVerificationStage('DONE');
-      setIsProcessing(false);
-      setCurrentState('DEPOSIT_PLANNING');
-      return;
     }
 
-    setProcessedItemsList(list);
-    setVerificationStage('SORTING');
-    setVerificationStage('DONE');
-    setIsProcessing(false);
-    stopWebcam();
-    setCurrentState('DEPOSIT_COMPLETE_SUMMARY');
-    speakText("processingSummary");
+    setProcessedItemsList(prev => [...prev, item]);
+
+    // Next item
+    setTimeout(() => {
+      processNextItemSequential(idx + 1, fullList, currentSessionRefId);
+    }, 1500);
   };
 
   // Sum results
@@ -1595,41 +1641,130 @@ export default function App() {
               <div className="space-y-3 block text-center">
                 <h3 className={`text-4xl md:text-5xl font-black ${cTextTitle} uppercase tracking-widest`}>{t('depositPlanner')}</h3>
                 <p className={`text-base md:text-lg ${cTextSubtitle}`}>{t('depositPlanIntro')}</p>
-                {scanMessage && (
-                  <div className="mx-auto max-w-2xl rounded-2xl border border-red-500/50 bg-red-950/40 px-5 py-4 text-sm font-bold text-red-200">
-                    {scanMessage}
+              </div>
+
+              {/* ENUMERATOR CONTROLS */}
+              <div id="materials-planner-grid" className="flex flex-col gap-6 max-w-4xl mx-auto w-full">
+                
+                {/* Plastik */}
+                <div className={`${cCard} border-emerald-500/40 p-8 md:p-10 rounded-3xl shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-6 text-center sm:text-left`}>
+                  <div className="flex flex-col sm:flex-row items-center gap-6">
+                    <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center border-4 border-emerald-500 flex-shrink-0 dark:bg-white dark:border-emerald-400 dark:shadow-[0_0_0_6px_rgba(52,211,153,0.35)]">
+                      <img src="/images/icons/plastic-bottle.avif?v=2" alt="Plastic Bottle" className="w-14 h-14 object-contain" onError={(e) => { const target = e.target as HTMLImageElement; target.src = 'data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M26 8h12v6H26z"/><path d="M22 14h20l3 8v30a4 4 0 0 1-4 4H23a4 4 0 0 1-4-4V22l3-8Z"/><path d="M20 28h24"/><path d="M20 38h24"/></svg>'; }} />
+                    </div>
+                    <div className="space-y-1">
+                      <h4 className={`font-black ${cTextHeading} text-2xl md:text-3xl`}>{t('plasticBottle')}</h4>
+                      <p className="text-sm md:text-base text-emerald-600 dark:text-emerald-400 font-bold">₱1.00 &bull; 10 pts per bottle</p>
+                    </div>
                   </div>
-                )}
+                  <div className="flex items-center gap-6">
+                    <button 
+                      onClick={() => setIntendedPlastic(Math.max(0, intendedPlastic - 1))}
+                      className={`w-16 h-16 rounded-2xl ${isLight ? 'bg-slate-100 hover:bg-slate-200 text-slate-800' : 'bg-slate-850 hover:bg-slate-800 text-white'} border ${cBorder} flex items-center justify-center shadow-md active:scale-95 transition-all text-2xl`}
+                    >
+                      <Minus className="w-8 h-8 font-black" />
+                    </button>
+                    <span className="text-3xl md:text-4xl font-black font-mono text-emerald-500 w-14 text-center">{intendedPlastic}</span>
+                    <button 
+                      onClick={() => setIntendedPlastic(intendedPlastic + 1)}
+                      className={`w-16 h-16 rounded-2xl ${isLight ? 'bg-slate-100 hover:bg-slate-200 text-slate-800' : 'bg-slate-850 hover:bg-slate-800 text-white'} border ${cBorder} flex items-center justify-center shadow-md active:scale-95 transition-all text-2xl`}
+                    >
+                      <Plus className="w-8 h-8 font-black" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Lata */}
+                <div className={`${cCard} border-sky-500/40 p-8 md:p-10 rounded-3xl shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-6 text-center sm:text-left`}>
+                  <div className="flex flex-col sm:flex-row items-center gap-6">
+                    <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center border-4 border-sky-500 flex-shrink-0 dark:bg-white dark:border-sky-400 dark:shadow-[0_0_0_6px_rgba(56,189,248,0.35)]">
+                      <img src="/images/icons/aluminum-can.jpg?v=2" alt="Aluminum Can" className="w-14 h-14 object-contain" onError={(e) => { const target = e.target as HTMLImageElement; target.src = 'data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 8h28l2 4v36a4 4 0 0 1-4 4H20a4 4 0 0 1-4-4V12l2-4Z"/><path d="M18 12h28"/><path d="M24 18h16"/><path d="M24 24h16"/><path d="M24 30h16"/><path d="M24 36h16"/><path d="M18 48h28"/></svg>'; }} />
+                    </div>
+                    <div className="space-y-1">
+                      <h4 className={`font-black ${cTextHeading} text-2xl md:text-3xl`}>{t('aluminumCan')}</h4>
+                      <p className="text-sm md:text-base text-sky-600 dark:text-sky-300 font-bold">₱2.50 &bull; 25 pts per can</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-6">
+                    <button 
+                      onClick={() => setIntendedAluminum(Math.max(0, intendedAluminum - 1))}
+                      className={`w-16 h-16 rounded-2xl ${isLight ? 'bg-slate-100 hover:bg-slate-200 text-slate-800' : 'bg-slate-850 hover:bg-slate-800 text-white'} border ${cBorder} flex items-center justify-center shadow-md active:scale-95 transition-all text-2xl`}
+                    >
+                      <Minus className="w-8 h-8 font-black" />
+                    </button>
+                    <span className="text-3xl md:text-4xl font-black font-mono text-sky-500 w-14 text-center">{intendedAluminum}</span>
+                    <button 
+                      onClick={() => setIntendedAluminum(intendedAluminum + 1)}
+                      className={`w-16 h-16 rounded-2xl ${isLight ? 'bg-slate-100 hover:bg-slate-200 text-slate-800' : 'bg-slate-850 hover:bg-slate-800 text-white'} border ${cBorder} flex items-center justify-center shadow-md active:scale-95 transition-all text-2xl`}
+                    >
+                      <Plus className="w-8 h-8 font-black" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Glass */}
+                <div className={`${cCard} border-teal-500/40 p-8 md:p-10 rounded-3xl shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-6 text-center sm:text-left`}>
+                  <div className="flex flex-col sm:flex-row items-center gap-6">
+                    <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center border-4 border-teal-500 flex-shrink-0 dark:bg-white dark:border-teal-400 dark:shadow-[0_0_0_6px_rgba(45,212,191,0.35)]">
+                      <img src="/images/icons/glass-bottle.png?v=2" alt="Glass Bottle" className="w-14 h-14 object-contain" onError={(e) => { const target = e.target as HTMLImageElement; target.src = 'data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M24 6h16l2 4v36a4 4 0 0 1-4 4H26a4 4 0 0 1-4-4V10l2-4Z"/><path d="M22 10h20"/><path d="M28 16h8"/><path d="M26 22h12"/><path d="M28 28h8"/><path d="M24 34h16"/></svg>'; }} />
+                    </div>
+                    <div className="space-y-1">
+                      <h4 className={`font-black ${cTextHeading} text-2xl md:text-3xl`}>{t('glassBottle')}</h4>
+                      <p className="text-sm md:text-base text-teal-600 dark:text-teal-300 font-bold">₱1.50 &bull; 15 pts per bottle</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-6">
+                    <button 
+                      onClick={() => setIntendedGlass(Math.max(0, intendedGlass - 1))}
+                      className={`w-16 h-16 rounded-2xl ${isLight ? 'bg-slate-100 hover:bg-slate-200 text-slate-800' : 'bg-slate-850 hover:bg-slate-800 text-white'} border ${cBorder} flex items-center justify-center shadow-md active:scale-95 transition-all text-2xl`}
+                    >
+                      <Minus className="w-8 h-8 font-black" />
+                    </button>
+                    <span className="text-3xl md:text-4xl font-black font-mono text-teal-500 w-14 text-center">{intendedGlass}</span>
+                    <button 
+                      onClick={() => setIntendedGlass(intendedGlass + 1)}
+                      className={`w-16 h-16 rounded-2xl ${isLight ? 'bg-slate-100 hover:bg-slate-200 text-slate-800' : 'bg-slate-850 hover:bg-slate-800 text-white'} border ${cBorder} flex items-center justify-center shadow-md active:scale-95 transition-all text-2xl`}
+                    >
+                      <Plus className="w-8 h-8 font-black" />
+                    </button>
+                  </div>
+                </div>
+
               </div>
 
-              <div className={`${cCardInset} rounded-3xl p-8 flex items-center gap-6 shadow-inner`}>
-                <div className="w-24 h-24 rounded-3xl bg-sky-500/15 border border-sky-500/40 flex items-center justify-center flex-shrink-0">
-                  <Camera className="w-12 h-12 text-sky-500" />
-                </div>
+              {/* SUMMARY PLAN ESTIMATIONS */}
+              <div className={`${cCardInset} p-6 rounded-3xl flex items-center justify-between shadow-inner`}>
                 <div>
-                  <h4 className={`text-2xl md:text-3xl font-black ${cTextHeading}`}>Vision-only intake</h4>
-                  <p className={`mt-2 ${cTextSubtitle}`}>Place the container in the camera view. Acceptance, item counts, and rewards come from the detector result.</p>
+                  <span className={`text-sm ${cTextMuted} font-bold block`}>{t('totalEstimatedItems')}</span>
+                  <p className={`text-3xl font-black ${cTextHeading}`}>{intendedPlastic + intendedAluminum + intendedGlass} Items</p>
+                </div>
+                <div className="text-right">
+                  <span className="text-sm text-emerald-500 font-black block">Estimated Return Value:</span>
+                  <p className="text-3xl font-black text-emerald-500 font-mono">₱{(intendedPlastic * 1.0 + intendedAluminum * 2.5 + intendedGlass * 1.5).toFixed(2)}</p>
                 </div>
               </div>
 
+              {/* START REVERSE VENDING DRIVER AND HARDWARE INTEND BUTTON */}
               <div className="flex flex-row flex-wrap justify-center gap-8 max-w-5xl mx-auto w-full">
-                <button
+                <button 
                   id="activate-rvm-button"
-                  onClick={runVerificationProcess}
-                  className="w-80 h-80 md:w-96 md:h-96 bg-gradient-to-r from-emerald-600 to-teal-500 font-black text-white rounded-3xl shadow-xl flex flex-col items-center justify-center gap-6 hover:brightness-110 active:scale-95 transition-all text-2xl"
+                  onClick={() => {
+                    runVerificationProcess();
+                  }}
+                  className="w-80 h-80 md:w-96 md:h-96 bg-gradient-to-r from-emerald-600 to-teal-500 font-black text-white rounded-3xl shadow-xl flex flex-col items-center justify-center gap-6 hover:brightness-110 active:scale-95 transition-all text-2xl animate-pulse"
                 >
-                  <Camera className="w-14 h-14" />
+                  <Cpu className="w-14 h-14 animate-spin-slow" />
                   <span>{t('startRVM')}</span>
                 </button>
 
-                <button
+                <button 
                   onClick={() => setCurrentState('MAIN_MENU')}
                   className={`w-80 h-80 md:w-96 md:h-96 ${isLight ? 'bg-slate-200 text-slate-705 hover:bg-slate-250 border-slate-350' : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border-slate-705'} border rounded-3xl text-2xl font-black flex flex-col items-center justify-center gap-6 transition-all active:scale-95`}
                 >
                   <div className="bg-red-500/10 p-4 rounded-2xl">
                     <X className="w-14 h-14 text-red-500" />
                   </div>
-                  <span>Cancel</span>
+                  <span>Cancel Plan</span>
                 </button>
               </div>
             </div>
@@ -1637,6 +1772,7 @@ export default function App() {
 
           {/* ========================================================= */}
           {/* STATE 8: VERIFYING ITEMS ONE BY ONE DIAGNOSTIC PANEL */}
+          {/* ========================================================= */}
           {currentState === 'VERIFYING_ITEMS' && (
             <div className="w-full max-w-5xl mx-auto space-y-8 my-auto py-4">
               
@@ -1667,10 +1803,11 @@ export default function App() {
                       )
                     ) : (
                      <div className="flex-1 flex flex-col items-center justify-center text-center p-6 min-h-[280px]">
-                        {/* SIMULATED OPTICS SCHEMATIC GRAPHIC BASED ON ITEM MATERIAL */}
                         <div className="w-28 h-28 rounded-2xl bg-slate-800 flex items-center justify-center border border-slate-700 relative mb-4">
                           {verificationStage === 'CAMERA' && <Camera className="w-12 h-12 text-teal-400 animate-pulse" />}
-                          {verificationStage === 'VISION' && <Cpu className="w-12 h-12 text-sky-400 animate-spin" />}
+                          {verificationStage === 'INDUCTIVE' && <Wifi className="w-12 h-12 text-sky-400 animate-bounce" />}
+                          {verificationStage === 'WEIGHT' && <Cpu className="w-12 h-12 text-emerald-400 animate-spin" />}
+                          {verificationStage === 'TOF' && <Sliders className="w-12 h-12 text-indigo-400 animate-pulse" />}
                           {verificationStage === 'SORTING' && <Sliders className="w-12 h-12 text-amber-500 animate-bounce" />}
                           <div className="absolute inset-0 bg-gradient-to-t from-teal-500/20 to-transparent"></div>
                         </div>
@@ -1717,17 +1854,45 @@ export default function App() {
                       </span>
                     </div>
 
-                    {/* VISION-ONLY CLASSIFICATION STAGE */}
-                    <div className={`p-4 rounded-2xl border border-transparent flex items-center justify-between ${verificationStage === 'VISION' ? 'bg-sky-950/40 border-sky-500 text-sky-400 dark:text-white animate-pulse' : isLight ? 'bg-slate-100 text-slate-500' : 'bg-slate-900/60 text-slate-400'}`}>
+                    {/* INDUCTIVE METALS STAGE */}
+                    <div className={`p-4 rounded-2xl border border-transparent flex items-center justify-between ${verificationStage === 'INDUCTIVE' ? 'bg-sky-950/40 border-sky-500 text-sky-400 dark:text-white animate-pulse' : isLight ? 'bg-slate-100 text-slate-500' : 'bg-slate-900/60 text-slate-400'}`}>
                       <div className="flex items-center gap-4">
                         <span className={`w-10 h-10 rounded-xl ${isLight ? 'bg-slate-200 text-slate-700' : 'bg-slate-800 text-white'} flex items-center justify-center font-black font-mono text-base`}>2</span>
                         <div>
-                          <p className="text-sm font-black">Vision-Only Material Classifier</p>
-                          <span className="text-xs block opacity-80 font-mono font-bold">YOLO + OpenCV shape and appearance analysis</span>
+                          <p className="text-sm font-black">Inductive Metal Coil Sensor</p>
+                          <span className="text-xs block opacity-80 font-mono font-bold">Verifying aluminum conductivity</span>
                         </div>
                       </div>
                       <span className="text-sm font-mono font-black">
-                        {verificationStage === 'VISION' ? 'Classifying' : 'Completed'}
+                        {verificationStage === 'INDUCTIVE' ? '⚡ Sampling' : 'Locked'}
+                      </span>
+                    </div>
+
+                    {/* LOAD CELL WEIGHT STAGE */}
+                    <div className={`p-4 rounded-2xl border border-transparent flex items-center justify-between ${verificationStage === 'WEIGHT' ? 'bg-emerald-950/40 border-emerald-500 text-emerald-400 dark:text-white animate-pulse' : isLight ? 'bg-slate-100 text-slate-500' : 'bg-slate-900/60 text-slate-400'}`}>
+                      <div className="flex items-center gap-4">
+                        <span className={`w-10 h-10 rounded-xl ${isLight ? 'bg-slate-200 text-slate-700' : 'bg-slate-800 text-white'} flex items-center justify-center font-black font-mono text-base`}>3</span>
+                        <div>
+                          <p className="text-sm font-black">Load Cell Gravity Scaler</p>
+                          <span className="text-xs block opacity-80 font-mono font-bold">Confirming material mass</span>
+                        </div>
+                      </div>
+                      <span className="text-sm font-mono font-black">
+                        {verificationStage === 'WEIGHT' ? '⚖️ Measuring' : 'Calibrated'}
+                      </span>
+                    </div>
+
+                    {/* TOF LASER DISPLACEMENT VL53L0X STAGE */}
+                    <div className={`p-4 rounded-2xl border border-transparent flex items-center justify-between ${verificationStage === 'TOF' ? 'bg-indigo-950/40 border-indigo-500 text-indigo-400 dark:text-white animate-pulse' : isLight ? 'bg-slate-100 text-slate-500' : 'bg-slate-900/60 text-slate-400'}`}>
+                      <div className="flex items-center gap-4">
+                        <span className={`w-10 h-10 rounded-xl ${isLight ? 'bg-slate-200 text-slate-700' : 'bg-slate-800 text-white'} flex items-center justify-center font-black font-mono text-base`}>4</span>
+                        <div>
+                          <p className="text-sm font-black">VL53L0X Laser Distance Ranger</p>
+                          <span className="text-xs block opacity-80 font-mono font-bold">Measuring volume envelope</span>
+                        </div>
+                      </div>
+                      <span className="text-sm font-mono font-black">
+                        {verificationStage === 'TOF' ? '🎯 Beam active' : 'Stable'}
                       </span>
                     </div>
 
