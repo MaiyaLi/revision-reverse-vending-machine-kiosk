@@ -173,7 +173,7 @@ export interface TranslationSet {
 export const translations: Record<Language, TranslationSet> = {
   en: {
     idleTouchToBegin: "Touch Anywhere to Begin",
-    welcomeKiosk: "ReVision: Reverse Vending Machine",
+    welcomeKiosk: "ReVision Reverse Vending Machine Kiosk",
     insertMaterials: "Insert Materials",
     redeemRewards: "Redeem Rewards",
     learnMore: "Learn More",
@@ -244,7 +244,7 @@ export const translations: Record<Language, TranslationSet> = {
   },
   fil: {
     idleTouchToBegin: "Pindutin upang Magsimula",
-    welcomeKiosk: "ReVision Recycle Kiosk",
+    welcomeKiosk: "ReVision Reverse Vending Machine Kiosk",
     insertMaterials: "Mag-deposito",
     redeemRewards: "I-redeem ang Balanse",
     learnMore: "Alamin Pa ang Impormasyon",

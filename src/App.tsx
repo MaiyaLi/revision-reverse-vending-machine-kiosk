@@ -1088,7 +1088,7 @@ export default function App() {
                   <Leaf className="w-20 h-20 text-emerald-400" />
                 </div>
                 
-                <h3 className="text-5xl md:text-6xl font-black tracking-widest text-emerald-300 uppercase">E-Eco Vault Kiosk</h3>
+                <h3 className="text-5xl md:text-6xl font-black tracking-widest text-emerald-300 uppercase">ReVision Reverse Vending Machine Kiosk</h3>
                 
                 {/* Animated Graphic demonstrating inserting process */}
                 <div className="mt-12 flex items-center gap-8 bg-slate-900/95 py-6 px-10 rounded-3xl border border-teal-500/40">
