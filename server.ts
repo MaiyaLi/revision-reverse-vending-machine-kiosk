@@ -60,7 +60,7 @@ interface RateLimitEntry {
 
 const rateLimitStore: Map<string, RateLimitEntry> = new Map();
 
-function rateLimit(windowMs: number, max: number, message: string) {
+function rateLimit(windowMs: number, max: number, message: string, skipInternal: boolean = false) {
   const limitKey = `${windowMs}:${max}`;
 
   const checkInMemory = (key: string, now: number) => {
@@ -82,6 +82,19 @@ function rateLimit(windowMs: number, max: number, message: string) {
   };
 
   return async (req: any, res: any, next: any) => {
+    const path = req.path || req.url || '';
+    if (
+      skipInternal &&
+      (path.startsWith('/api/camera') ||
+       path.startsWith('/api/detection') ||
+       path.startsWith('/api/telemetry') ||
+       path.startsWith('/api/health') ||
+       path.startsWith('/api/csrf-token') ||
+       !path.startsWith('/api'))
+    ) {
+      return next();
+    }
+
     const key = req.ip || req.socket?.remoteAddress || 'unknown';
     const storeKey = `${limitKey}:${key}`;
     const now = Date.now();
@@ -94,7 +107,10 @@ function rateLimit(windowMs: number, max: number, message: string) {
           `INSERT INTO rate_limits ("key", "count", "resetTime")
            VALUES ($1, 1, $2)
            ON CONFLICT ("key") DO UPDATE
-           SET "count" = rate_limits."count" + 1,
+           SET "count" = CASE
+                 WHEN rate_limits."resetTime" < NOW() THEN 1
+                 ELSE rate_limits."count" + 1
+               END,
                "resetTime" = CASE
                  WHEN rate_limits."resetTime" < NOW() THEN $2
                  ELSE rate_limits."resetTime"
@@ -153,8 +169,8 @@ app.get("/api/csrf-token", (req: any, res: any) => {
 // RATE LIMITING
 // ============================================
 
-// General rate limit: 100 requests per 15 minutes
-app.use(rateLimit(15 * 60 * 1000, 100, 'Too many requests. Please try again later.'));
+// General rate limit: 3000 requests per 15 minutes for kiosk API, exempting high-frequency telemetry/camera polling
+app.use(rateLimit(15 * 60 * 1000, 3000, 'Too many requests. Please try again later.', true));
 
 // Stricter rate limit for auth and wallet endpoints: 10 requests per minute
 const authRateLimit = rateLimit(60 * 1000, 10, 'Too many authentication attempts. Please try again later.');
