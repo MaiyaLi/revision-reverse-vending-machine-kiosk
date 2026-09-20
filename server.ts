@@ -4,6 +4,7 @@ import { createServer as createViteServer } from "vite";
 import dotenv from "dotenv";
 import https from "https";
 import fs from "fs";
+import { spawn } from "child_process";
 import cookieParser from "cookie-parser";
 import csurf from "csurf";
 
@@ -622,7 +623,6 @@ let mjpegStreamPath: string | null = null;
 
 function startMjpegStream() {
   if (mjpegStreamProc) return;
-  const { spawn } = require("child_process");
   const streamPath = "/tmp/rvm-mjpeg-stream.mjpeg";
   const proc = spawn("rpicam-vid", [
     "-t", "0",
@@ -661,7 +661,6 @@ app.get("/api/camera/stream", (req, res) => {
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "close");
 
-  const { spawn } = require("child_process");
   let proc: any;
   let cleanedUp = false;
   let timeout: ReturnType<typeof setTimeout> | null = null;
@@ -762,7 +761,7 @@ app.get("/api/camera/image", async (req, res) => {
       timeout: 5000
     });
     res.sendFile(tmpFile, {}, (err) => {
-      try { require("fs").unlinkSync(tmpFile); } catch {}
+      try { fs.unlinkSync(tmpFile); } catch {}
     });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
