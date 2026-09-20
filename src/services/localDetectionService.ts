@@ -2,6 +2,18 @@ import { spawn } from "child_process";
 import fs from "fs";
 import os from "os";
 import path from "path";
+import { fileURLToPath } from "url";
+
+function getServiceDir(): string {
+  if (typeof __dirname !== "undefined") {
+    return __dirname;
+  }
+  try {
+    return path.dirname(fileURLToPath(import.meta.url));
+  } catch {
+    return process.cwd();
+  }
+}
 
 export interface BoundingBox {
   x: number;
@@ -47,8 +59,9 @@ export class LocalDetectionService {
   private readonly pythonBin: string;
 
   constructor() {
-    const sourceRoot = path.resolve(__dirname, "..", "..");
-    const distributionRoot = path.resolve(__dirname, "..");
+    const serviceDir = getServiceDir();
+    const sourceRoot = path.resolve(serviceDir, "..", "..");
+    const distributionRoot = path.resolve(serviceDir, "..");
     const candidateRoots = [process.cwd(), sourceRoot, distributionRoot];
     this.projectRoot =
       candidateRoots.find((root) => fs.existsSync(path.join(root, "scripts", "yolo_detect.py"))) || process.cwd();
