@@ -1,7 +1,8 @@
+import dotenv from "dotenv";
+dotenv.config();
 import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
-import dotenv from "dotenv";
 import https from "https";
 import fs from "fs";
 import { spawn } from "child_process";
@@ -20,8 +21,6 @@ import { printReceipt } from "./src/services/printerService";
 import userRoutes from "./src/routes/userRoutes";
 
 import type { ReceiptData } from "./src/services/receiptService";
-
-dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;

@@ -1,27 +1,47 @@
-import { Pool, PoolClient } from 'pg';
+import { Pool, PoolClient, PoolConfig } from 'pg';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 export class DatabaseService {
-  private pool: Pool;
-  private connectionString: string;
+  private pool: Pool | null = null;
   private connected: boolean = false;
 
-  constructor() {
-    this.connectionString = process.env.DATABASE_URL || 'postgresql://localhost/revision_rvm';
-    this.pool = new Pool({
-      connectionString: this.connectionString,
-      max: 20,
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 2000,
-    });
+  private getPool(): Pool {
+    if (!this.pool) {
+      const connectionString = process.env.DATABASE_URL;
 
-    this.pool.on('error', (err) => {
-      console.error('Unexpected error on idle client', err);
-    });
+      let poolConfig: PoolConfig;
+      if (connectionString) {
+        poolConfig = { connectionString };
+      } else {
+        const password = process.env.PGPASSWORD ?? process.env.DB_PASSWORD ?? '';
+        poolConfig = {
+          user: process.env.PGUSER || process.env.DB_USER || 'postgres',
+          password: String(password),
+          host: process.env.PGHOST || process.env.DB_HOST || 'localhost',
+          port: Number(process.env.PGPORT || process.env.DB_PORT || 5432),
+          database: process.env.PGDATABASE || process.env.DB_NAME || 'revision_rvm',
+        };
+      }
+
+      this.pool = new Pool({
+        ...poolConfig,
+        max: 20,
+        idleTimeoutMillis: 30000,
+        connectionTimeoutMillis: 5000,
+      });
+
+      this.pool.on('error', (err) => {
+        console.error('Unexpected error on idle database client:', err);
+      });
+    }
+    return this.pool;
   }
 
   async connect(): Promise<void> {
     try {
-      const client = await this.pool.connect();
+      const client = await this.getPool().connect();
       await client.query('SELECT NOW()');
       client.release();
       this.connected = true;
@@ -39,7 +59,7 @@ export class DatabaseService {
 
   async query(text: string, params?: any[]): Promise<any[]> {
     try {
-      const result = await this.pool.query(text, params);
+      const result = await this.getPool().query(text, params);
       return result.rows;
     } catch (error) {
       console.error('Database query error:', error);
@@ -53,7 +73,7 @@ export class DatabaseService {
   }
 
   async transaction<T>(callback: (client: PoolClient) => Promise<T>): Promise<T> {
-    const client = await this.pool.connect();
+    const client = await this.getPool().connect();
     try {
       await client.query('BEGIN');
       const result = await callback(client);
@@ -68,11 +88,14 @@ export class DatabaseService {
   }
 
   async close(): Promise<void> {
-    await this.pool.end();
+    if (this.pool) {
+      await this.pool.end();
+      this.pool = null;
+    }
   }
 
   getClient(): Pool {
-    return this.pool;
+    return this.getPool();
   }
 }
 
