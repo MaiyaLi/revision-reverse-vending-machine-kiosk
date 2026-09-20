@@ -133,18 +133,21 @@ function rateLimit(windowMs: number, max: number, message: string) {
 const csrfSecret = process.env.CSRF_SECRET || "revision-rvm-csrf-secret";
 
 app.use(cookieParser(csrfSecret));
-app.use(csurf({
-  cookie: {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
-    maxAge: 3600000,
-  },
-}));
+if (process.env.ENABLE_CSRF === "true") {
+  app.use(csurf({
+    cookie: {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 3600000,
+    },
+  }));
+}
 
 // Endpoint for clients to obtain a CSRF token
 app.get("/api/csrf-token", (req: any, res: any) => {
-  res.json({ csrfToken: req.csrfToken() });
+  const token = typeof req.csrfToken === "function" ? req.csrfToken() : "csrf-disabled";
+  res.json({ csrfToken: token });
 });
 
 // ============================================
