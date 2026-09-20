@@ -4,10 +4,13 @@ from scripts.yolo_detect import (
     CropFeatures,
     SENSOR_MIN_ACCEPT_CONFIDENCE,
     VISION_ONLY_MIN_ACCEPT_CONFIDENCE,
+    appearance_scores,
+    aspect_ratio_from_dimensions,
     canonical_item_name,
     confidence_for,
     effective_aspect_ratio,
     has_metallic_surface,
+    is_bottle_shape,
     is_can_shape,
     is_lying_can_candidate,
     is_lying_can_shape,
@@ -51,11 +54,109 @@ class VisionContractTests(unittest.TestCase):
             edge_ratio=0.0,
             specular_ratio=0.0,
             dark_ratio=0.0,
-            extent=0.1,
+            extent=0.05,
             solidity=0.5,
             oriented_aspect_ratio=3.6,
         )
         self.assertEqual(effective_aspect_ratio(0.2, features), 5.0)
+
+    def test_oriented_aspect_ratio_preserves_subpixel_dimensions(self):
+        self.assertEqual(aspect_ratio_from_dimensions(12.0, 0.8), 15.0)
+
+    def test_effective_aspect_ratio_uses_near_lying_contour(self):
+        features = CropFeatures(
+            saturation_mean=0.0,
+            value_mean=0.0,
+            value_std=0.0,
+            colorfulness=0.0,
+            edge_ratio=0.0,
+            specular_ratio=0.0,
+            dark_ratio=0.0,
+            extent=0.5,
+            solidity=0.5,
+            oriented_aspect_ratio=1.4,
+        )
+        self.assertGreater(effective_aspect_ratio(0.8, features), 1.25)
+
+    def test_upright_can_accepts_wide_ratio(self):
+        self.assertTrue(is_can_shape(0.25, extent=0.5))
+
+    def test_lying_can_accepts_aspect_ratio_boundaries(self):
+        self.assertTrue(is_lying_can_shape(1.8, extent=0.24, solidity=0.42))
+        self.assertTrue(is_lying_can_shape(10.0, extent=0.24, solidity=0.42))
+        self.assertFalse(is_lying_can_shape(1.79, extent=0.24, solidity=0.42))
+        self.assertFalse(is_lying_can_shape(10.01, extent=0.24, solidity=0.42))
+
+    def test_near_square_rotated_can_uses_contour_orientation(self):
+        self.assertTrue(is_lying_can_shape(0.95, extent=0.20, solidity=0.30, shape_ratio=5.8))
+        self.assertTrue(is_lying_can_shape(0.20, extent=0.20, solidity=0.30, shape_ratio=3.6))
+
+    def test_lying_bottle_uses_relaxed_geometry(self):
+        self.assertTrue(is_bottle_shape(4.0, extent=0.05, solidity=0.09))
+        features = CropFeatures(
+            saturation_mean=0.45,
+            value_mean=0.60,
+            value_std=0.12,
+            colorfulness=0.18,
+            edge_ratio=0.05,
+            specular_ratio=0.03,
+            dark_ratio=0.05,
+            extent=0.05,
+            solidity=0.09,
+            oriented_aspect_ratio=4.0,
+        )
+        scores = {"aluminum": 0.10, "glass": 0.20, "plastic": 0.78}
+        self.assertEqual(
+            material_from_class("bottle", 4.0, False, 0, None, True, features, scores),
+            "plastic",
+        )
+
+    def test_lying_bottle_uses_geometry_and_appearance_separately(self):
+        shape_features = CropFeatures(
+            saturation_mean=0.0,
+            value_mean=0.0,
+            value_std=0.0,
+            colorfulness=0.0,
+            edge_ratio=0.0,
+            specular_ratio=0.0,
+            dark_ratio=0.0,
+            extent=0.05,
+            solidity=0.09,
+            oriented_aspect_ratio=4.0,
+        )
+        appearance_features = CropFeatures(
+            saturation_mean=0.45,
+            value_mean=0.60,
+            value_std=0.12,
+            colorfulness=0.18,
+            edge_ratio=0.05,
+            specular_ratio=0.03,
+            dark_ratio=0.05,
+            extent=0.20,
+            solidity=0.30,
+            oriented_aspect_ratio=4.0,
+        )
+        scores = appearance_scores(None, 4.0, appearance_features, shape_features)
+        self.assertGreater(scores["plastic"], scores["glass"])
+
+    def test_lying_can_candidate_accepts_fragmented_metal_surface(self):
+        features = CropFeatures(
+            saturation_mean=0.30,
+            value_mean=0.65,
+            value_std=0.15,
+            colorfulness=0.08,
+            edge_ratio=0.06,
+            specular_ratio=0.05,
+            dark_ratio=0.05,
+            extent=0.07,
+            solidity=0.13,
+            oriented_aspect_ratio=5.8,
+        )
+        scores = {"aluminum": 0.65, "glass": 0.20, "plastic": 0.20}
+        self.assertEqual(
+            material_from_class("cup", 0.17, False, 0, None, True, features, scores),
+            "aluminum",
+        )
 
     def test_can_shape_accepts_upright_and_lying_cans(self):
         self.assertTrue(is_can_shape(0.35, extent=0.7))
@@ -67,7 +168,8 @@ class VisionContractTests(unittest.TestCase):
 
     def test_lying_can_candidate_requires_both_geometry_signals(self):
         self.assertTrue(is_lying_can_candidate(5.8, extent=0.10, solidity=0.18))
-        self.assertFalse(is_lying_can_shape(5.8, extent=0.10, solidity=0.18))
+        self.assertFalse(is_lying_can_shape(5.8, extent=0.09, solidity=0.18))
+        self.assertTrue(is_lying_can_shape(5.8, extent=0.10, solidity=0.18))
         self.assertFalse(is_lying_can_shape(5.8, extent=0.29, solidity=0.0))
         self.assertFalse(is_lying_can_shape(5.8, extent=0.0, solidity=0.5))
         self.assertFalse(is_lying_can_candidate(1.0, extent=0.5, solidity=0.5))

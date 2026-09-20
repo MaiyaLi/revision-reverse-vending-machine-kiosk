@@ -25,25 +25,29 @@ SENSOR_MIN_ACCEPT_CONFIDENCE = float(os.getenv("YOLO_MIN_CONFIDENCE", "0.45"))
 VISION_ONLY_MIN_ACCEPT_CONFIDENCE = float(os.getenv("YOLO_VISION_ONLY_MIN_CONFIDENCE", "0.64"))
 MIN_CANDIDATE_AREA_RATIO = float(os.getenv("YOLO_MIN_AREA_RATIO", "0.0025"))
 CAN_UPRIGHT_ASPECT_RATIO_MIN = float(os.getenv("YOLO_CAN_UPRIGHT_ASPECT_RATIO_MIN", "1.05"))
-CAN_UPRIGHT_ASPECT_RATIO_MAX = float(os.getenv("YOLO_CAN_UPRIGHT_ASPECT_RATIO_MAX", "3.0"))
+CAN_UPRIGHT_ASPECT_RATIO_MAX = float(os.getenv("YOLO_CAN_UPRIGHT_ASPECT_RATIO_MAX", "4.0"))
 CAN_UPRIGHT_MIN_EXTENT = float(os.getenv("YOLO_CAN_UPRIGHT_MIN_EXTENT", "0.25"))
+ORIENTED_ASPECT_RATIO_MIN = float(os.getenv("YOLO_ORIENTED_ASPECT_RATIO_MIN", "1.2"))
+ORIENTED_ASPECT_RATIO_MIN_EXTENT = float(os.getenv("YOLO_ORIENTED_ASPECT_RATIO_MIN_EXTENT", "0.08"))
+ORIENTED_ASPECT_RATIO_MIN_SOLIDITY = float(os.getenv("YOLO_ORIENTED_ASPECT_RATIO_MIN_SOLIDITY", "0.12"))
 LYING_CAN_ASPECT_RATIO_MIN = float(os.getenv("YOLO_LYING_CAN_ASPECT_RATIO_MIN", "1.8"))
-LYING_CAN_ASPECT_RATIO_MAX = float(os.getenv("YOLO_LYING_CAN_ASPECT_RATIO_MAX", "8.5"))
-LYING_CAN_MIN_EXTENT = float(os.getenv("YOLO_LYING_CAN_MIN_EXTENT", "0.12"))
-LYING_CAN_MIN_SOLIDITY = float(os.getenv("YOLO_LYING_CAN_MIN_SOLIDITY", "0.20"))
-LYING_CAN_CANDIDATE_MIN_EXTENT = float(os.getenv("YOLO_LYING_CAN_CANDIDATE_MIN_EXTENT", "0.08"))
-LYING_CAN_CANDIDATE_MIN_SOLIDITY = float(os.getenv("YOLO_LYING_CAN_CANDIDATE_MIN_SOLIDITY", "0.15"))
+LYING_CAN_ASPECT_RATIO_MAX = float(os.getenv("YOLO_LYING_CAN_ASPECT_RATIO_MAX", "10.0"))
+VERTICAL_LYING_ASPECT_RATIO_THRESHOLD = float(os.getenv("YOLO_VERTICAL_LYING_ASPECT_RATIO_THRESHOLD", "3.2"))
+LYING_CAN_MIN_EXTENT = float(os.getenv("YOLO_LYING_CAN_MIN_EXTENT", "0.10"))
+LYING_CAN_MIN_SOLIDITY = float(os.getenv("YOLO_LYING_CAN_MIN_SOLIDITY", "0.16"))
+LYING_CAN_CANDIDATE_MIN_EXTENT = float(os.getenv("YOLO_LYING_CAN_CANDIDATE_MIN_EXTENT", "0.06"))
+LYING_CAN_CANDIDATE_MIN_SOLIDITY = float(os.getenv("YOLO_LYING_CAN_CANDIDATE_MIN_SOLIDITY", "0.12"))
 BOTTLE_ASPECT_RATIO_MIN = float(os.getenv("YOLO_BOTTLE_ASPECT_RATIO_MIN", "1.0"))
-BOTTLE_ASPECT_RATIO_MAX = float(os.getenv("YOLO_BOTTLE_ASPECT_RATIO_MAX", "10.5"))
-BOTTLE_MIN_EXTENT = float(os.getenv("YOLO_BOTTLE_MIN_EXTENT", "0.08"))
-BOTTLE_MIN_SOLIDITY = float(os.getenv("YOLO_BOTTLE_MIN_SOLIDITY", "0.12"))
+BOTTLE_ASPECT_RATIO_MAX = float(os.getenv("YOLO_BOTTLE_ASPECT_RATIO_MAX", "12.0"))
+BOTTLE_MIN_EXTENT = float(os.getenv("YOLO_BOTTLE_MIN_EXTENT", "0.04"))
+BOTTLE_MIN_SOLIDITY = float(os.getenv("YOLO_BOTTLE_MIN_SOLIDITY", "0.08"))
 GLASS_SCORE_THRESHOLD = float(os.getenv("YOLO_GLASS_SCORE_THRESHOLD", "0.48"))
 PLASTIC_SCORE_THRESHOLD = float(os.getenv("YOLO_PLASTIC_SCORE_THRESHOLD", "0.44"))
 MATERIAL_SCORE_MARGIN = float(os.getenv("YOLO_MATERIAL_SCORE_MARGIN", "0.06"))
 CAN_ALUMINUM_SCORE_THRESHOLD = float(os.getenv("YOLO_CAN_ALUMINUM_SCORE_THRESHOLD", "0.58"))
 CAN_ALUMINUM_SURFACE_SCORE_THRESHOLD = float(os.getenv("YOLO_CAN_ALUMINUM_SURFACE_SCORE_THRESHOLD", "0.42"))
 LYING_CAN_ALUMINUM_SCORE_THRESHOLD = float(os.getenv("YOLO_LYING_CAN_ALUMINUM_SCORE_THRESHOLD", "0.55"))
-LYING_CAN_CANDIDATE_ALUMINUM_SCORE_THRESHOLD = float(os.getenv("YOLO_LYING_CAN_CANDIDATE_ALUMINUM_SCORE_THRESHOLD", "0.68"))
+LYING_CAN_CANDIDATE_ALUMINUM_SCORE_THRESHOLD = float(os.getenv("YOLO_LYING_CAN_CANDIDATE_ALUMINUM_SCORE_THRESHOLD", "0.60"))
 VISION_LYING_CAN_CONFIDENCE_FLOOR = float(os.getenv("YOLO_VISION_LYING_CAN_CONFIDENCE_FLOOR", "0.60"))
 VISION_LYING_CAN_CANDIDATE_CONFIDENCE_FLOOR = float(os.getenv("YOLO_VISION_LYING_CAN_CANDIDATE_CONFIDENCE_FLOOR", "0.55"))
 SENSOR_LYING_CAN_CONFIDENCE_FLOOR = float(os.getenv("YOLO_SENSOR_LYING_CAN_CONFIDENCE_FLOOR", "0.40"))
@@ -96,14 +100,23 @@ def orientation_invariant_aspect_ratio(aspect_ratio: float) -> float:
     return max(aspect_ratio, 1.0 / max(aspect_ratio, 0.001))
 
 
+def aspect_ratio_from_dimensions(width: float, height: float) -> float:
+    if width <= 0.0 or height <= 0.0:
+        return 0.0
+    return max(width, height) / min(width, height)
+
+
 def effective_aspect_ratio(box_aspect_ratio: float, features: CropFeatures) -> float:
     box_ratio = orientation_invariant_aspect_ratio(box_aspect_ratio)
     if (
-        features.oriented_aspect_ratio >= 1.5
-        and features.extent >= LYING_CAN_MIN_EXTENT
-        and features.solidity >= LYING_CAN_MIN_SOLIDITY
+        features.oriented_aspect_ratio >= ORIENTED_ASPECT_RATIO_MIN
+        and features.extent >= ORIENTED_ASPECT_RATIO_MIN_EXTENT
+        and features.solidity >= ORIENTED_ASPECT_RATIO_MIN_SOLIDITY
     ):
-        return features.oriented_aspect_ratio
+        oriented_ratio = min(features.oriented_aspect_ratio, LYING_CAN_ASPECT_RATIO_MAX)
+        if box_ratio > CAN_UPRIGHT_ASPECT_RATIO_MAX or box_ratio < 1.2:
+            return oriented_ratio
+        return 0.65 * box_ratio + 0.35 * oriented_ratio
     return box_ratio
 
 
@@ -113,9 +126,11 @@ def is_upright_can_shape(aspect_ratio: float, extent: float = 0.0) -> bool:
 
 
 def is_lying_can_orientation(aspect_ratio: float, shape_ratio: float) -> bool:
-    return aspect_ratio > 1.0 or (
-        aspect_ratio < 1.0 and shape_ratio > CAN_UPRIGHT_ASPECT_RATIO_MAX
-    )
+    if aspect_ratio > 1.1 and shape_ratio >= LYING_CAN_ASPECT_RATIO_MIN:
+        return True
+    if aspect_ratio < 0.9 and shape_ratio >= VERTICAL_LYING_ASPECT_RATIO_THRESHOLD:
+        return True
+    return 0.85 <= aspect_ratio <= 1.15 and shape_ratio > CAN_UPRIGHT_ASPECT_RATIO_MAX
 
 
 def is_lying_can_candidate(
@@ -124,7 +139,7 @@ def is_lying_can_candidate(
     solidity: float = 0.0,
     shape_ratio: Optional[float] = None,
 ) -> bool:
-    ratio = orientation_invariant_aspect_ratio(shape_ratio if shape_ratio is not None else aspect_ratio)
+    ratio = shape_ratio if shape_ratio is not None else orientation_invariant_aspect_ratio(aspect_ratio)
     return (
         is_lying_can_orientation(aspect_ratio, ratio)
         and LYING_CAN_ASPECT_RATIO_MIN <= ratio <= LYING_CAN_ASPECT_RATIO_MAX
@@ -151,7 +166,7 @@ def is_can_shape(
     solidity: float = 0.0,
     shape_ratio: Optional[float] = None,
 ) -> bool:
-    ratio = orientation_invariant_aspect_ratio(shape_ratio if shape_ratio is not None else aspect_ratio)
+    ratio = shape_ratio if shape_ratio is not None else orientation_invariant_aspect_ratio(aspect_ratio)
     return is_upright_can_shape(ratio, extent) or is_lying_can_shape(aspect_ratio, extent, solidity, ratio)
 
 
@@ -169,6 +184,13 @@ def contour_touches_border(contour: np.ndarray, width: int, height: int) -> bool
     return x <= 0 or y <= 0 or x + contour_width >= width - 1 or y + contour_height >= height - 1
 
 
+def close_mask(mask: np.ndarray) -> np.ndarray:
+    height, width = mask.shape[:2]
+    kernel_size = 5 if min(height, width) >= 16 else 3
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (kernel_size, kernel_size))
+    return cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
+
+
 def best_contour(contours: list[np.ndarray], width: int, height: int, bbox_area: float) -> Optional[np.ndarray]:
     candidates = [contour for contour in contours if cv2.contourArea(contour) > 0]
     if not candidates:
@@ -178,7 +200,7 @@ def best_contour(contours: list[np.ndarray], width: int, height: int, bbox_area:
     if interior:
         return max(interior, key=cv2.contourArea)
 
-    bounded = [contour for contour in candidates if cv2.contourArea(contour) <= bbox_area * 0.95]
+    bounded = [contour for contour in candidates if cv2.contourArea(contour) <= bbox_area * 0.98]
     return max(bounded or candidates, key=cv2.contourArea)
 
 
@@ -193,15 +215,22 @@ def extract_crop_features(crop: Optional[np.ndarray]) -> CropFeatures:
     edges = cv2.Canny(gray, 50, 140)
     _, threshold = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
     _, inverse_threshold = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+    threshold = close_mask(threshold)
+    inverse_threshold = close_mask(inverse_threshold)
     threshold_contours, _ = cv2.findContours(threshold, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     inverse_contours, _ = cv2.findContours(inverse_threshold, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
     height, width = gray.shape[:2]
     bbox_area = float(height * width)
+    edge_kernel_size = 3 if min(height, width) < 16 else 5
+    edge_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (edge_kernel_size, edge_kernel_size))
+    edge_mask = cv2.dilate(edges, edge_kernel, iterations=1)
+    edge_contours, _ = cv2.findContours(edge_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     threshold_contour = best_contour(threshold_contours, width, height, bbox_area)
     inverse_contour = best_contour(inverse_contours, width, height, bbox_area)
+    edge_contour = best_contour(edge_contours, width, height, bbox_area)
     largest_contour = max(
-        (contour for contour in (threshold_contour, inverse_contour) if contour is not None),
+        (contour for contour in (threshold_contour, inverse_contour, edge_contour) if contour is not None),
         key=cv2.contourArea,
         default=None,
     )
@@ -214,10 +243,9 @@ def extract_crop_features(crop: Optional[np.ndarray]) -> CropFeatures:
         hull_area = float(cv2.contourArea(hull))
         solidity = largest_area / max(hull_area, 1.0)
         rect_width, rect_height = cv2.minAreaRect(largest_contour)[1]
-        if rect_width > 0 and rect_height > 0:
-            oriented_aspect_ratio = max(rect_width, rect_height) / max(min(rect_width, rect_height), 1.0)
+        oriented_aspect_ratio = aspect_ratio_from_dimensions(rect_width, rect_height)
 
-    red = rgb[:, :, 0]
+    rgb = crop.astype(np.float32)
     green = rgb[:, :, 1]
     blue = rgb[:, :, 2]
     red_green = red - green
@@ -258,15 +286,18 @@ def appearance_scores(
     crop: Optional[np.ndarray],
     aspect_ratio: float,
     features: Optional[CropFeatures] = None,
+    shape_features: Optional[CropFeatures] = None,
 ) -> dict[str, float]:
     if features is None:
         features = extract_crop_features(crop)
-    shape_aspect_ratio = effective_aspect_ratio(aspect_ratio, features)
-    upright_can_shape = is_upright_can_shape(shape_aspect_ratio, features.extent)
-    lying_can_shape = is_lying_can_shape(aspect_ratio, features.extent, features.solidity, shape_aspect_ratio)
-    lying_can_candidate = is_lying_can_candidate(aspect_ratio, features.extent, features.solidity, shape_aspect_ratio)
+    if shape_features is None:
+        shape_features = features
+    shape_aspect_ratio = effective_aspect_ratio(aspect_ratio, shape_features)
+    upright_can_shape = is_upright_can_shape(shape_aspect_ratio, shape_features.extent)
+    lying_can_shape = is_lying_can_shape(aspect_ratio, shape_features.extent, shape_features.solidity, shape_aspect_ratio)
+    lying_can_candidate = is_lying_can_candidate(aspect_ratio, shape_features.extent, shape_features.solidity, shape_aspect_ratio)
     can_shape = upright_can_shape or lying_can_shape
-    bottle_shape = is_bottle_shape(shape_aspect_ratio, features.extent, features.solidity)
+    bottle_shape = is_bottle_shape(shape_aspect_ratio, shape_features.extent, shape_features.solidity)
     specular_strength = clamp(features.specular_ratio / 0.12)
     edge_strength = clamp(features.edge_ratio / 0.14)
     low_saturation = 1.0 - features.saturation_mean
@@ -314,8 +345,8 @@ def is_metallic_crop(crop: Optional[np.ndarray], features: Optional[CropFeatures
     if features is None:
         features = extract_crop_features(crop)
     return features.value_mean > 0.30 and (
-        metallic_evidence(features) >= 0.42
-        or (features.solidity >= 0.25 and has_metallic_surface(features))
+        metallic_evidence(features) >= 0.38
+        or (features.solidity >= 0.20 and has_metallic_surface(features))
     )
 
 
@@ -327,32 +358,27 @@ def has_aluminum_evidence(
     lying_can_shape: bool,
     lying_can_candidate: bool,
 ) -> bool:
+    strongest_competitor = max(scores["plastic"], scores["glass"])
+    aluminum_is_preferred = scores["aluminum"] >= strongest_competitor - MATERIAL_SCORE_MARGIN
     if lying_can_candidate and not lying_can_shape:
-        strongest_competitor = max(scores["plastic"], scores["glass"])
         return (
             scores["aluminum"] >= LYING_CAN_CANDIDATE_ALUMINUM_SCORE_THRESHOLD
-            and scores["aluminum"] >= strongest_competitor - MATERIAL_SCORE_MARGIN
-            and is_metallic_crop(crop, features)
+            and aluminum_is_preferred
+            and (is_metallic_crop(crop, features) or has_metallic_surface(features))
         )
     if not can_shape:
         return False
 
-    strongest_competitor = max(scores["plastic"], scores["glass"])
-    aluminum_is_preferred = scores["aluminum"] >= strongest_competitor - MATERIAL_SCORE_MARGIN
     metallic_threshold = LYING_CAN_ALUMINUM_SCORE_THRESHOLD if lying_can_shape else CAN_ALUMINUM_SCORE_THRESHOLD
     if scores["aluminum"] >= metallic_threshold and aluminum_is_preferred:
         return True
-    if is_metallic_crop(crop, features):
+    if is_metallic_crop(crop, features) or has_metallic_surface(features):
         return (
             scores["aluminum"] >= CAN_ALUMINUM_SURFACE_SCORE_THRESHOLD
             and aluminum_is_preferred
         )
 
-    return (
-        has_metallic_surface(features)
-        and scores["aluminum"] >= CAN_ALUMINUM_SURFACE_SCORE_THRESHOLD
-        and aluminum_is_preferred
-    )
+    return False
 
 
 def material_from_class(
@@ -364,12 +390,15 @@ def material_from_class(
     vision_only: bool = False,
     features: Optional[CropFeatures] = None,
     scores: Optional[dict[str, float]] = None,
+    appearance_features: Optional[CropFeatures] = None,
 ) -> Optional[str]:
     cls = normalized_class_name(class_name)
     if features is None:
         features = extract_crop_features(crop)
+    if appearance_features is None:
+        appearance_features = features
     if scores is None:
-        scores = appearance_scores(crop, aspect_ratio, features)
+        scores = appearance_scores(crop, aspect_ratio, appearance_features, features)
     shape_aspect_ratio = effective_aspect_ratio(aspect_ratio, features)
     can_shape = is_can_shape(aspect_ratio, features.extent, features.solidity, shape_aspect_ratio)
     lying_can_shape = is_lying_can_shape(aspect_ratio, features.extent, features.solidity, shape_aspect_ratio)
@@ -380,7 +409,7 @@ def material_from_class(
     explicit_bottle = "bottle" in cls
     aluminum_evidence = has_aluminum_evidence(
         crop,
-        features,
+        appearance_features,
         scores,
         can_shape,
         lying_can_shape,
@@ -440,12 +469,15 @@ def confidence_for(
     vision_only: bool,
     features: Optional[CropFeatures] = None,
     scores: Optional[dict[str, float]] = None,
+    appearance_features: Optional[CropFeatures] = None,
 ) -> float:
     cls = normalized_class_name(class_name)
     if features is None:
         features = extract_crop_features(crop)
+    if appearance_features is None:
+        appearance_features = features
     if scores is None:
-        scores = appearance_scores(crop, aspect_ratio, features)
+        scores = appearance_scores(crop, aspect_ratio, appearance_features, features)
     shape_aspect_ratio = effective_aspect_ratio(aspect_ratio, features)
     lying_can_shape = is_lying_can_shape(aspect_ratio, features.extent, features.solidity, shape_aspect_ratio)
     lying_can_candidate = is_lying_can_candidate(aspect_ratio, features.extent, features.solidity, shape_aspect_ratio)
@@ -581,9 +613,11 @@ def main() -> int:
                     continue
 
                 box_tuple = (x1, y1, x2, y2)
+                geometry_crop = crop_for_box(image_rgb, box_tuple)
                 crop = crop_for_box(image_rgb, box_tuple, min_dimension=MIN_CROP_PIXELS)
-                features = extract_crop_features(crop)
-                scores = appearance_scores(crop, aspect_ratio, features)
+                features = extract_crop_features(geometry_crop)
+                appearance_features = extract_crop_features(crop)
+                scores = appearance_scores(crop, aspect_ratio, appearance_features, features)
                 shape_aspect_ratio = effective_aspect_ratio(aspect_ratio, features)
                 can_shape = is_can_shape(aspect_ratio, features.extent, features.solidity, shape_aspect_ratio)
                 lying_can_shape = is_lying_can_shape(aspect_ratio, features.extent, features.solidity, shape_aspect_ratio)
@@ -597,6 +631,7 @@ def main() -> int:
                     vision_only,
                     features,
                     scores,
+                    appearance_features,
                 )
                 if material is None:
                     continue
@@ -612,6 +647,7 @@ def main() -> int:
                     vision_only,
                     features,
                     scores,
+                    appearance_features,
                 )
                 status = "accepted" if adjusted_confidence >= minimum_accept_confidence else "rejected"
                 x1 = max(0.0, min(float(width), x1))
@@ -640,6 +676,7 @@ def main() -> int:
                     "visualScores": {name: round(score, 4) for name, score in scores.items()},
                     "canShape": is_can_shape(aspect_ratio, features.extent, features.solidity, shape_aspect_ratio),
                     "lyingCanShape": is_lying_can_shape(aspect_ratio, features.extent, features.solidity, shape_aspect_ratio),
+                    "lyingCanCandidate": is_lying_can_candidate(aspect_ratio, features.extent, features.solidity, shape_aspect_ratio),
                     "cropExtent": round(features.extent, 4),
                     "cropSolidity": round(features.solidity, 4),
                 })
